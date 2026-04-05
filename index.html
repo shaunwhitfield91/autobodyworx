@@ -488,7 +488,7 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
       </div>
 
       <div class="card">
-        <div class="card-lbl">🔗 Setmore Integration</div>
+        <div class="card-lbl">📅 Diary Booking</div>
         <p style="color:var(--grey2);font-size:13px;margin-bottom:18px;line-height:1.7;">Your refresh token is stored only in this browser and sent directly to Setmore — never stored on any server.</p>
         <div class="fg" style="margin-bottom:14px;">
           <label>Setmore Refresh Token</label>
@@ -513,7 +513,7 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
         <div style="display:flex;flex-direction:column;gap:12px;">
           <div style="display:flex;gap:12px;align-items:flex-start;"><div style="background:var(--accent);color:var(--bg);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">1</div><div style="font-size:13px;color:var(--grey1);line-height:1.6;">Approve a quote → saves to CRM with photos automatically</div></div>
           <div style="display:flex;gap:12px;align-items:flex-start;"><div style="background:var(--accent);color:var(--bg);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">2</div><div style="font-size:13px;color:var(--grey1);line-height:1.6;">Set date, time, duration &amp; assign Shaun or Charles in CRM</div></div>
-          <div style="display:flex;gap:12px;align-items:flex-start;"><div style="background:var(--accent);color:var(--bg);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">3</div><div style="font-size:13px;color:var(--grey1);line-height:1.6;">Hit <strong style="color:var(--accent)">Book into Setmore</strong> — appointment created instantly</div></div>
+          <div style="display:flex;gap:12px;align-items:flex-start;"><div style="background:var(--accent);color:var(--bg);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">3</div><div style="font-size:13px;color:var(--grey1);line-height:1.6;">Hit <strong style="color:var(--accent)">Book</strong> — switches to Diary with the job highlighted</div></div>
           <div style="display:flex;gap:12px;align-items:flex-start;"><div style="background:var(--accent);color:var(--bg);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">4</div><div style="font-size:13px;color:var(--grey1);line-height:1.6;">Charles uploads completion photos &amp; marks payment — synced in real time across all devices</div></div>
         </div>
       </div>
@@ -788,7 +788,13 @@ async function approveQuote(){
       approved_by:currentProfile?.full_name||currentUser?.email||'',created_by:currentUser.id
     });
     if(result.suggested_parts?.length){
-      await sbRawInsert('job_parts',result.suggested_parts.map(p=>({job_id:job.id,name:p,price:'',ordered:false})));
+      // Filter out processes/consumables — only save real physical parts
+      const PROCESS_WORDS=['paint','primer','clearcoat','clear coat','basecoat','polish','sand','prep','labour','blend','tape','mask','buff','lacquer','filler','sundry','consumable','touch up','touch-up'];
+      const realParts=result.suggested_parts.filter(p=>{
+        const pl=p.toLowerCase();
+        return !PROCESS_WORDS.some(w=>pl.includes(w));
+      });
+      if(realParts.length) await sbRawInsert('job_parts',realParts.map(p=>({job_id:job.id,name:p,price:'',ordered:false})));
     }
     for(const img of photos){
       const ext=img.file.name.split('.').pop()||'jpg';
@@ -835,7 +841,7 @@ function jHTML(j){
   const srcBadge=`<span class="badge badge-src">${SRC[j.source]||j.source||''}</span>`;
   const cdBadge=j.cd_required?`<span class="badge badge-cd">C&amp;D</span>`:'';
   const durBadge=j.duration?`<span class="badge badge-dur">${DUR[j.duration]||j.duration}</span>`:'';
-  const depBadge=j.deposit_taken?`<span class="badge badge-dep">Deposit ✓</span>`:(j.job_parts?.length?`<span class="badge badge-dep-due">Deposit due</span>`:'');
+  const depBadge=j.deposit_taken?`<span class="badge badge-dep">Deposit ✓</span>`:((j.job_parts?.length||j.parts_required)?`<span class="badge badge-dep-due">Deposit due</span>`:'' );
   const techName=j.assigned_tech||'';
   const techBadge=techName?`<span class="badge badge-${techName.toLowerCase()}">${techName}</span>`:'';
   const dateMeta=j.booking_date?`📅 ${fmtDate(j.booking_date)}${j.booking_time?' at '+j.booking_time:''}`:'';
@@ -876,7 +882,21 @@ function jHTML(j){
       <div class="jd-field"><div class="jd-lbl">Phone</div><input class="jd-inp" value="${ea(j.customer_phone||'')}" ${isTech?'readonly':''} onchange="updJob(${j.id},'customer_phone',this.value)"></div>
       <div class="jd-field"><div class="jd-lbl">Email</div><input class="jd-inp" type="email" value="${ea(j.customer_email||'')}" ${isTech?'readonly':''} onchange="updJob(${j.id},'customer_email',this.value)"></div>
       <div class="jd-field full"><div class="jd-lbl">Home Address</div><input class="jd-inp" value="${ea(j.customer_address||'')}" ${isTech?'readonly':''} onchange="updJob(${j.id},'customer_address',this.value)"></div>
-      <div class="jd-field full"><div class="jd-lbl">Job Location (Unit/Workshop)</div><input class="jd-inp" value="${ea(j.job_location||'')}" placeholder="e.g. Unit 4, Anytown Business Park" onchange="updJob(${j.id},'job_location',this.value)"></div>
+      <div class="jd-field full">
+        <div class="jd-lbl">Job Location</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--grey1);cursor:pointer;">
+            <input type="radio" name="loc-type-${j.id}" value="workshop" ${(!j.job_location||j.job_location==='workshop')?'checked':''} onchange="updJob(${j.id},'job_location','workshop');document.getElementById('loc-other-${j.id}').style.display='none';"> 🏭 Workshop
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--grey1);cursor:pointer;">
+            <input type="radio" name="loc-type-${j.id}" value="customer" ${j.job_location==='customer'?'checked':''} onchange="updJob(${j.id},'job_location','customer');document.getElementById('loc-other-${j.id}').style.display='none';"> 🏠 Customer's Address
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--grey1);cursor:pointer;">
+            <input type="radio" name="loc-type-${j.id}" value="other" ${(j.job_location&&j.job_location!=='workshop'&&j.job_location!=='customer')?'checked':''} onchange="document.getElementById('loc-other-${j.id}').style.display='block';"> 📍 Other
+          </label>
+        </div>
+        <input class="jd-inp" id="loc-other-${j.id}" value="${ea(j.job_location&&j.job_location!=='workshop'&&j.job_location!=='customer'?j.job_location:'')}" placeholder="Enter address or location..." style="display:${(j.job_location&&j.job_location!=='workshop'&&j.job_location!=='customer')?'block':'none'}" onchange="updJob(${j.id},'job_location',this.value)">
+      </div>
       <div class="jd-field"><div class="jd-lbl">Vehicle</div><input class="jd-inp" value="${ea(j.vehicle||'')}" ${isTech?'readonly':''} onchange="updJob(${j.id},'vehicle',this.value)"></div>
       <div class="jd-field"><div class="jd-lbl">Panels</div><input class="jd-inp" value="${ea(j.panels||'')}" ${isTech?'readonly':''} onchange="updJob(${j.id},'panels',this.value)"></div>
       <div class="jd-field"><div class="jd-lbl">Booking Date</div>
@@ -936,6 +956,7 @@ function jHTML(j){
 
     <div class="sec-div"></div>
     <div class="sec-ttl">💳 Parts Deposit</div>
+    <p style="font-size:11px;color:var(--grey3);margin-bottom:8px;">Only required when parts need to be ordered.</p>
     <label class="chk-lbl" style="margin-bottom:8px;"><input type="checkbox" ${j.deposit_taken?'checked':''} onchange="updJob(${j.id},'deposit_taken',this.checked);document.getElementById('deprow-${j.id}').style.display=this.checked?'grid':'none'"> Parts deposit taken</label>
     <div id="deprow-${j.id}" style="display:${j.deposit_taken?'grid':'none'};grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">
       <div class="jd-field"><div class="jd-lbl">Amount</div><input class="jd-inp" placeholder="£ amount" value="${ea(j.deposit_amount||'')}" onchange="updJob(${j.id},'deposit_amount',this.value)"></div>
@@ -994,7 +1015,7 @@ function jHTML(j){
     </div>
     <div class="jactions">
       <button class="btn-save" onclick="saveJob(${j.id})">Save Changes</button>
-      <button class="btn-setmore ${j.setmore_booked?'booked':''}" onclick="bookSetmore(${j.id})">${j.setmore_booked?'✓ In Setmore':'📅 Book into Setmore'}</button>
+      <button class="btn-setmore ${j.booking_date?'booked':''}" onclick="bookIntoDiary(${j.id})">${j.booking_date?'✓ Booked — '+fmtDate(j.booking_date):'📅 Book'}</button>
       ${isAdmin?`<button class="btn-del" onclick="delJob(${j.id})">Delete</button>`:''}
     </div>
   </div>
@@ -1196,6 +1217,30 @@ async function bookSetmore(jobId){
   }catch(e){alert('Setmore booking failed: '+e.message);}
 }
 
+
+
+function bookIntoDiary(jobId){
+  // Switch to diary tab and highlight the job
+  switchTab('diary');
+  diaryView='day';
+  const j = allJobs.find(x=>x.id===jobId);
+  if(j && j.booking_date){
+    // Calculate offset to the job's week
+    const today = new Date(); today.setHours(0,0,0,0);
+    const jobDay = new Date(j.booking_date+'T00:00:00');
+    const diff = Math.round((jobDay-today)/(1000*60*60*24));
+    diaryOffset = diff;
+  } else {
+    diaryOffset = 0;
+  }
+  // Update toggle buttons
+  ['day','week','month'].forEach(v=>{
+    const b=document.getElementById('dvt-'+v);
+    if(b) b.className='dvt-btn'+(v==='day'?' on':'');
+  });
+  renderDiary();
+  showToast('Switched to Diary — set the date on the job card to book it in');
+}
 
 // SIGN-OFF
 function selectPayMethod(jobId, method, el){
