@@ -312,6 +312,7 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
             </div>
           </div>
           <div class="fg full"><label>Extra Notes</label><textarea id="q_notes" placeholder="Stress cracks, urgency, previous repair..."></textarea></div>
+          <div class="fg full"><label>🧠 Training Notes <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--grey3);">— help Claude quote better (e.g. "similar job went for £380", "customer said previous quote was £450")</span></label><textarea id="q_training" placeholder="Add any context to guide the quote..." style="border-color:var(--purple);"></textarea></div>
         </div>
       </div>
       <button class="btn-gen" id="genBtn" onclick="generateQuote()">Generate Quote</button>
@@ -326,6 +327,10 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
             <div class="rung-tag" id="rRung">—</div>
             <div class="reasoning" id="rReasoning"></div>
             <div class="flags" id="rFlags"></div>
+            <div style="margin-top:14px;">
+              <label style="font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--purple);display:block;margin-bottom:6px;">🧠 Training Feedback <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--grey3);">— was this quote right? Add notes to improve future quotes</span></label>
+              <textarea id="q_training_result" placeholder="e.g. 'Actual job was £420 — customer accepted', 'Too high, lost the job', 'Rung 3 was correct'..." style="background:var(--bg);border:1px solid var(--purple);color:var(--white);padding:10px 12px;border-radius:6px;font-family:'Open Sans',sans-serif;font-size:13px;width:100%;resize:vertical;min-height:70px;"></textarea>
+            </div>
           </div>
           <div class="result-actions">
             <p>Review before sending to customer.</p>
@@ -540,7 +545,7 @@ function rmImg(i){quoteImgs.splice(i,1);renderPrev();}
 
 // GENERATE QUOTE
 async function generateQuote(){
-  const make=gv('q_make'),model=gv('q_model'),year=gv('q_year'),colour=gv('q_colour'),panels=gv('q_panels'),notes=gv('q_notes');
+  const make=gv('q_make'),model=gv('q_model'),year=gv('q_year'),colour=gv('q_colour'),panels=gv('q_panels'),notes=gv('q_notes'),training=gv('q_training');
   if(!make||!model||!panels){alert('Please fill in Make, Model and Panels.');return;}
   const btn=document.getElementById('genBtn');btn.disabled=true;
   document.getElementById('loadingDiv').classList.add('show');
@@ -552,15 +557,17 @@ RULES: Blend adjacent panels unless black. Steel wing default. Never discount me
 Return ONLY valid JSON: {"price":"£XXX inc VAT","rung":"Rung X - Name","reasoning":"3-5 sentences.","flags":[{"type":"warn|info","text":"..."}],"internal_breakdown":"...","suggested_parts":["..."],"duration":"3 Hours|5 Hours|Full Day"}`;
   const content=[];
   quoteImgs.slice(0,4).forEach(x=>{content.push({type:'image',source:{type:'base64',media_type:x.b64.split(';')[0].split(':')[1],data:x.b64.split(',')[1]}});});
-  content.push({type:'text',text:`Quote: ${year} ${make} ${model}, ${colour||'colour unknown'}, panels: ${panels}, location: ${locVal}, travel: ${trvVal}, notes: ${notes||'none'}. ${quoteImgs.length} photo(s).`});
+  content.push({type:'text',text:`Quote: ${year} ${make} ${model}, ${colour||'colour unknown'}, panels: ${panels}, location: ${locVal}, travel: ${trvVal}, notes: ${notes||'none'}. ${quoteImgs.length} photo(s).${training?`\n\nTraining context from engineer: ${training}`:''}${document.getElementById('q_training_result')?.value?.trim()?`\n\nPost-quote feedback: ${document.getElementById('q_training_result').value.trim()}`:''}`});
   try{
     const apiKey=localStorage.getItem('abw_anthropic_key');
     if(!apiKey){throw new Error('No API key saved. Go to Settings and save your Anthropic API key.');}
-    const res=await fetch('/.netlify/functions/claude-proxy',{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{
         'Content-Type':'application/json',
         'x-api-key':apiKey,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-allow-browser':'true'
       },
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:sys,messages:[{role:'user',content}]})
     });
@@ -609,7 +616,7 @@ async function approveQuote(){
   }catch(e){alert('Save failed: '+e.message);}
   finally{btn.disabled=false;btn.textContent='✓ Approve & Save to CRM';}
 }
-function revise(){document.getElementById('resultWrap').style.display='none';window.scrollTo({top:0,behavior:'smooth'});}
+function revise(){document.getElementById('resultWrap').style.display='none';document.getElementById('q_training_result').value='';window.scrollTo({top:0,behavior:'smooth'});}
 
 // CRM
 function setFilter(f,btn){crmFilter=f;document.querySelectorAll('.fpill').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderCRM();}
