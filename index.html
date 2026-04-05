@@ -231,6 +231,95 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
   header{padding:0 12px;}
   .tab-btn{padding:0 10px;font-size:10px;}
 }
+/* ── DIARY ── */
+.diary-wrap{max-width:1100px;margin:0 auto;padding:24px 16px 80px;}
+.diary-nav{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+.diary-nav h2{font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--white);flex:1;text-align:center;}
+.diary-nav-btn{background:var(--card2);border:1px solid var(--border2);color:var(--grey1);padding:7px 18px;border-radius:6px;cursor:pointer;font-size:20px;line-height:1;font-weight:700;}
+.diary-nav-btn:hover{border-color:var(--accent);color:var(--accent);}
+.diary-today-btn{background:var(--accent);color:var(--bg);border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;}
+.diary-legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;}
+.diary-legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--grey2);}
+.diary-legend-dot{width:12px;height:12px;border-radius:2px;border-left:3px solid transparent;}
+.diary-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;}
+.diary-day{background:var(--card);border:1px solid var(--border);border-radius:8px;min-height:130px;overflow:hidden;}
+.diary-day.today{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);}
+.diary-day-hd{padding:8px 10px;border-bottom:1px solid var(--border);}
+.diary-day-name{font-family:'Montserrat',sans-serif;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--grey3);}
+.diary-day.today .diary-day-name,.diary-day.today .diary-day-num{color:var(--accent);}
+.diary-day-num{font-family:'Montserrat',sans-serif;font-size:20px;font-weight:800;color:var(--white);line-height:1;margin-top:2px;}
+.diary-day-body{padding:5px;}
+.diary-job{border-radius:5px;padding:5px 7px;margin-bottom:4px;cursor:pointer;transition:opacity .15s;}
+.diary-job:hover{opacity:.8;}
+.diary-job.tc-shaun{background:rgba(74,222,128,.15);border-left:3px solid var(--accent);}
+.diary-job.tc-charles{background:rgba(96,165,250,.15);border-left:3px solid var(--blue);}
+.diary-job.tc-both{background:rgba(167,139,250,.15);border-left:3px solid var(--purple);}
+.diary-job.tc-none{background:rgba(120,120,120,.1);border-left:3px solid var(--grey3);}
+.diary-job-name{font-size:11px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.diary-job-sub{font-size:10px;color:var(--grey2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.diary-cont{border-radius:4px;padding:3px 7px;margin-bottom:4px;font-size:10px;color:var(--grey3);border-left:3px solid var(--accent);}
+.diary-cont.tc-charles{border-left-color:var(--blue);}
+.diary-cont.tc-both{border-left-color:var(--purple);}
+.diary-empty{color:var(--grey3);font-size:11px;text-align:center;padding:8px 0;font-style:italic;}
+.diary-popup{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px;}
+.diary-popup-box{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:24px;max-width:460px;width:100%;max-height:88vh;overflow-y:auto;}
+.diary-popup-box h3{font-family:'Montserrat',sans-serif;font-size:15px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px;color:var(--white);}
+.dpr{display:flex;gap:10px;margin-bottom:8px;font-size:13px;}
+.dpl{color:var(--grey3);width:90px;flex-shrink:0;font-size:12px;}
+.dpv{color:var(--grey1);font-weight:500;}
+.dp-flag{display:inline-block;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700;margin-bottom:10px;}
+.dp-flag.cd{background:rgba(245,158,11,.15);color:var(--yellow);border:1px solid rgba(245,158,11,.3);}
+.dp-flag.parts{background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3);}
+/* ── ENHANCED JOB CARDS ── */
+.flag-banner{border-radius:6px;padding:10px 14px;margin-bottom:10px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px;}
+.flag-banner.cd-banner{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--yellow);}
+.flag-banner.parts-banner{background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);color:var(--blue);}
+.parts-tracker{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0;}
+.parts-step{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:6px;border:1px solid var(--border2);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;}
+.parts-step.done{border-color:var(--accent);background:rgba(74,222,128,.1);color:var(--accent);}
+.parts-step.pending{color:var(--grey3);}
+.signoff-box{background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:16px;margin-top:12px;}
+.signoff-box h4{font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--accent);margin-bottom:12px;}
+.pay-pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.pay-pill{padding:8px 16px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--grey2);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'Montserrat',sans-serif;}
+.pay-pill.on{background:var(--accent);border-color:var(--accent);color:var(--bg);}
+.btn-signoff{background:var(--accent);color:var(--bg);border:none;padding:11px 20px;border-radius:6px;font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;width:100%;}
+.btn-signoff:disabled{background:var(--border2);color:var(--grey3);cursor:not-allowed;}
+.signoff-done{background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);color:var(--accent);border-radius:6px;padding:10px 14px;font-size:12px;font-weight:600;text-align:center;}
+@media(max-width:700px){.diary-grid{grid-template-columns:repeat(2,1fr);}}
+
+/* DIARY VIEW TOGGLE */
+.diary-view-toggle{display:flex;gap:0;border:1px solid var(--border2);border-radius:6px;overflow:hidden;margin-bottom:16px;}
+.dvt-btn{background:transparent;border:none;color:var(--grey3);padding:7px 16px;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .15s;border-right:1px solid var(--border2);}
+.dvt-btn:last-child{border-right:none;}
+.dvt-btn:hover{color:var(--white);}
+.dvt-btn.on{background:var(--accent);color:var(--bg);}
+/* DAY VIEW */
+.diary-day-view{max-width:700px;}
+.diary-day-header{font-family:'Montserrat',sans-serif;font-size:18px;font-weight:800;margin-bottom:16px;color:var(--white);}
+.diary-day-job{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:10px;cursor:pointer;transition:all .15s;border-left:4px solid var(--grey3);}
+.diary-day-job:hover{border-color:var(--accent);}
+.diary-day-job.tc-shaun{border-left-color:var(--accent);}
+.diary-day-job.tc-charles{border-left-color:var(--blue);}
+.diary-day-job.tc-both{border-left-color:var(--purple);}
+.diary-day-job-title{font-size:15px;font-weight:700;color:var(--white);margin-bottom:4px;}
+.diary-day-job-meta{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--grey2);}
+.diary-day-empty{color:var(--grey3);font-size:14px;text-align:center;padding:40px 0;font-style:italic;}
+/* MONTH VIEW */
+.diary-month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.diary-month-hd{font-family:'Montserrat',sans-serif;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--grey3);text-align:center;padding:6px 0;}
+.diary-month-cell{background:var(--card);border:1px solid var(--border);border-radius:6px;min-height:80px;padding:4px;}
+.diary-month-cell.today{border-color:var(--accent);}
+.diary-month-cell.other-month{opacity:.4;}
+.diary-month-num{font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;color:var(--grey2);margin-bottom:3px;}
+.diary-month-cell.today .diary-month-num{color:var(--accent);}
+.diary-month-dot{border-radius:3px;padding:2px 5px;margin-bottom:2px;font-size:9px;font-weight:700;color:var(--white);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.diary-month-dot.tc-shaun{background:rgba(74,222,128,.4);}
+.diary-month-dot.tc-charles{background:rgba(96,165,250,.4);}
+.diary-month-dot.tc-both{background:rgba(167,139,250,.4);}
+.diary-month-dot.tc-none{background:rgba(120,120,120,.3);}
+.diary-month-more{font-size:9px;color:var(--grey3);padding:1px 4px;}
+
 </style>
 </head>
 <body>
@@ -255,6 +344,7 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
       <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('quote')" id="t-quote">⚡ Quotes</button>
         <button class="tab-btn" onclick="switchTab('crm')" id="t-crm">📋 Jobs <span class="tab-count" id="crmCount">0</span></button>
+        <button class="tab-btn" onclick="switchTab('diary')" id="t-diary">📅 Diary</button>
         <button class="tab-btn role-admin role-admin_staff" onclick="switchTab('settings')" id="t-settings">⚙️ Settings</button>
       </div>
     </div>
@@ -312,7 +402,6 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
             </div>
           </div>
           <div class="fg full"><label>Extra Notes</label><textarea id="q_notes" placeholder="Stress cracks, urgency, previous repair..."></textarea></div>
-          <div class="fg full"><label>🧠 Training Notes <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--grey3);">— help Claude quote better (e.g. "similar job went for £380", "customer said previous quote was £450")</span></label><textarea id="q_training" placeholder="Add any context to guide the quote..." style="border-color:var(--purple);"></textarea></div>
         </div>
       </div>
       <button class="btn-gen" id="genBtn" onclick="generateQuote()">Generate Quote</button>
@@ -327,10 +416,6 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
             <div class="rung-tag" id="rRung">—</div>
             <div class="reasoning" id="rReasoning"></div>
             <div class="flags" id="rFlags"></div>
-            <div style="margin-top:14px;">
-              <label style="font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--purple);display:block;margin-bottom:6px;">🧠 Training Feedback <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--grey3);">— was this quote right? Add notes to improve future quotes</span></label>
-              <textarea id="q_training_result" placeholder="e.g. 'Actual job was £420 — customer accepted', 'Too high, lost the job', 'Rung 3 was correct'..." style="background:var(--bg);border:1px solid var(--purple);color:var(--white);padding:10px 12px;border-radius:6px;font-family:'Open Sans',sans-serif;font-size:13px;width:100%;resize:vertical;min-height:70px;"></textarea>
-            </div>
           </div>
           <div class="result-actions">
             <p>Review before sending to customer.</p>
@@ -431,6 +516,50 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
   </div>
 </div>
 
+
+  <div class="page" id="diaryPage">
+    <div class="diary-wrap">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+        <div class="diary-view-toggle">
+          <button class="dvt-btn on" id="dvt-day" onclick="setDiaryView('day')">Day</button>
+          <button class="dvt-btn" id="dvt-week" onclick="setDiaryView('week')">Week</button>
+          <button class="dvt-btn" id="dvt-month" onclick="setDiaryView('month')">Month</button>
+        </div>
+        <div class="diary-nav" style="margin-bottom:0;">
+          <button class="diary-nav-btn" onclick="diaryPrev()">&#8249;</button>
+          <h2 id="diaryTitle" style="min-width:180px;"></h2>
+          <button class="diary-nav-btn" onclick="diaryNext()">&#8250;</button>
+          <button class="diary-today-btn" onclick="diaryToday()">Today</button>
+        </div>
+      </div>
+      <div class="diary-legend">
+        <div class="diary-legend-item"><div class="diary-legend-dot" style="background:rgba(74,222,128,.4);border-left-color:var(--accent);"></div>Shaun</div>
+        <div class="diary-legend-item"><div class="diary-legend-dot" style="background:rgba(96,165,250,.4);border-left-color:var(--blue);"></div>Charles</div>
+        <div class="diary-legend-item"><div class="diary-legend-dot" style="background:rgba(167,139,250,.4);border-left-color:var(--purple);"></div>Both</div>
+        <div class="diary-legend-item"><div class="diary-legend-dot" style="background:rgba(120,120,120,.3);border-left-color:var(--grey3);"></div>Unassigned</div>
+      </div>
+      <div id="diaryGrid"></div>
+    </div>
+    <div class="diary-popup" id="diaryPopup" style="display:none;" onclick="if(event.target===this)closeDiaryPopup()">
+      <div class="diary-popup-box">
+        <h3 id="dp-name"></h3>
+        <div id="dp-cd-flag" class="dp-flag cd" style="display:none;">🚗 Collection / Delivery</div>
+        <div id="dp-parts-flag" class="dp-flag parts" style="display:none;">🔧 Parts Required</div>
+        <div class="dpr"><span class="dpl">Vehicle</span><span class="dpv" id="dp-vehicle"></span></div>
+        <div class="dpr"><span class="dpl">Panels</span><span class="dpv" id="dp-panels"></span></div>
+        <div class="dpr"><span class="dpl">Date</span><span class="dpv" id="dp-date"></span></div>
+        <div class="dpr"><span class="dpl">Time</span><span class="dpv" id="dp-time"></span></div>
+        <div class="dpr"><span class="dpl">Duration</span><span class="dpv" id="dp-dur"></span></div>
+        <div class="dpr"><span class="dpl">Tech</span><span class="dpv" id="dp-tech"></span></div>
+        <div class="dpr"><span class="dpl">Location</span><span class="dpv" id="dp-loc"></span></div>
+        <div class="dpr"><span class="dpl">Price</span><span class="dpv" id="dp-price"></span></div>
+        <div class="dpr"><span class="dpl">Phone</span><span class="dpv" id="dp-phone"></span></div>
+        <div class="dpr" id="dp-notes-row" style="display:none;"><span class="dpl">Notes</span><span class="dpv" id="dp-notes"></span></div>
+        <button class="btn-primary" style="margin-top:16px;width:100%;" onclick="closeDiaryPopup()">Close</button>
+      </div>
+    </div>
+  </div>
+
 <!-- ADD JOB MODAL -->
 <div class="overlay" id="addModal" onclick="if(event.target===this)closeAddModal()">
   <div class="modal">
@@ -527,6 +656,7 @@ function switchTab(t){
   document.getElementById(t+'Page').classList.add('active');
   document.getElementById('t-'+t)?.classList.add('active');
   if(t==='crm') renderCRM();
+  if(t==='diary') renderDiary();
 }
 
 // PILLS
@@ -545,7 +675,7 @@ function rmImg(i){quoteImgs.splice(i,1);renderPrev();}
 
 // GENERATE QUOTE
 async function generateQuote(){
-  const make=gv('q_make'),model=gv('q_model'),year=gv('q_year'),colour=gv('q_colour'),panels=gv('q_panels'),notes=gv('q_notes'),training=gv('q_training');
+  const make=gv('q_make'),model=gv('q_model'),year=gv('q_year'),colour=gv('q_colour'),panels=gv('q_panels'),notes=gv('q_notes');
   if(!make||!model||!panels){alert('Please fill in Make, Model and Panels.');return;}
   const btn=document.getElementById('genBtn');btn.disabled=true;
   document.getElementById('loadingDiv').classList.add('show');
@@ -557,17 +687,15 @@ RULES: Blend adjacent panels unless black. Steel wing default. Never discount me
 Return ONLY valid JSON: {"price":"£XXX inc VAT","rung":"Rung X - Name","reasoning":"3-5 sentences.","flags":[{"type":"warn|info","text":"..."}],"internal_breakdown":"...","suggested_parts":["..."],"duration":"3 Hours|5 Hours|Full Day"}`;
   const content=[];
   quoteImgs.slice(0,4).forEach(x=>{content.push({type:'image',source:{type:'base64',media_type:x.b64.split(';')[0].split(':')[1],data:x.b64.split(',')[1]}});});
-  content.push({type:'text',text:`Quote: ${year} ${make} ${model}, ${colour||'colour unknown'}, panels: ${panels}, location: ${locVal}, travel: ${trvVal}, notes: ${notes||'none'}. ${quoteImgs.length} photo(s).${training?`\n\nTraining context from engineer: ${training}`:''}${document.getElementById('q_training_result')?.value?.trim()?`\n\nPost-quote feedback: ${document.getElementById('q_training_result').value.trim()}`:''}`});
+  content.push({type:'text',text:`Quote: ${year} ${make} ${model}, ${colour||'colour unknown'}, panels: ${panels}, location: ${locVal}, travel: ${trvVal}, notes: ${notes||'none'}. ${quoteImgs.length} photo(s).`});
   try{
     const apiKey=localStorage.getItem('abw_anthropic_key');
     if(!apiKey){throw new Error('No API key saved. Go to Settings and save your Anthropic API key.');}
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    const res=await fetch('/.netlify/functions/claude-proxy',{
       method:'POST',
       headers:{
         'Content-Type':'application/json',
         'x-api-key':apiKey,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-allow-browser':'true'
       },
       body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:sys,messages:[{role:'user',content}]})
     });
@@ -616,7 +744,7 @@ async function approveQuote(){
   }catch(e){alert('Save failed: '+e.message);}
   finally{btn.disabled=false;btn.textContent='✓ Approve & Save to CRM';}
 }
-function revise(){document.getElementById('resultWrap').style.display='none';document.getElementById('q_training_result').value='';window.scrollTo({top:0,behavior:'smooth'});}
+function revise(){document.getElementById('resultWrap').style.display='none';window.scrollTo({top:0,behavior:'smooth'});}
 
 // CRM
 function setFilter(f,btn){crmFilter=f;document.querySelectorAll('.fpill').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderCRM();}
@@ -687,6 +815,9 @@ function jHTML(j){
     <div class="jd-grid">
       <div class="jd-field"><div class="jd-lbl">Customer Name</div><input class="jd-inp" value="${ea(j.customer_name)}" ${isTech?'readonly':''} onchange="updJob(${j.id},'customer_name',this.value)"></div>
       <div class="jd-field"><div class="jd-lbl">Phone</div><input class="jd-inp" value="${ea(j.customer_phone||'')}" ${isTech?'readonly':''} onchange="updJob(${j.id},'customer_phone',this.value)"></div>
+      <div class="jd-field"><div class="jd-lbl">Email</div><input class="jd-inp" type="email" value="${ea(j.customer_email||'')}" ${isTech?'readonly':''} onchange="updJob(${j.id},'customer_email',this.value)"></div>
+      <div class="jd-field full"><div class="jd-lbl">Home Address</div><input class="jd-inp" value="${ea(j.customer_address||'')}" ${isTech?'readonly':''} onchange="updJob(${j.id},'customer_address',this.value)"></div>
+      <div class="jd-field full"><div class="jd-lbl">Job Location (Unit/Workshop)</div><input class="jd-inp" value="${ea(j.job_location||'')}" placeholder="e.g. Unit 4, Anytown Business Park" onchange="updJob(${j.id},'job_location',this.value)"></div>
       <div class="jd-field"><div class="jd-lbl">Vehicle</div><input class="jd-inp" value="${ea(j.vehicle||'')}" ${isTech?'readonly':''} onchange="updJob(${j.id},'vehicle',this.value)"></div>
       <div class="jd-field"><div class="jd-lbl">Panels</div><input class="jd-inp" value="${ea(j.panels||'')}" ${isTech?'readonly':''} onchange="updJob(${j.id},'panels',this.value)"></div>
       <div class="jd-field"><div class="jd-lbl">Booking Date</div>
@@ -736,6 +867,8 @@ function jHTML(j){
     </div>
 
     <div class="sec-div"></div>
+    ${j.cd_required?`<div class="flag-banner cd-banner">🚗 Collection / Delivery Required${j.cd_notes?' — '+esc(j.cd_notes):''}</div>`:''}
+    ${j.parts_required?`<div class="flag-banner parts-banner">🔧 Parts Required${j.parts_instock?' — ✅ In Stock':j.parts_ordered?' — 📦 Ordered':' — ⏳ Not Yet Ordered'}</div>`:''}
     <div class="sec-ttl">🚗 Collection &amp; Delivery</div>
     <label class="chk-lbl" style="margin-bottom:8px;"><input type="checkbox" ${j.cd_required?'checked':''} onchange="updJob(${j.id},'cd_required',this.checked);document.getElementById('cdrow-${j.id}').style.display=this.checked?'block':'none'"> C&amp;D required</label>
     <div id="cdrow-${j.id}" style="display:${j.cd_required?'block':'none'};margin-top:8px;">
@@ -759,7 +892,18 @@ function jHTML(j){
     </div>
 
     <div class="sec-div"></div>
-    <div class="sec-ttl">🔧 Parts <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px;"> — tick when ordered</span></div>
+    <div class="sec-ttl">📦 Parts</div>
+    <label class="chk-lbl" style="margin-bottom:10px;"><input type="checkbox" ${j.parts_required?'checked':''} onchange="updJob(${j.id},'parts_required',this.checked);document.getElementById('partsrow-${j.id}').style.display=this.checked?'block':'none'"> Parts required for this job</label>
+    <div id="partsrow-${j.id}" style="display:${j.parts_required?'block':'none'}">
+      <div class="parts-tracker">
+        <div class="parts-step ${j.parts_required?'done':'pending'}" onclick="updJob(${j.id},'parts_required',true);showToast('Parts marked required')">✓ Required</div>
+        <div class="parts-step ${j.parts_ordered?'done':'pending'}" onclick="updJob(${j.id},'parts_ordered',true);this.className='parts-step done';showToast('Parts marked ordered')">📦 Ordered</div>
+        <div class="parts-step ${j.parts_instock?'done':'pending'}" onclick="updJob(${j.id},'parts_instock',true);this.className='parts-step done';showToast('Parts in stock ✓')">✅ In Stock</div>
+      </div>
+      <input class="jd-inp" style="margin-top:6px;" placeholder="Parts notes (e.g. part numbers, supplier)..." value="${ea(j.parts_notes||'')}" onchange="updJob(${j.id},'parts_notes',this.value)">
+    </div>
+    <div class="sec-div"></div>
+    <div class="sec-ttl">🔧 Job Parts <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px;"> — tick when ordered</span></div>
     <div class="parts-list" id="pl-${j.id}">${partsHTML}</div>
     <div class="add-part-row">
       <input type="text" class="jd-inp" id="pn-${j.id}" placeholder="Part name...">
@@ -775,6 +919,20 @@ function jHTML(j){
     <div class="sec-ttl">✅ Completion Photos</div>
     <div class="photos-grid">${photoGrid('completion')}</div>
 
+    <div class="sec-div"></div>
+    <div class="signoff-box" id="signoff-${j.id}">
+      ${j.signed_off_at
+        ? `<div class="signoff-done">✅ Signed off by ${esc(j.signed_off_by||'unknown')} — ${j.payment_method||''}</div>`
+        : `<h4>✅ Sign Off Job</h4>
+           <div style="font-size:12px;color:var(--grey2);margin-bottom:10px;">Requires a completion photo. Select payment method to complete.</div>
+           <div class="pay-pills">
+             <div class="pay-pill ${j.payment_method==='Card'?'on':''}" onclick="selectPayMethod(${j.id},'Card',this)">💳 Card</div>
+             <div class="pay-pill ${j.payment_method==='Cash'?'on':''}" onclick="selectPayMethod(${j.id},'Cash',this)">💵 Cash</div>
+             <div class="pay-pill ${j.payment_method==='BACS'?'on':''}" onclick="selectPayMethod(${j.id},'BACS',this)">🏦 BACS</div>
+           </div>
+           <button class="btn-signoff" id="signoffbtn-${j.id}" onclick="signOffJob(${j.id})">Sign Off &amp; Complete</button>`
+      }
+    </div>
     <div class="jactions">
       <button class="btn-save" onclick="saveJob(${j.id})">Save Changes</button>
       <button class="btn-setmore ${j.setmore_booked?'booked':''}" onclick="bookSetmore(${j.id})">${j.setmore_booked?'✓ In Setmore':'📅 Book into Setmore'}</button>
@@ -978,6 +1136,245 @@ async function bookSetmore(jobId){
     }else throw new Error(ad.message||JSON.stringify(ad));
   }catch(e){alert('Setmore booking failed: '+e.message);}
 }
+
+
+// SIGN-OFF
+function selectPayMethod(jobId, method, el){
+  document.querySelectorAll('#signoff-'+jobId+' .pay-pill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  if(!pending[jobId]) pending[jobId]={};
+  pending[jobId].payment_method = method;
+}
+
+async function signOffJob(jobId){
+  const j = allJobs.find(x=>x.id===jobId);
+  if(!j){ alert('Job not found'); return; }
+  // Check completion photo exists
+  const photos = j.job_photos||[];
+  const hasCompletion = photos.some(p=>p.photo_type==='completion');
+  if(!hasCompletion){ alert('⚠️ A completion photo is required before signing off. Please upload one first.'); return; }
+  const payMethod = (pending[jobId]||{}).payment_method || j.payment_method;
+  if(!payMethod){ alert('Please select a payment method before signing off.'); return; }
+  const btn = document.getElementById('signoffbtn-'+jobId);
+  if(btn){ btn.disabled=true; btn.textContent='Signing off...'; }
+  const updates = {
+    status:'completed',
+    payment_method: payMethod,
+    paid: payMethod==='Card'?'card':payMethod==='Cash'?'cash':payMethod==='BACS'?'paid':'unpaid',
+    signed_off_at: new Date().toISOString(),
+    signed_off_by: currentProfile?.full_name||currentUser?.email||'unknown'
+  };
+  const {error} = await sb.from('jobs').update(updates).eq('id',jobId);
+  if(error){ alert('Sign-off failed: '+error.message); if(btn){btn.disabled=false;btn.textContent='Sign Off & Complete';} return; }
+  showToast('Job signed off ✓');
+  // Send review SMS (placeholder — needs Twilio)
+  const reviewLink = 'https://g.page/r/CW7AEhwlB_fbEBM/review';
+  const reviewMsg = 'Hi '+( j.customer_name||'there').split(' ')[0]+', thank you for choosing Auto Bodyworx! We hope you\'re delighted with the result. If you have a moment, we\'d really appreciate a Google review: '+reviewLink+' — Shaun & the team 🚗';
+  console.log('REVIEW SMS (Twilio needed):', j.customer_phone, reviewMsg);
+  showToast('Review SMS ready — connect Twilio to send');
+  await loadJobs();
+}
+
+// DIARY
+let diaryOffset = 0;
+let diaryView = 'day';
+
+function setDiaryView(v){
+  diaryView = v;
+  ['day','week','month'].forEach(function(x){
+    const b = document.getElementById('dvt-'+x);
+    if(b) b.className = 'dvt-btn'+(x===v?' on':'');
+  });
+  diaryOffset = 0;
+  renderDiary();
+}
+
+function diaryToday(){ diaryOffset=0; renderDiary(); }
+function diaryPrev(){ diaryOffset--; renderDiary(); }
+function diaryNext(){ diaryOffset++; renderDiary(); }
+
+function getDiaryDays(){
+  const now = new Date();
+  const dow = now.getDay();
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - (dow===0?6:dow-1) + (diaryOffset*7));
+  mon.setHours(0,0,0,0);
+  return Array.from({length:6},function(_,i){ const d=new Date(mon); d.setDate(mon.getDate()+i); return d; });
+}
+
+function jobDurDays(dur){
+  if(!dur) return 1;
+  const m = dur.toLowerCase().match(/^(\d+)\s*day/);
+  return m ? parseInt(m[1]) : 1;
+}
+
+function tcClass(j){
+  const t=(j.assigned_tech||'').toLowerCase();
+  return t==='shaun'?'tc-shaun':t==='charles'?'tc-charles':t==='both'?'tc-both':'tc-none';
+}
+
+function fmtDiaryDate(d){
+  const MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return d.getDate()+' '+MO[d.getMonth()]+' '+d.getFullYear();
+}
+
+function getJobsForDate(ds){
+  return allJobs.filter(function(j){
+    if(!j.booking_date||j.status==='completed') return false;
+    if(j.booking_date===ds) return true;
+    const nd=jobDurDays(j.duration);
+    if(nd<=1) return false;
+    const st=new Date(j.booking_date+'T00:00:00');
+    const en=new Date(st); en.setDate(st.getDate()+nd-1);
+    const day=new Date(ds+'T00:00:00');
+    return day>st && day<=en;
+  });
+}
+
+function renderDiary(){
+  const MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const FULL_MO=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const todayMs=new Date().setHours(0,0,0,0);
+  const grid=document.getElementById('diaryGrid');
+  if(!grid) return;
+
+  if(diaryView==='day'){
+    const day=new Date();
+    day.setDate(day.getDate()+diaryOffset);
+    day.setHours(0,0,0,0);
+    document.getElementById('diaryTitle').textContent=fmtDiaryDate(day);
+    const ds=day.getFullYear()+'-'+String(day.getMonth()+1).padStart(2,'0')+'-'+String(day.getDate()).padStart(2,'0');
+    const jobs=getJobsForDate(ds);
+    grid.className='diary-day-view';
+    let html='';
+    if(!jobs.length){
+      html='<div class="diary-day-empty">Nothing booked for this day</div>';
+    } else {
+      jobs.forEach(function(j){
+        const tc=tcClass(j);
+        const cdIcon=j.cd_required?'🚗 ':'';
+        const partsIcon=j.parts_required?(j.parts_instock?' ✅':j.parts_ordered?' 📦':' ⏳'):'';
+        html+='<div class="diary-day-job '+tc+'" onclick="openDiaryJob('+j.id+')">'
+          +'<div class="diary-day-job-title">'+cdIcon+esc(j.customer_name||'Unknown')+partsIcon+'</div>'
+          +'<div class="diary-day-job-meta">'
+          +(j.booking_time?'<span>🕐 '+j.booking_time.slice(0,5)+'</span>':'')
+          +(j.vehicle?'<span>🚘 '+esc(j.vehicle)+'</span>':'')
+          +(j.panels?'<span>'+esc(j.panels)+'</span>':'')
+          +(j.duration?'<span>⏱ '+esc(j.duration)+'</span>':'')
+          +(j.assigned_tech?'<span>👤 '+esc(j.assigned_tech)+'</span>':'')
+          +(j.quote_price?'<span>'+esc(j.quote_price)+'</span>':'')
+          +'</div>'
+          +'</div>';
+      });
+    }
+    grid.innerHTML=html;
+
+  } else if(diaryView==='week'){
+    const days=getDiaryDays();
+    const s=days[0],e=days[5];
+    const mo=s.getMonth()===e.getMonth()?MO[s.getMonth()]:MO[s.getMonth()]+'–'+MO[e.getMonth()];
+    document.getElementById('diaryTitle').textContent=s.getDate()+' '+mo+' '+e.getFullYear();
+    const DN=['Mon','Tue','Wed','Thu','Fri','Sat'];
+    grid.className='diary-grid';
+    let html='';
+    days.forEach(function(day,di){
+      const isToday=day.getTime()===todayMs;
+      const ds=day.getFullYear()+'-'+String(day.getMonth()+1).padStart(2,'0')+'-'+String(day.getDate()).padStart(2,'0');
+      const starts=allJobs.filter(function(j){return j.booking_date===ds&&j.status!=='completed';});
+      const spans=allJobs.filter(function(j){
+        if(!j.booking_date||j.status==='completed') return false;
+        const nd=jobDurDays(j.duration);
+        if(nd<=1) return false;
+        const st=new Date(j.booking_date+'T00:00:00');
+        const en=new Date(st); en.setDate(st.getDate()+nd-1);
+        return day>st&&day<=en;
+      });
+      let body='';
+      starts.forEach(function(j){
+        const nd=jobDurDays(j.duration);
+        const tc=tcClass(j);
+        const timeStr=j.booking_time?j.booking_time.slice(0,5):'';
+        const durLbl=nd>1?nd+' days':(j.duration||'');
+        const cdIcon=j.cd_required?'🚗 ':'';
+        body+='<div class="diary-job '+tc+'" onclick="openDiaryJob('+j.id+')">'
+          +'<div class="diary-job-name">'+cdIcon+esc(j.customer_name||'Unknown')+'</div>'
+          +'<div class="diary-job-sub">'+esc(j.vehicle||j.panels||'')+'</div>'
+          +(timeStr||durLbl?'<div class="diary-job-sub" style="color:var(--grey3);">'+timeStr+(timeStr&&durLbl?' · ':'')+durLbl+'</div>':'')
+          +'</div>';
+      });
+      spans.forEach(function(j){
+        body+='<div class="diary-cont '+tcClass(j)+'">↳ '+esc(j.customer_name||'')+'</div>';
+      });
+      if(!starts.length&&!spans.length) body='<div class="diary-empty">—</div>';
+      html+='<div class="diary-day'+(isToday?' today':'')+'">'
+        +'<div class="diary-day-hd"><div class="diary-day-name">'+DN[di]+'</div><div class="diary-day-num">'+day.getDate()+'</div></div>'
+        +'<div class="diary-day-body">'+body+'</div>'
+        +'</div>';
+    });
+    grid.innerHTML=html;
+
+  } else if(diaryView==='month'){
+    const now=new Date();
+    const viewMonth=new Date(now.getFullYear(),now.getMonth()+diaryOffset,1);
+    document.getElementById('diaryTitle').textContent=FULL_MO[viewMonth.getMonth()]+' '+viewMonth.getFullYear();
+    const firstDay=viewMonth.getDay(); // 0=Sun
+    const startOffset=firstDay===0?6:firstDay-1; // days before month starts
+    const daysInMonth=new Date(viewMonth.getFullYear(),viewMonth.getMonth()+1,0).getDate();
+    const DN2=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    grid.className='diary-month-grid';
+    let html=DN2.map(function(d){return'<div class="diary-month-hd">'+d+'</div>';}).join('');
+    // Empty cells before month
+    for(let i=0;i<startOffset;i++){
+      const prevDate=new Date(viewMonth.getFullYear(),viewMonth.getMonth(),0-startOffset+i+1);
+      html+='<div class="diary-month-cell other-month"><div class="diary-month-num">'+prevDate.getDate()+'</div></div>';
+    }
+    for(let d=1;d<=daysInMonth;d++){
+      const day=new Date(viewMonth.getFullYear(),viewMonth.getMonth(),d);
+      const isToday=day.getTime()===todayMs;
+      const ds=day.getFullYear()+'-'+String(day.getMonth()+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      const jobs=allJobs.filter(function(j){return j.booking_date===ds&&j.status!=='completed';});
+      let dots='';
+      jobs.slice(0,3).forEach(function(j){
+        dots+='<div class="diary-month-dot '+tcClass(j)+'" onclick="openDiaryJob('+j.id+')">'+esc((j.customer_name||'Unknown').split(' ')[0])+'</div>';
+      });
+      if(jobs.length>3) dots+='<div class="diary-month-more">+'+( jobs.length-3)+' more</div>';
+      html+='<div class="diary-month-cell'+(isToday?' today':'')+'">'
+        +'<div class="diary-month-num">'+d+'</div>'
+        +dots+'</div>';
+    }
+    // Fill remaining cells
+    const total=startOffset+daysInMonth;
+    const remaining=(7-total%7)%7;
+    for(let i=1;i<=remaining;i++){
+      html+='<div class="diary-month-cell other-month"><div class="diary-month-num">'+i+'</div></div>';
+    }
+    grid.innerHTML=html;
+  }
+}
+
+function openDiaryJob(jobId){
+  const j=allJobs.find(function(x){return x.id===jobId;});
+  if(!j) return;
+  const MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const fd=function(d){ if(!d)return'—'; const dt=new Date(d+'T00:00:00'); return dt.getDate()+' '+MO[dt.getMonth()]+' '+dt.getFullYear(); };
+  document.getElementById('dp-name').textContent=j.customer_name||'Unknown';
+  document.getElementById('dp-vehicle').textContent=j.vehicle||'—';
+  document.getElementById('dp-panels').textContent=j.panels||'—';
+  document.getElementById('dp-date').textContent=fd(j.booking_date);
+  document.getElementById('dp-time').textContent=j.booking_time||'—';
+  document.getElementById('dp-dur').textContent=j.duration||'—';
+  document.getElementById('dp-tech').textContent=j.assigned_tech||'Unassigned';
+  document.getElementById('dp-loc').textContent=j.job_location||j.location||'—';
+  document.getElementById('dp-price').textContent=j.quote_price||'—';
+  document.getElementById('dp-phone').textContent=j.customer_phone||'—';
+  const nr=document.getElementById('dp-notes-row');
+  if(j.notes){document.getElementById('dp-notes').textContent=j.notes;nr.style.display='flex';}else nr.style.display='none';
+  document.getElementById('dp-cd-flag').style.display=j.cd_required?'inline-block':'none';
+  document.getElementById('dp-parts-flag').style.display=j.parts_required?'inline-block':'none';
+  document.getElementById('diaryPopup').style.display='flex';
+}
+function closeDiaryPopup(){ document.getElementById('diaryPopup').style.display='none'; }
+
 
 // UTILS
 function gv(id){return document.getElementById(id)?.value?.trim()||'';}
