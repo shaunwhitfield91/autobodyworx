@@ -615,7 +615,10 @@ async function doLogin(){
 function showLoginErr(msg){console.log('DEBUG:',msg);const el=document.getElementById('loginErr');if(el){el.textContent=msg;el.classList.add('show');}document.getElementById('loginBtn').disabled=false;document.getElementById('loginBtn').textContent='Sign In';}
 async function doLogout(){await sb.auth.signOut();currentUser=null;currentProfile=null;document.getElementById('appShell').classList.remove('show');document.getElementById('loginScreen').style.display='flex';}
 
+let appInitialised=false;
 async function initApp(user){
+  if(appInitialised) return;
+  appInitialised=true;
   currentUser=user;
   // Set profile from email - no database lookup needed
   const emailName = user.email.split('@')[0];
@@ -640,7 +643,10 @@ function applyRoleUI(){
   if(role==='tech') switchTab('crm');
 }
 
+let realtimeSetup=false;
 function setupRealtime(){
+  if(realtimeSetup) return;
+  realtimeSetup=true;
   sb.channel('abw-realtime')
     .on('postgres_changes',{event:'*',schema:'public',table:'jobs'},()=>loadJobs())
     .on('postgres_changes',{event:'*',schema:'public',table:'job_parts'},()=>loadJobs())
@@ -1391,10 +1397,9 @@ function showToast(msg){const t=document.getElementById('toast');t.textContent='
 
 // INIT
 sb.auth.onAuthStateChange(async(event,session)=>{
-  if(event==='SIGNED_IN'&&session?.user) await initApp(session.user);
-  else if(event==='SIGNED_OUT'){document.getElementById('appShell').classList.remove('show');document.getElementById('loginScreen').style.display='flex';}
+  if((event==='SIGNED_IN'||event==='INITIAL_SESSION')&&session?.user) await initApp(session.user);
+  else if(event==='SIGNED_OUT'){appInitialised=false;realtimeSetup=false;document.getElementById('appShell').classList.remove('show');document.getElementById('loginScreen').style.display='flex';}
 });
-sb.auth.getSession().then(async({data:{session}})=>{if(session?.user) await initApp(session.user);});
 </script>
 </body>
 </html>
