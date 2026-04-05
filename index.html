@@ -860,7 +860,7 @@ function jHTML(j){
     return html;
   }
 
-  const partsHTML=(j.job_parts||[]).map(p=>`<div class="prow"><input type="checkbox" class="pcheck" ${p.ordered?'checked':''} onchange="togPart(${p.id},this.checked)"><span class="pname ${p.ordered?'done':''}">${esc(p.name)}</span><span class="pprice">${esc(p.price||'')}</span>${isAdmin?`<button class="prm" onclick="delPart(${p.id},${j.id})">✕</button>`:''}</div>`).join('');
+  const partsHTML=(j.job_parts||[]).map(p=>`<div class="prow" id="pr-${p.id}"><input type="checkbox" class="pcheck" ${p.ordered?'checked':''} onchange="togPart(${p.id},this.checked)"><span class="pname ${p.ordered?'done':''}">${esc(p.name)}</span><span class="pprice">${esc(p.price||'')}</span>${isAdmin?`<button class="prm" onclick="delPart(${p.id},${j.id})">✕</button>`:''}</div>`).join('');
 
   function timeOpts(){let o='<option value="">— Select time —</option>';for(let h=8;h<=20;h++)for(let m of[0,30]){if(h===20&&m===30)continue;const v=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;o+=`<option value="${v}" ${j.booking_time===v?'selected':''}>${v}</option>`;}return o;}
 
@@ -986,8 +986,8 @@ function jHTML(j){
     <div class="sec-ttl">🔧 Job Parts <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:9px;"> — tick when ordered</span></div>
     <div class="parts-list" id="pl-${j.id}">${partsHTML}</div>
     <div class="add-part-row">
-      <input type="text" class="jd-inp" id="pn-${j.id}" placeholder="Part name...">
-      <input type="text" class="jd-inp pp-inp" id="pp-${j.id}" placeholder="£ price">
+      <input type="text" class="jd-inp" id="pn-${j.id}" placeholder="Part name..." autocomplete="off">
+      <input type="text" class="jd-inp pp-inp" id="pp-${j.id}" placeholder="£ price" autocomplete="off">
       <button class="btn-addpart" onclick="addPart(${j.id})">+ Add</button>
     </div>
 
@@ -1051,13 +1051,34 @@ function togCard(id){document.getElementById('jc-'+id)?.classList.toggle('open')
 async function addPart(jid){
   const n=document.getElementById('pn-'+jid),p=document.getElementById('pp-'+jid);
   if(!n.value.trim())return;
-  await sbRawInsert('job_parts',{job_id:jid,name:n.value.trim(),price:p.value.trim(),ordered:false});
+  const part=await sbRawInsert('job_parts',{job_id:jid,name:n.value.trim(),price:p.value.trim(),ordered:false});
+  // Update DOM directly — no reload, card stays open
+  const list=document.getElementById('pl-'+jid);
+  if(list&&part){
+    const row=document.createElement('div');
+    row.className='prow';
+    row.id='pr-'+part.id;
+    row.innerHTML='<input type="checkbox" class="pcheck" onchange="togPart('+part.id+',this.checked)">'
+      +'<span class="pname">'+esc(part.name)+'</span>'
+      +'<span class="pprice">'+esc(part.price||'')+'</span>'
+      +'<button class="prm" onclick="delPart('+part.id+','+jid+')">✕</button>';
+    list.appendChild(row);
+  }
   n.value='';p.value='';
-  await loadJobs();
-  setTimeout(()=>document.getElementById('jc-'+jid)?.classList.add('open'),100);
+  // Also update the in-memory allJobs so everything stays in sync
+  const job=allJobs.find(j=>j.id===jid);
+  if(job&&part){if(!job.job_parts)job.job_parts=[];job.job_parts.push(part);}
 }
 async function togPart(pid,checked){await sbRaw('PATCH','job_parts',{ordered:checked,ordered_at:checked?new Date().toISOString():null},`?id=eq.${pid}`);}
-async function delPart(pid,jobId){await sbRaw('DELETE','job_parts',null,`?id=eq.${pid}`);await loadJobs();setTimeout(()=>{const el=document.getElementById('jc-'+jobId);if(el){el.classList.add('open');el.scrollIntoView({behavior:'smooth',block:'nearest'});}},50);}
+async function delPart(pid,jobId){
+  await sbRaw('DELETE','job_parts',null,`?id=eq.${pid}`);
+  // Remove row from DOM directly — no reload, card stays open
+  const row=document.getElementById('pr-'+pid);
+  if(row) row.remove();
+  // Update in-memory allJobs
+  const job=allJobs.find(j=>j.id===jobId);
+  if(job&&job.job_parts) job.job_parts=job.job_parts.filter(p=>p.id!==pid);
+}
 
 // PHOTOS
 async function uploadPhotos(jobId,type,files){
