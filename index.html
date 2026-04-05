@@ -860,7 +860,7 @@ function jHTML(j){
     return html;
   }
 
-  const partsHTML=(j.job_parts||[]).map(p=>`<div class="prow"><input type="checkbox" class="pcheck" ${p.ordered?'checked':''} onchange="togPart(${p.id},this.checked)"><span class="pname ${p.ordered?'done':''}">${esc(p.name)}</span><span class="pprice">${esc(p.price||'')}</span>${isAdmin?`<button class="prm" onclick="delPart(${p.id})">✕</button>`:''}</div>`).join('');
+  const partsHTML=(j.job_parts||[]).map(p=>`<div class="prow"><input type="checkbox" class="pcheck" ${p.ordered?'checked':''} onchange="togPart(${p.id},this.checked)"><span class="pname ${p.ordered?'done':''}">${esc(p.name)}</span><span class="pprice">${esc(p.price||'')}</span>${isAdmin?`<button class="prm" onclick="delPart(${p.id},${j.id})">✕</button>`:''}</div>`).join('');
 
   function timeOpts(){let o='<option value="">— Select time —</option>';for(let h=8;h<=20;h++)for(let m of[0,30]){if(h===20&&m===30)continue;const v=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;o+=`<option value="${v}" ${j.booking_time===v?'selected':''}>${v}</option>`;}return o;}
 
@@ -1057,7 +1057,7 @@ async function addPart(jid){
   setTimeout(()=>document.getElementById('jc-'+jid)?.classList.add('open'),100);
 }
 async function togPart(pid,checked){await sbRaw('PATCH','job_parts',{ordered:checked,ordered_at:checked?new Date().toISOString():null},`?id=eq.${pid}`);}
-async function delPart(pid){await sbRaw('DELETE','job_parts',null,`?id=eq.${pid}`);await loadJobs();}
+async function delPart(pid,jobId){await sbRaw('DELETE','job_parts',null,`?id=eq.${pid}`);await loadJobs();setTimeout(()=>{const el=document.getElementById('jc-'+jobId);if(el){el.classList.add('open');el.scrollIntoView({behavior:'smooth',block:'nearest'});}},50);}
 
 // PHOTOS
 async function uploadPhotos(jobId,type,files){
