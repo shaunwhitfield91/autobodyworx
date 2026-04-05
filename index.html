@@ -665,7 +665,7 @@ function setupRealtime(){
 }
 
 async function loadJobs(){
-  const data=await sbRaw('GET','jobs','',`?select=*,job_parts(*),job_photos(*)&archived=eq.false&order=created_at.desc`);
+  const data=await sbRaw('GET','jobs',null,`?select=*,job_parts(*),job_photos(*)&archived=eq.false&order=created_at.desc`);
   allJobs=data||[];
   renderCRM();
 }
@@ -743,7 +743,7 @@ async function sbRaw(method, table, body=null, filters=''){
   const token=parsed?.access_token||parsed?.session?.access_token||parsed?.currentSession?.access_token||'';
   const SUPABASE_URL='https://isxycoxqlummscxmdckj.supabase.co';
   const ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzeHljb3hxbHVtbXNjeG1kY2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTg1MTIsImV4cCI6MjA5MDg5NDUxMn0.QU_VJ-RvHa9gxOQgKG0_ywxrny4upxE5rFwG9cNMEjw';
-  const hasBody = body!=null && method!=='GET' && method!=='HEAD';
+  const hasBody = body!=null && body!=='' && method!=='GET' && method!=='HEAD';
   const prefer = method==='POST' ? 'return=representation' : (method==='PATCH'||method==='DELETE') ? 'return=representation' : '';
   const res=await fetch(`${SUPABASE_URL}/rest/v1/${table}${filters}`,{
     method,
@@ -1030,13 +1030,13 @@ function togCard(id){document.getElementById('jc-'+id)?.classList.toggle('open')
 async function addPart(jid){
   const n=document.getElementById('pn-'+jid),p=document.getElementById('pp-'+jid);
   if(!n.value.trim())return;
-  await sb.from('job_parts').insert({job_id:jid,name:n.value.trim(),price:p.value.trim(),ordered:false});
+  await sbRawInsert('job_parts',{job_id:jid,name:n.value.trim(),price:p.value.trim(),ordered:false});
   n.value='';p.value='';
   await loadJobs();
   setTimeout(()=>document.getElementById('jc-'+jid)?.classList.add('open'),100);
 }
-async function togPart(pid,checked){await sb.from('job_parts').update({ordered:checked,ordered_at:checked?new Date().toISOString():null}).eq('id',pid);}
-async function delPart(pid){await sb.from('job_parts').delete().eq('id',pid);await loadJobs();}
+async function togPart(pid,checked){await sbRaw('PATCH','job_parts',{ordered:checked,ordered_at:checked?new Date().toISOString():null},`?id=eq.${pid}`);}
+async function delPart(pid){await sbRaw('DELETE','job_parts',null,`?id=eq.${pid}`);await loadJobs();}
 
 // PHOTOS
 async function uploadPhotos(jobId,type,files){
@@ -1045,7 +1045,7 @@ async function uploadPhotos(jobId,type,files){
     const ext=file.name.split('.').pop()||'jpg';
     const path=`job-${jobId}/${type}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const {error:upErr}=await sb.storage.from('job-photos').upload(path,file,{contentType:file.type});
-    if(!upErr) await sb.from('job_photos').insert({job_id:jobId,storage_path:path,photo_type:type,uploaded_by:currentUser.id});
+    if(!upErr) await sbRawInsert('job_photos',{job_id:jobId,storage_path:path,photo_type:type,uploaded_by:currentUser.id});
   }
   showToast('Photos uploaded ✓');
   await loadJobs();
@@ -1054,7 +1054,7 @@ async function uploadPhotos(jobId,type,files){
 async function delPhoto(photoId,path){
   if(!confirm('Delete this photo?'))return;
   await sb.storage.from('job-photos').remove([path]);
-  await sb.from('job_photos').delete().eq('id',photoId);
+  await sbRaw('DELETE','job_photos',null,`?id=eq.${photoId}`);
   showToast('Deleted');await loadJobs();
 }
 
@@ -1190,7 +1190,7 @@ async function bookSetmore(jobId){
     const ar=await fetch('https://developer.setmore.com/api/v1/bookingapi/appointment/create',{method:'POST',headers:{Authorization:`Bearer ${smAccess}`,'Content-Type':'application/json'},body:JSON.stringify({staff_key:staff.key,service_key:service.key,customer_key:custKey,start_time:startDT,end_time:endDT,comment:`${j.vehicle||''} | ${j.panels||''} | ${j.quote_price||''}`})});
     const ad=await ar.json();
     if(ad.response===true||ad.data?.appointment){
-      await sb.from('jobs').update({setmore_booked:true,status:'booked'}).eq('id',jobId);
+      await sbRaw('PATCH','jobs',{setmore_booked:true,status:'booked'},`?id=eq.${jobId}`);
       showToast('Booked into Setmore ✓');await loadJobs();
     }else throw new Error(ad.message||JSON.stringify(ad));
   }catch(e){alert('Setmore booking failed: '+e.message);}
@@ -1223,7 +1223,7 @@ async function signOffJob(jobId){
     signed_off_at: new Date().toISOString(),
     signed_off_by: currentProfile?.full_name||currentUser?.email||'unknown'
   };
-  const {error} = await sb.from('jobs').update(updates).eq('id',jobId);
+  const _so=await sbRaw('PATCH','jobs',updates,`?id=eq.${jobId}`);
   if(error){ alert('Sign-off failed: '+error.message); if(btn){btn.disabled=false;btn.textContent='Sign Off & Complete';} return; }
   showToast('Job signed off ✓');
   // Send review SMS (placeholder — needs Twilio)
