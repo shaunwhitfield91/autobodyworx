@@ -320,6 +320,24 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
 .diary-month-dot.tc-none{background:rgba(120,120,120,.3);}
 .diary-month-more{font-size:9px;color:var(--grey3);padding:1px 4px;}
 
+/* PANEL PICKER */
+.panel-picker{position:relative;width:100%;}
+.panel-picker-btn{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--white);padding:10px 12px;border-radius:6px;font-family:'Open Sans',sans-serif;font-size:13px;text-align:left;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.panel-picker-btn:hover{border-color:var(--accent);}
+.panel-picker-btn span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--grey2);}
+.panel-picker-btn span.has-val{color:var(--white);}
+.panel-picker-btn .pp-arrow{flex-shrink:0;font-size:10px;color:var(--grey3);transition:transform .15s;}
+.panel-picker.open .pp-arrow{transform:rotate(180deg);}
+.panel-picker-drop{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--card);border:1px solid var(--border2);border-radius:8px;z-index:200;max-height:280px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.4);}
+.panel-picker.open .panel-picker-drop{display:block;}
+.pp-item{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;font-size:13px;color:var(--grey1);transition:background .1s;}
+.pp-item:hover{background:var(--card2);}
+.pp-item input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;}
+.pp-item label{cursor:pointer;flex:1;}
+.pp-divider{height:1px;background:var(--border);margin:4px 0;}
+.pp-clear{padding:8px 14px;font-size:11px;color:var(--grey3);cursor:pointer;text-align:right;}
+.pp-clear:hover{color:var(--accent);}
+
 </style>
 </head>
 <body>
@@ -374,7 +392,7 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
           <div class="fg"><label>Model</label><input type="text" id="q_model" placeholder="e.g. Polo"></div>
           <div class="fg"><label>Year</label><input type="text" id="q_year" placeholder="e.g. 2022"></div>
           <div class="fg"><label>Colour</label><input type="text" id="q_colour" placeholder="e.g. Solid White"></div>
-          <div class="fg full"><label>Panel(s) Damaged</label><input type="text" id="q_panels" placeholder="e.g. Rear quarter panel + bumper corner"></div>
+          <div class="fg full"><label>Panel(s) Damaged</label><div id="q_panels_picker"></div><input type="hidden" id="q_panels"></div>
           <div class="fg full"><label>Job Location</label>
             <div class="pills" id="locPills">
               <button class="pill on" data-v="mobile">Mobile</button>
@@ -898,7 +916,14 @@ function jHTML(j){
         <input class="jd-inp" id="loc-other-${j.id}" value="${ea(j.job_location&&j.job_location!=='workshop'&&j.job_location!=='customer'?j.job_location:'')}" placeholder="Enter address or location..." style="display:${(j.job_location&&j.job_location!=='workshop'&&j.job_location!=='customer')?'block':'none'}" onchange="updJob(${j.id},'job_location',this.value)">
       </div>
       <div class="jd-field"><div class="jd-lbl">Vehicle</div><input class="jd-inp" value="${ea(j.vehicle||'')}" ${isTech?'readonly':''} onchange="updJob(${j.id},'vehicle',this.value)"></div>
-      <div class="jd-field"><div class="jd-lbl">Panels</div><input class="jd-inp" value="${ea(j.panels||'')}" ${isTech?'readonly':''} onchange="updJob(${j.id},'panels',this.value)"></div>
+      <div class="jd-field full">
+        <div class="jd-lbl">Panels</div>
+        ${isTech
+          ? `<div class="jd-inp" style="min-height:38px;height:auto;white-space:normal;">${ea(j.panels||'—')}</div>`
+          : buildPanelPicker('jc'+j.id,'jpanels-'+j.id, j.panels||'')
+        }
+        <input type="hidden" id="jpanels-${j.id}" value="${ea(j.panels||'')}" onchange="updJob(${j.id},'panels',this.value)">
+      </div>
       <div class="jd-field"><div class="jd-lbl">Booking Date</div>
         <div class="dp-wrap">
           <div class="dp-btn" id="dpb-${j.id}" onclick="dpToggle('dpc-${j.id}','dpv-${j.id}','dpb-${j.id}')">
@@ -1507,6 +1532,82 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 function ea(s){return String(s).replace(/"/g,'&quot;');}
 function fmtDate(d){if(!d)return'';try{return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});}catch{return d;}}
 function showToast(msg){const t=document.getElementById('toast');t.textContent='✓ '+msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);}
+
+
+const PANELS = [
+  'Bumper Corner NSF','Bumper Corner NSR','Bumper Corner OSF','Bumper Corner OSR',
+  'Full Bumper Front','Full Bumper Rear',
+  'Bonnet','Roof',
+  'NSF Wing','OSF Wing',
+  'NS Front Door','NS Rear Door','OS Front Door','OS Rear Door',
+  'OS Quarter Panel','NS Quarter Panel',
+  'NS Sill Panel','OS Sill Panel',
+  'Wing Mirror','Alloys'
+];
+
+function buildPanelPicker(pickerId, hiddenId, currentVal){
+  const selected = currentVal ? currentVal.split(',').map(s=>s.trim()).filter(Boolean) : [];
+  const items = PANELS.map(p=>`
+    <div class="pp-item">
+      <input type="checkbox" id="pp-${pickerId}-${p.replace(/\s/g,'_')}" value="${p}" ${selected.includes(p)?'checked':''} onchange="ppChange('${pickerId}','${hiddenId}')">
+      <label for="pp-${pickerId}-${p.replace(/\s/g,'_')}">${p}</label>
+    </div>`).join('');
+  const label = selected.length ? selected.join(', ') : 'Select panels...';
+  return `<div class="panel-picker" id="picker-${pickerId}">
+    <button type="button" class="panel-picker-btn" onclick="togglePP('${pickerId}')">
+      <span id="pp-lbl-${pickerId}" class="${selected.length?'has-val':''}">${label}</span>
+      <span class="pp-arrow">▼</span>
+    </button>
+    <div class="panel-picker-drop">
+      ${items}
+      <div class="pp-divider"></div>
+      <div class="pp-clear" onclick="ppClear('${pickerId}','${hiddenId}')">Clear all</div>
+    </div>
+  </div>
+  <input type="hidden" id="${hiddenId}" value="${selected.join(', ')}">`;
+}
+
+function togglePP(id){
+  const el=document.getElementById('picker-'+id);
+  const isOpen=el.classList.contains('open');
+  // Close all open pickers first
+  document.querySelectorAll('.panel-picker.open').forEach(p=>p.classList.remove('open'));
+  if(!isOpen) el.classList.add('open');
+}
+
+function ppChange(pickerId, hiddenId){
+  // Will also trigger job card update if this is a job card picker
+  const checks=document.querySelectorAll(`#picker-${pickerId} input[type=checkbox]`);
+  const vals=Array.from(checks).filter(c=>c.checked).map(c=>c.value);
+  document.getElementById(hiddenId).value=vals.join(', ');
+  const lbl=document.getElementById('pp-lbl-'+pickerId);
+  lbl.textContent=vals.length?vals.join(', '):'Select panels...';
+  lbl.className=vals.length?'has-val':'';
+  // If this is a job card picker, trigger updJob
+  if(pickerId.startsWith('jc')){
+    const jobId=parseInt(pickerId.replace('jc',''));
+    if(!isNaN(jobId)) updJob(jobId,'panels',vals.join(', '));
+  }
+}
+
+function ppClear(pickerId, hiddenId){
+  document.querySelectorAll(`#picker-${pickerId} input[type=checkbox]`).forEach(c=>c.checked=false);
+  document.getElementById(hiddenId).value='';
+  const lbl=document.getElementById('pp-lbl-'+pickerId);
+  lbl.textContent='Select panels...'; lbl.className='';
+}
+
+// Close panel pickers when clicking outside
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.panel-picker')) document.querySelectorAll('.panel-picker.open').forEach(p=>p.classList.remove('open'));
+});
+
+
+// Init quote panel picker
+(function(){
+  const el=document.getElementById('q_panels_picker');
+  if(el) el.innerHTML=buildPanelPicker('quote','q_panels','');
+})();
 
 // INIT
 sb.auth.onAuthStateChange(async(event,session)=>{
