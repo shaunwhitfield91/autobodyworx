@@ -255,6 +255,8 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
 .diary-job.tc-charles{background:rgba(96,165,250,.15);border-left:3px solid var(--blue);}
 .diary-job.tc-both{background:rgba(167,139,250,.15);border-left:3px solid var(--purple);}
 .diary-job.tc-none{background:rgba(120,120,120,.1);border-left:3px solid var(--grey3);}
+.diary-job.done{opacity:.45;border-left-style:dashed;}
+.diary-job.done .diary-job-name::after{content:" ✓";color:var(--accent);font-size:10px;}
 .diary-job-name{font-size:11px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .diary-job-sub{font-size:10px;color:var(--grey2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .diary-cont{border-radius:4px;padding:3px 7px;margin-bottom:4px;font-size:10px;color:var(--grey3);border-left:3px solid var(--accent);}
@@ -958,7 +960,7 @@ function renderCRM(){
 }
 
 const SRC={whatsapp:'WhatsApp',hubspot:'HubSpot',phone:'Phone',walkin:'Walk-in',other:'Other'};
-const DUR={'3hr':'⏱ 3h','5hr':'⏱ 5h','fullday':'⏱ Full Day','3 Hours':'⏱ 3h','5 Hours':'⏱ 5h','Full Day':'⏱ Full Day'};
+const DUR={'3hr':'⏱ 3h','5hr':'⏱ 5h','fullday':'⏱ Full Day','3 Hours':'⏱ 3h','5 Hours':'⏱ 5h','Full Day':'⏱ Full Day','2 Days':'⏱ 2d','3 Days':'⏱ 3d','4 Days':'⏱ 4d','5 Days':'⏱ 5d'};
 
 function jHTML(j){
   const isAdmin=['admin','admin_staff'].includes(currentProfile?.role);
@@ -1048,6 +1050,10 @@ function jHTML(j){
           <option value="3hr" ${j.duration==='3hr'||j.duration==='3 Hours'?'selected':''}>3 Hours</option>
           <option value="5hr" ${j.duration==='5hr'||j.duration==='5 Hours'?'selected':''}>5 Hours</option>
           <option value="fullday" ${j.duration==='fullday'||j.duration==='Full Day'?'selected':''}>Full Day</option>
+          <option value="2 Days" ${j.duration==='2 Days'?'selected':''}>2 Days</option>
+          <option value="3 Days" ${j.duration==='3 Days'?'selected':''}>3 Days</option>
+          <option value="4 Days" ${j.duration==='4 Days'?'selected':''}>4 Days</option>
+          <option value="5 Days" ${j.duration==='5 Days'?'selected':''}>5 Days</option>
         </select>
       </div>
       <div class="jd-field"><div class="jd-lbl">Assigned Tech</div>
@@ -1578,6 +1584,20 @@ async function declineJob(jobId){
   }catch(e){ alert('Failed: '+e.message); }
 }
 
+
+function abbrDur(dur){
+  if(!dur) return '';
+  const d=dur.toLowerCase();
+  if(d==='2 days'||d.includes('2 day')) return '2 Days';
+  if(d==='3 days'||d.includes('3 day')) return '3 Days';
+  if(d==='4 days'||d.includes('4 day')) return '4 Days';
+  if(d==='5 days'||d.includes('5 day')) return '5 Days';
+  if(d.includes('full')||d.includes('day')) return 'Full Day';
+  const m=d.match(/(\d+)/);
+  if(m) return m[1]+'hr';
+  return dur;
+}
+
 // SIGN-OFF
 function selectPayMethod(jobId, method, el){
   document.querySelectorAll('#signoff-'+jobId+' .pay-pill').forEach(p=>p.classList.remove('on'));
@@ -1715,7 +1735,7 @@ function fmtDiaryDate(d){
 
 function getJobsForDate(ds){
   return allJobs.filter(function(j){
-    if(!j.booking_date||j.status==='completed') return false;
+    if(!j.booking_date) return false;
     if(j.booking_date===ds) return true;
     const nd=jobDurDays(j.duration);
     if(nd<=1) return false;
@@ -1740,7 +1760,7 @@ function renderDiary(){
     day.setHours(0,0,0,0);
     document.getElementById('diaryTitle').textContent=fmtDiaryDate(day);
     const ds=day.getFullYear()+'-'+String(day.getMonth()+1).padStart(2,'0')+'-'+String(day.getDate()).padStart(2,'0');
-    const jobs=filteredJobs.filter(function(j){ if(!j.booking_date||j.status==='completed') return false; if(j.booking_date===ds) return true; const nd=jobDurDays(j.duration); if(nd<=1) return false; const st=new Date(j.booking_date+'T00:00:00'); const en=new Date(st); en.setDate(st.getDate()+nd-1); const d2=new Date(ds+'T00:00:00'); return d2>st&&d2<=en; });
+    const jobs=filteredJobs.filter(function(j){ if(!j.booking_date) return false; if(j.booking_date===ds) return true; const nd=jobDurDays(j.duration); if(nd<=1) return false; const st=new Date(j.booking_date+'T00:00:00'); const en=new Date(st); en.setDate(st.getDate()+nd-1); const d2=new Date(ds+'T00:00:00'); return d2>st&&d2<=en; });
     grid.className='diary-day-view';
     let html='';
     if(!jobs.length){
@@ -1776,9 +1796,9 @@ function renderDiary(){
     days.forEach(function(day,di){
       const isToday=day.getTime()===todayMs;
       const ds=day.getFullYear()+'-'+String(day.getMonth()+1).padStart(2,'0')+'-'+String(day.getDate()).padStart(2,'0');
-      const starts=filteredJobs.filter(function(j){return j.booking_date===ds&&j.status!=='completed';});
+      const starts=filteredJobs.filter(function(j){return j.booking_date===ds;});
       const spans=filteredJobs.filter(function(j){
-        if(!j.booking_date||j.status==='completed') return false;
+        if(!j.booking_date) return false;
         const nd=jobDurDays(j.duration);
         if(nd<=1) return false;
         const st=new Date(j.booking_date+'T00:00:00');
@@ -1792,10 +1812,12 @@ function renderDiary(){
         const timeStr=j.booking_time?j.booking_time.slice(0,5):'';
         const durLbl=nd>1?nd+' days':(j.duration||'');
         const cdIcon=j.cd_required?'🚗 ':'';
-        body+='<div class="diary-job '+tc+'" onclick="openDiaryJob('+j.id+')">'
-          +'<div class="diary-job-name">'+cdIcon+esc(j.customer_name||'Unknown')+'</div>'
+        const isDone=(j.status==='completed'||['card','cash','paid'].includes(j.paid));
+        const dur=abbrDur(j.duration);
+        body+='<div class="diary-job '+tc+(isDone?' done':'')+'" onclick="openDiaryJob('+j.id+')">'
+          +'<div class="diary-job-name">'+cdIcon+esc(j.customer_name||'Unknown')+(dur?' <span style="font-size:9px;opacity:.7;font-weight:600;">'+esc(dur)+'</span>':'')+'</div>'
           +'<div class="diary-job-sub">'+esc(j.vehicle||j.panels||'')+'</div>'
-          +(timeStr||durLbl?'<div class="diary-job-sub" style="color:var(--grey3);">'+timeStr+(timeStr&&durLbl?' · ':'')+durLbl+'</div>':'')
+          +(timeStr?'<div class="diary-job-sub" style="color:var(--grey3);">'+timeStr+'</div>':'')
           +'</div>';
       });
       spans.forEach(function(j){
@@ -1828,7 +1850,7 @@ function renderDiary(){
       const day=new Date(viewMonth.getFullYear(),viewMonth.getMonth(),d);
       const isToday=day.getTime()===todayMs;
       const ds=day.getFullYear()+'-'+String(day.getMonth()+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-      const jobs=filteredJobs.filter(function(j){return j.booking_date===ds&&j.status!=='completed';});
+      const jobs=filteredJobs.filter(function(j){return j.booking_date===ds;});
       let dots='';
       jobs.slice(0,3).forEach(function(j){
         dots+='<div class="diary-month-dot '+tcClass(j)+'" onclick="openDiaryJob('+j.id+')">'+esc((j.customer_name||'Unknown').split(' ')[0])+'</div>';
