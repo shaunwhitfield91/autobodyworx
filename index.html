@@ -338,6 +338,16 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
 .pp-clear{padding:8px 14px;font-size:11px;color:var(--grey3);cursor:pointer;text-align:right;}
 .pp-clear:hover{color:var(--accent);}
 
+/* DIARY TECH FILTER */
+.diary-tech-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
+.diary-tech-filter span{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--grey3);margin-right:4px;}
+.dtf-btn{padding:5px 14px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--grey2);font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .15s;}
+.dtf-btn:hover{border-color:var(--grey1);color:var(--white);}
+.dtf-btn.on{background:var(--accent);border-color:var(--accent);color:var(--bg);}
+.dtf-btn.tc-shaun.on{background:var(--accent);border-color:var(--accent);}
+.dtf-btn.tc-charles.on{background:var(--blue);border-color:var(--blue);}
+.dtf-btn.tc-both.on{background:var(--purple);border-color:var(--purple);}
+
 </style>
 </head>
 <body>
@@ -555,11 +565,9 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
           <button class="diary-today-btn" onclick="diaryToday()">Today</button>
         </div>
       </div>
-      <div class="diary-legend">
-        <div class="diary-legend-item"><div class="diary-legend-dot" style="background:rgba(74,222,128,.4);border-left-color:var(--accent);"></div>Shaun</div>
-        <div class="diary-legend-item"><div class="diary-legend-dot" style="background:rgba(96,165,250,.4);border-left-color:var(--blue);"></div>Charles</div>
-        <div class="diary-legend-item"><div class="diary-legend-dot" style="background:rgba(167,139,250,.4);border-left-color:var(--purple);"></div>Both</div>
-        <div class="diary-legend-item"><div class="diary-legend-dot" style="background:rgba(120,120,120,.3);border-left-color:var(--grey3);"></div>Unassigned</div>
+      <div class="diary-tech-filter" id="diaryTechFilter">
+        <span>View:</span>
+        <button class="dtf-btn on" id="dtf-all" onclick="setDiaryTech('all')">All</button>
       </div>
       <div id="diaryGrid"></div>
     </div>
@@ -686,6 +694,7 @@ async function loadJobs(){
   const data=await sbRaw('GET','jobs',null,`?select=*,job_parts(*),job_photos(*)&archived=eq.false&order=created_at.desc`);
   allJobs=data||[];
   renderCRM();
+  buildDiaryTechFilter();
 }
 
 // TABS
@@ -695,7 +704,7 @@ function switchTab(t){
   document.getElementById(t+'Page').classList.add('active');
   document.getElementById('t-'+t)?.classList.add('active');
   if(t==='crm') renderCRM();
-  if(t==='diary') renderDiary();
+  if(t==='diary'){buildDiaryTechFilter();renderDiary();}
 }
 
 // PILLS
@@ -966,7 +975,7 @@ function jHTML(j){
           <option value="partial" ${j.paid==='partial'?'selected':''}>Part Paid</option>
         </select>
       </div>
-      <div class="jd-field"><div class="jd-lbl">Invoice Amount</div><input class="jd-inp" value="${ea(j.invoice_amount||'')}" ${isTech?'readonly':''} onchange="updJob(${j.id},'invoice_amount',this.value)"></div>
+      <div class="jd-field"><div class="jd-lbl">Quote Price</div><input class="jd-inp" value="${ea(j.quote_price||'')}" ${isTech?'readonly':''} placeholder="e.g. £480 inc VAT" onchange="updJob(${j.id},'quote_price',this.value);updJob(${j.id},'invoice_amount',this.value)"></div>
       <div class="jd-field full"><div class="jd-lbl">Notes</div><textarea class="jd-inp" onchange="updJob(${j.id},'notes',this.value)">${esc(j.notes||'')}</textarea></div>
     </div>
 
@@ -1057,12 +1066,17 @@ function updJob(id,field,val){
 async function saveJob(id){
   const updates=pending[id]||{};
   if(!Object.keys(updates).length){showToast('Nothing to save');return;}
-  const _r=await sbRaw('PATCH','jobs',updates,`?id=eq.${id}`);
-  if(error){alert('Save failed: '+error.message);return;}
-  delete pending[id];
-  showToast('Saved ✓');
-  await loadJobs();
-  setTimeout(()=>{document.getElementById('jc-'+id)?.classList.add('open');},100);
+  try{
+    await sbRaw('PATCH','jobs',updates,`?id=eq.${id}`);
+    delete pending[id];
+    // Update in-memory allJobs so diary reflects the change immediately
+    const job=allJobs.find(j=>j.id===id);
+    if(job) Object.assign(job,updates);
+    showToast('Saved ✓');
+    renderCRM();
+    renderDiary();
+    setTimeout(()=>{document.getElementById('jc-'+id)?.classList.add('open');},50);
+  }catch(e){alert('Save failed: '+e.message);}
 }
 
 async function delJob(id){
@@ -1325,6 +1339,59 @@ async function signOffJob(jobId){
   await loadJobs();
 }
 
+
+// DIARY TECH FILTER
+let diaryTechFilter = 'all';
+
+function setDiaryTech(tech){
+  diaryTechFilter = tech;
+  document.querySelectorAll('.dtf-btn').forEach(b=>b.classList.remove('on'));
+  const btn = document.getElementById('dtf-'+tech.replace(/\s/g,'_'));
+  if(btn) btn.classList.add('on');
+  renderDiary();
+}
+
+function buildDiaryTechFilter(){
+  // Collect all unique techs from allJobs
+  const techSet = new Set();
+  allJobs.forEach(j=>{ if(j.assigned_tech) techSet.add(j.assigned_tech); });
+  const techs = Array.from(techSet).sort();
+
+  const bar = document.getElementById('diaryTechFilter');
+  if(!bar) return;
+
+  // Rebuild buttons
+  bar.innerHTML = '<span>View:</span>';
+  const allBtn = document.createElement('button');
+  allBtn.className = 'dtf-btn' + (diaryTechFilter==='all'?' on':'');
+  allBtn.id = 'dtf-all';
+  allBtn.textContent = 'All';
+  allBtn.onclick = ()=>setDiaryTech('all');
+  bar.appendChild(allBtn);
+
+  techs.forEach(tech=>{
+    const tc = tcClass({assigned_tech:tech});
+    const btn = document.createElement('button');
+    btn.className = 'dtf-btn '+tc+(diaryTechFilter===tech?' on':'');
+    btn.id = 'dtf-'+tech.replace(/\s/g,'_');
+    btn.textContent = tech;
+    btn.onclick = ()=>setDiaryTech(tech);
+    bar.appendChild(btn);
+  });
+}
+
+function getFilteredJobs(){
+  if(diaryTechFilter==='all') return allJobs;
+  return allJobs.filter(j=>{
+    const t=(j.assigned_tech||'').toLowerCase();
+    const f=diaryTechFilter.toLowerCase();
+    // "Both" means show jobs assigned to both, or show jobs for this specific tech
+    if(f==='both') return t==='both';
+    // For a specific tech, show their jobs AND "both" jobs
+    return t===f || t==='both';
+  });
+}
+
 // DIARY
 let diaryOffset = 0;
 let diaryView = 'day';
@@ -1388,13 +1455,14 @@ function renderDiary(){
   const grid=document.getElementById('diaryGrid');
   if(!grid) return;
 
+  const filteredJobs=getFilteredJobs();
   if(diaryView==='day'){
     const day=new Date();
     day.setDate(day.getDate()+diaryOffset);
     day.setHours(0,0,0,0);
     document.getElementById('diaryTitle').textContent=fmtDiaryDate(day);
     const ds=day.getFullYear()+'-'+String(day.getMonth()+1).padStart(2,'0')+'-'+String(day.getDate()).padStart(2,'0');
-    const jobs=getJobsForDate(ds);
+    const jobs=filteredJobs.filter(function(j){ if(!j.booking_date||j.status==='completed') return false; if(j.booking_date===ds) return true; const nd=jobDurDays(j.duration); if(nd<=1) return false; const st=new Date(j.booking_date+'T00:00:00'); const en=new Date(st); en.setDate(st.getDate()+nd-1); const d2=new Date(ds+'T00:00:00'); return d2>st&&d2<=en; });
     grid.className='diary-day-view';
     let html='';
     if(!jobs.length){
@@ -1430,8 +1498,8 @@ function renderDiary(){
     days.forEach(function(day,di){
       const isToday=day.getTime()===todayMs;
       const ds=day.getFullYear()+'-'+String(day.getMonth()+1).padStart(2,'0')+'-'+String(day.getDate()).padStart(2,'0');
-      const starts=allJobs.filter(function(j){return j.booking_date===ds&&j.status!=='completed';});
-      const spans=allJobs.filter(function(j){
+      const starts=filteredJobs.filter(function(j){return j.booking_date===ds&&j.status!=='completed';});
+      const spans=filteredJobs.filter(function(j){
         if(!j.booking_date||j.status==='completed') return false;
         const nd=jobDurDays(j.duration);
         if(nd<=1) return false;
@@ -1482,7 +1550,7 @@ function renderDiary(){
       const day=new Date(viewMonth.getFullYear(),viewMonth.getMonth(),d);
       const isToday=day.getTime()===todayMs;
       const ds=day.getFullYear()+'-'+String(day.getMonth()+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-      const jobs=allJobs.filter(function(j){return j.booking_date===ds&&j.status!=='completed';});
+      const jobs=filteredJobs.filter(function(j){return j.booking_date===ds&&j.status!=='completed';});
       let dots='';
       jobs.slice(0,3).forEach(function(j){
         dots+='<div class="diary-month-dot '+tcClass(j)+'" onclick="openDiaryJob('+j.id+')">'+esc((j.customer_name||'Unknown').split(' ')[0])+'</div>';
