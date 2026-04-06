@@ -320,6 +320,10 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
 .diary-month-dot.tc-none{background:rgba(120,120,120,.3);}
 .diary-month-more{font-size:9px;color:var(--grey3);padding:1px 4px;}
 
+.badge-comp{background:rgba(74,222,128,.15);color:var(--accent);border:1px solid rgba(74,222,128,.3);padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+.badge-book{background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3);padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+.badge-quot{background:rgba(245,158,11,.15);color:var(--yellow);border:1px solid rgba(245,158,11,.3);padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+
 /* PANEL PICKER */
 .panel-picker{position:relative;width:100%;}
 .panel-picker-btn{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--white);padding:10px 12px;border-radius:6px;font-family:'Open Sans',sans-serif;font-size:13px;text-align:left;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;}
@@ -732,7 +736,7 @@ async function generateQuote(){
   const sys=`You are an expert auto body repair quoting assistant for Auto Bodyworx UK run by Shaun Whitfield.
 Quoting Ladder (inc VAT): RUNG 1 GBP250-280 precision SMART mobile. RUNG 2 GBP280-320 full bumper corner mobile ceiling min £280. RUNG 3 GBP360-420 grey zone push workshop. RUNG 4 GBP460-520 wing door dents workshop preferred. RUNG 5 GBP520-700 quarter panels two-panel black aluminium premium. RUNG 6 GBP700+ multi-panel compound.
 RULES: Blend adjacent panels unless black. Steel wing default. Never discount metal only plastic. Stress cracks +GBP80-120. Black no blend highest risk. New/premium cars top of rung. Mobile bigger than bumper corner flag workshop. Travel 30+ mins note discretionary.
-Return ONLY valid JSON: {"price":"£XXX inc VAT","rung":"Rung X - Name","reasoning":"3-5 sentences.","flags":[{"type":"warn|info","text":"..."}],"internal_breakdown":"...","suggested_parts":["..."],"duration":"3 Hours|5 Hours|Full Day"}`;
+Return ONLY valid JSON: {"price":"£XXX inc VAT","rung":"Rung X - Name","reasoning":"3-5 sentences.","flags":[{"type":"warn|info","text":"..."}],"internal_breakdown":"...","duration":"3 Hours|5 Hours|Full Day"}`;
   const content=[];
   quoteImgs.slice(0,4).forEach(x=>{content.push({type:'image',source:{type:'base64',media_type:x.b64.split(';')[0].split(':')[1],data:x.b64.split(',')[1]}});});
   const trainingResult=document.getElementById('q_training_result')?.value?.trim()||'';
@@ -814,15 +818,7 @@ async function approveQuote(){
       status:'quoted',location:locVal,source:srcVal,notes,duration:result.duration||'',
       approved_by:currentProfile?.full_name||currentUser?.email||'',created_by:currentUser.id
     });
-    if(result.suggested_parts?.length){
-      // Filter out processes/consumables — only save real physical parts
-      const PROCESS_WORDS=['paint','primer','clearcoat','clear coat','basecoat','polish','sand','prep','labour','blend','tape','mask','buff','lacquer','filler','sundry','consumable','touch up','touch-up'];
-      const realParts=result.suggested_parts.filter(p=>{
-        const pl=p.toLowerCase();
-        return !PROCESS_WORDS.some(w=>pl.includes(w));
-      });
-      if(realParts.length) await sbRawInsert('job_parts',realParts.map(p=>({job_id:job.id,name:p,price:'',ordered:false})));
-    }
+    // Parts are entered manually — not auto-generated from quote
     for(const img of photos){
       const ext=img.file.name.split('.').pop()||'jpg';
       const path=`job-${job.id}/damage-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
@@ -960,11 +956,11 @@ function jHTML(j){
         </select>
       </div>
       <div class="jd-field"><div class="jd-lbl">Status</div>
-        <select class="jd-sel" onchange="updJob(${j.id},'status',this.value)">
-          <option value="quoted" ${j.status==='quoted'?'selected':''}>Quoted</option>
-          <option value="booked" ${j.status==='booked'?'selected':''}>Booked</option>
-          <option value="completed" ${j.status==='completed'?'selected':''}>Completed</option>
-        </select>
+        <div class="jd-inp" style="height:auto;padding:8px 12px;display:flex;align-items:center;">
+          <span class="badge ${j.status==='completed'?'badge-comp':j.status==='booked'?'badge-book':'badge-quot'}" style="font-size:11px;">
+            ${j.status==='completed'?'✅ Completed':j.status==='booked'?'📅 Booked':'💬 Quoted'}
+          </span>
+        </div>
       </div>
       <div class="jd-field"><div class="jd-lbl">Payment</div>
         <select class="jd-sel" onchange="updJob(${j.id},'paid',this.value)">
@@ -1279,27 +1275,63 @@ async function bookSetmore(jobId){
 
 
 
-function bookIntoDiary(jobId){
-  // Switch to diary tab and highlight the job
-  switchTab('diary');
-  diaryView='day';
+async function bookIntoDiary(jobId){
   const j = allJobs.find(x=>x.id===jobId);
-  if(j && j.booking_date){
-    // Calculate offset to the job's week
-    const today = new Date(); today.setHours(0,0,0,0);
-    const jobDay = new Date(j.booking_date+'T00:00:00');
-    const diff = Math.round((jobDay-today)/(1000*60*60*24));
-    diaryOffset = diff;
-  } else {
-    diaryOffset = 0;
+  if(!j) return;
+
+  // If job already has a booking date, just switch to diary
+  if(j.booking_date){
+    goToDiaryForJob(j);
+    return;
   }
-  // Update toggle buttons
+
+  // No booking date set — prompt for one
+  const dateVal = prompt('Enter booking date (YYYY-MM-DD) or leave blank for today:') || new Date().toISOString().split('T')[0];
+  if(!dateVal.match(/^\d{4}-\d{2}-\d{2}$/)){
+    alert('Invalid date format. Use YYYY-MM-DD');
+    return;
+  }
+
+  // Save booking date + status=booked to Supabase
+  const updates = { booking_date: dateVal, status: 'booked' };
+
+  // Also merge any pending unsaved changes
+  const pend = pending[jobId]||{};
+  Object.assign(updates, pend);
+
+  try{
+    await sbRaw('PATCH','jobs',updates,`?id=eq.${jobId}`);
+    delete pending[jobId];
+    // Update in-memory
+    Object.assign(j, updates);
+    allJobs = allJobs.map(x=>x.id===jobId?j:x);
+    showToast('Booked ✓');
+    // Update the button text immediately
+    const btn = document.querySelector(`[onclick="bookIntoDiary(${jobId})"]`);
+    if(btn){ btn.textContent='✓ Booked — '+fmtDate(dateVal); btn.classList.add('booked'); }
+    renderCRM();
+    buildDiaryTechFilter();
+    goToDiaryForJob(j);
+  }catch(e){
+    alert('Booking failed: '+e.message);
+  }
+}
+
+function goToDiaryForJob(j){
+  // Switch to diary in day view, jump to the job date
+  diaryView='day';
+  const today=new Date(); today.setHours(0,0,0,0);
+  if(j.booking_date){
+    const jobDay=new Date(j.booking_date+'T00:00:00');
+    diaryOffset=Math.round((jobDay-today)/(1000*60*60*24));
+  } else {
+    diaryOffset=0;
+  }
   ['day','week','month'].forEach(v=>{
     const b=document.getElementById('dvt-'+v);
     if(b) b.className='dvt-btn'+(v==='day'?' on':'');
   });
-  renderDiary();
-  showToast('Switched to Diary — set the date on the job card to book it in');
+  switchTab('diary');
 }
 
 // SIGN-OFF
