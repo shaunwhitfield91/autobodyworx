@@ -324,6 +324,15 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
 .badge-book{background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3);padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
 .badge-quot{background:rgba(245,158,11,.15);color:var(--yellow);border:1px solid rgba(245,158,11,.3);padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
 
+/* REVENUE FILTER */
+.rev-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center;}
+.rev-filter span{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--grey3);margin-right:4px;}
+.rfp{padding:5px 12px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--grey2);font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .15s;}
+.rfp:hover{border-color:var(--grey1);color:var(--white);}
+.rfp.on{background:var(--accent);border-color:var(--accent);color:var(--bg);}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;}
+.stat-sub{font-size:11px;color:var(--grey3);margin-top:2px;}
+
 /* PANEL PICKER */
 .panel-picker{position:relative;width:100%;}
 .panel-picker-btn{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--white);padding:10px 12px;border-radius:6px;font-family:'Open Sans',sans-serif;font-size:13px;text-align:left;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;}
@@ -537,11 +546,19 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
         <h2>Job Tracker</h2>
         <button class="btn-sm role-admin role-admin_staff" onclick="openAddModal()">+ Add Job</button>
       </div>
+      <div class="rev-filter">
+        <span>Revenue:</span>
+        <button class="rfp on" id="rfp-all" onclick="setRevFilter('all',this)">All Time</button>
+        <button class="rfp" id="rfp-month" onclick="setRevFilter('month',this)">This Month</button>
+        <button class="rfp" id="rfp-last" onclick="setRevFilter('last',this)">Last Month</button>
+        <button class="rfp" id="rfp-year" onclick="setRevFilter('year',this)">This Year</button>
+        <input type="month" id="rfp-custom" class="rfp" style="padding:4px 8px;cursor:pointer;" onchange="setRevFilter('custom',null);revCustomMonth=this.value;renderCRM();" title="Pick a specific month">
+      </div>
       <div class="stats-grid">
         <div class="stat"><div class="stat-lbl">Quoted</div><div class="stat-val sv-y" id="sQ">0</div></div>
         <div class="stat"><div class="stat-lbl">Booked</div><div class="stat-val sv-b" id="sB">0</div></div>
         <div class="stat"><div class="stat-lbl">Completed</div><div class="stat-val sv-g" id="sC">0</div></div>
-        <div class="stat"><div class="stat-lbl">Revenue (Paid)</div><div class="stat-val sv-w" id="sR">£0</div></div>
+        <div class="stat"><div class="stat-lbl">Revenue (Paid)</div><div class="stat-val sv-w" id="sR">£0</div><div class="stat-sub" id="sRsub"></div></div>
       </div>
       <div class="toolbar">
         <input type="text" class="srch" id="crmSearch" placeholder="Search name, vehicle, phone..." oninput="renderCRM()">
@@ -903,9 +920,16 @@ function renderCRM(){
   });
   document.getElementById('sQ').textContent=allJobs.filter(j=>j.status==='quoted').length;
   document.getElementById('sB').textContent=allJobs.filter(j=>j.status==='booked').length;
-  document.getElementById('sC').textContent=allJobs.filter(j=>j.status==='completed').length;
-  const rev=allJobs.filter(j=>['paid','card','cash'].includes(j.paid)).reduce((s,j)=>s+(parseFloat((j.invoice_amount||'').replace(/[^0-9.]/g,''))||0),0);
+  document.getElementById('sC').textContent=allJobs.filter(j=>j.status==='completed'||['card','cash','paid'].includes(j.paid)).length;
+  const rev=calcRevenue(allJobs);
+  const proj=calcProjected(allJobs);
+  const revLabel={'all':'All Time','month':'This Month','last':'Last Month','year':'This Year'};
   document.getElementById('sR').textContent='£'+rev.toFixed(0);
+  const sub=document.getElementById('sRsub');
+  if(sub){
+    const rangeLabel = revFilter!=='all' ? revLabel[revFilter]+' · ' : '';
+    sub.textContent = rangeLabel + (proj>0?'+ £'+proj.toFixed(0)+' projected':'');
+  }
   document.getElementById('crmCount').textContent=allJobs.length;
   const col=document.getElementById('jobsCol');
   if(!filtered.length){col.innerHTML=`<div class="empty"><div class="empty-icon">🚗</div><p>${allJobs.length===0?'No jobs yet — approve a quote to get started.':'No jobs match your search.'}</p></div>`;return;}
@@ -1434,6 +1458,59 @@ async function bookJob(jobId){
   }
 }
 
+
+// REVENUE FILTER
+let revFilter = 'all';
+let revCustomMonth = '';
+function setRevFilter(f, btn){
+  revFilter = f;
+  document.querySelectorAll('.rfp').forEach(b=>b.classList.remove('on'));
+  if(btn) btn.classList.add('on');
+  renderCRM();
+}
+
+function getRevDateRange(){
+  const now = new Date();
+  if(revFilter==='month'){
+    const s = new Date(now.getFullYear(), now.getMonth(), 1);
+    const e = new Date(now.getFullYear(), now.getMonth()+1, 0, 23, 59, 59);
+    return {s,e};
+  }
+  if(revFilter==='last'){
+    const s = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    const e = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+    return {s,e};
+  }
+  if(revFilter==='year'){
+    const s = new Date(now.getFullYear(), 0, 1);
+    const e = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+    return {s,e};
+  }
+  if(revFilter==='custom'&&revCustomMonth){
+    const [yr,mo]=revCustomMonth.split('-').map(Number);
+    const s=new Date(yr,mo-1,1);
+    const e=new Date(yr,mo,0,23,59,59);
+    return {s,e};
+  }
+  return null;
+}
+
+function calcRevenue(jobs){
+  const range = getRevDateRange();
+  return jobs.filter(j=>{
+    if(!['paid','card','cash'].includes(j.paid)) return false;
+    if(!range) return true;
+    const d = new Date(j.signed_off_at||j.created_at||0);
+    return d>=range.s && d<=range.e;
+  }).reduce((s,j)=>s+(parseFloat((j.invoice_amount||'').replace(/[^0-9.]/g,''))||0),0);
+}
+
+function calcProjected(jobs){
+  // Booked jobs not yet paid — potential future revenue
+  return jobs.filter(j=>j.status==='booked'&&!['paid','card','cash'].includes(j.paid))
+    .reduce((s,j)=>s+(parseFloat((j.invoice_amount||'').replace(/[^0-9.]/g,''))||0),0);
+}
+
 // SIGN-OFF
 function selectPayMethod(jobId, method, el){
   document.querySelectorAll('#signoff-'+jobId+' .pay-pill').forEach(p=>p.classList.remove('on'));
@@ -1460,8 +1537,10 @@ async function signOffJob(jobId){
     signed_off_at: new Date().toISOString(),
     signed_off_by: currentProfile?.full_name||currentUser?.email||'unknown'
   };
-  const _so=await sbRaw('PATCH','jobs',updates,`?id=eq.${jobId}`);
-  if(error){ alert('Sign-off failed: '+error.message); if(btn){btn.disabled=false;btn.textContent='Sign Off & Complete';} return; }
+  await sbRaw('PATCH','jobs',updates,`?id=eq.${jobId}`);
+  // Update in-memory so stats refresh immediately
+  const _job=allJobs.find(j=>j.id===jobId);
+  if(_job) Object.assign(_job, updates);
   showToast('Job signed off ✓');
   // Send review SMS (placeholder — needs Twilio)
   const reviewLink = 'https://g.page/r/CW7AEhwlB_fbEBM/review';
