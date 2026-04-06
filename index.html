@@ -333,6 +333,23 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
 .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;}
 .stat-sub{font-size:11px;color:var(--grey3);margin-top:2px;}
 
+/* PENDING / APPROVAL WORKFLOW */
+.badge-pend{background:rgba(245,158,11,.15);color:var(--yellow);border:1px solid rgba(245,158,11,.3);padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+.jcard.s-pending{border-left:3px solid var(--yellow);}
+.s-pending .j-sbadge{background:rgba(245,158,11,.12);color:var(--yellow);}
+.approval-bar{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:8px;padding:14px 16px;margin-bottom:12px;}
+.approval-bar h4{font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--yellow);margin:0 0 10px 0;}
+.approval-notes{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--white);padding:9px 12px;border-radius:6px;font-family:'Open Sans',sans-serif;font-size:13px;resize:vertical;min-height:60px;margin-bottom:10px;}
+.approval-notes:focus{outline:none;border-color:var(--yellow);}
+.approval-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.btn-approve{background:var(--accent);color:var(--bg);border:none;padding:9px 16px;border-radius:6px;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;}
+.btn-approve:hover{background:var(--accent-h);}
+.btn-revise{background:transparent;border:1px solid var(--yellow);color:var(--yellow);padding:9px 16px;border-radius:6px;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;}
+.btn-revise:hover{background:rgba(245,158,11,.1);}
+.btn-decline{background:transparent;border:1px solid var(--red);color:var(--red);padding:9px 16px;border-radius:6px;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;}
+.btn-decline:hover{background:rgba(239,68,68,.1);}
+.pending-banner{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:var(--yellow);border-radius:6px;padding:8px 12px;font-size:12px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+
 /* PANEL PICKER */
 .panel-picker{position:relative;width:100%;}
 .panel-picker-btn{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--white);padding:10px 12px;border-radius:6px;font-family:'Open Sans',sans-serif;font-size:13px;text-align:left;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;}
@@ -522,7 +539,7 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
           <div class="result-actions">
             <p>Review before sending to customer.</p>
             <button class="btn-ghost" onclick="revise()">Revise</button>
-            <button class="btn-sm" id="approveBtn" onclick="approveQuote()">✓ Approve &amp; Save to CRM</button>
+            <button class="btn-sm" id="approveBtn" onclick="approveQuote()">📤 Send for Approval</button>
           </div>
         </div>
         <div class="approved-msg" id="approvedMsg"></div>
@@ -555,6 +572,7 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
         <input type="month" id="rfp-custom" class="rfp" style="padding:4px 8px;cursor:pointer;" onchange="setRevFilter('custom',null);revCustomMonth=this.value;renderCRM();" title="Pick a specific month">
       </div>
       <div class="stats-grid">
+        <div class="stat"><div class="stat-lbl">Pending</div><div class="stat-val sv-y" id="sP">0</div></div>
         <div class="stat"><div class="stat-lbl">Quoted</div><div class="stat-val sv-y" id="sQ">0</div></div>
         <div class="stat"><div class="stat-lbl">Booked</div><div class="stat-val sv-b" id="sB">0</div></div>
         <div class="stat"><div class="stat-lbl">Completed</div><div class="stat-val sv-g" id="sC">0</div></div>
@@ -563,6 +581,7 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
       <div class="toolbar">
         <input type="text" class="srch" id="crmSearch" placeholder="Search name, vehicle, phone..." oninput="renderCRM()">
         <button class="fpill on" onclick="setFilter('all',this)">All</button>
+        <button class="fpill" onclick="setFilter('pending',this)">Pending Approval</button>
         <button class="fpill" onclick="setFilter('quoted',this)">Quoted</button>
         <button class="fpill" onclick="setFilter('booked',this)">Booked</button>
         <button class="fpill" onclick="setFilter('completed',this)">Completed</button>
@@ -889,8 +908,8 @@ async function approveQuote(){
       customer_name:custName||'Unknown Customer',customer_phone:custPhone||'',
       vehicle,colour,panels,quote_price:result.price,invoice_amount:result.price,
       rung:result.rung,reasoning:result.reasoning,internal_breakdown:result.internal_breakdown||'',
-      status:'quoted',location:locVal,source:srcVal,notes,duration:result.duration||'',
-      approved_by:currentProfile?.full_name||currentUser?.email||'',created_by:currentUser.id
+      status:'pending',location:locVal,source:srcVal,notes,duration:result.duration||'',
+      approved_by:'',created_by:currentUser.id
     });
     // Parts are entered manually — not auto-generated from quote
     for(const img of photos){
@@ -899,9 +918,9 @@ async function approveQuote(){
       const {error:upErr}=await sb.storage.from('job-photos').upload(path,img.file,{contentType:img.file.type});
       if(!upErr) await sbRawInsert('job_photos',{job_id:job.id,storage_path:path,photo_type:'damage',uploaded_by:currentUser.id});
     }
-    document.getElementById('approvedMsg').innerHTML=`✓ Saved to CRM by ${currentProfile?.full_name||'you'} — <strong>${result.price}</strong>`;
+    document.getElementById('approvedMsg').innerHTML=`📤 Sent for approval — <strong>${result.price}</strong> — awaiting your review in the CRM`;
     document.getElementById('approvedMsg').classList.add('show');
-    showToast('Saved to CRM ✓');
+    showToast('Sent for approval ✓');
     await loadJobs();
   }catch(e){alert('Save failed: '+e.message);}
   finally{btn.disabled=false;btn.textContent='✓ Approve & Save to CRM';}
@@ -915,10 +934,11 @@ function renderCRM(){
   const q=(document.getElementById('crmSearch')?.value||'').toLowerCase();
   const filtered=allJobs.filter(j=>{
     const isCompleted=j.status==='completed'||['card','cash','paid'].includes(j.paid);
-    const mf=crmFilter==='all'||(crmFilter==='completed'?isCompleted:j.status===crmFilter);
+    const mf=crmFilter==='all'||(crmFilter==='completed'?isCompleted:crmFilter==='pending'?j.status==='pending':j.status===crmFilter);
     const ms=!q||[j.customer_name,j.vehicle,j.customer_phone,j.panels].some(x=>x&&x.toLowerCase().includes(q));
     return mf&&ms;
   });
+  document.getElementById('sP').textContent=allJobs.filter(j=>j.status==='pending').length;
   document.getElementById('sQ').textContent=allJobs.filter(j=>j.status==='quoted').length;
   document.getElementById('sB').textContent=allJobs.filter(j=>j.status==='booked'&&!['card','cash','paid'].includes(j.paid)).length;
   document.getElementById('sC').textContent=allJobs.filter(j=>j.status==='completed'||['card','cash','paid'].includes(j.paid)).length;
@@ -969,7 +989,7 @@ function jHTML(j){
 
   function timeOpts(){let o='<option value="">— Select time —</option>';for(let h=8;h<=20;h++)for(let m of[0,30]){if(h===20&&m===30)continue;const v=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;o+=`<option value="${v}" ${j.booking_time===v?'selected':''}>${v}</option>`;}return o;}
 
-  const effStatus=(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'completed':j.status;
+  const effStatus=(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'completed':j.status==='pending'?'pending':j.status;
   return `<div class="jcard s-${effStatus}" id="jc-${j.id}">
   <div class="jcard-hd" onclick="togCard(${j.id})">
     <div class="ji">
@@ -978,7 +998,7 @@ function jHTML(j){
     </div>
     <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
       <div class="j-price">${(j.quote_price||'—').split(' ')[0]}</div>
-      <div class="j-sbadge ${(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'comp':j.status==='booked'?'book':'quot'}">${(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'Completed':j.status==='booked'?'Booked':'Quoted'}</div>
+      <div class="j-sbadge ${(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'comp':j.status==='booked'?'book':j.status==='pending'?'pend':'quot'}">${(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'Completed':j.status==='booked'?'Booked':j.status==='pending'?'Pending Approval':'Quoted'}</div>
       <div class="j-chevron">▼</div>
     </div>
   </div>
@@ -1040,8 +1060,8 @@ function jHTML(j){
       </div>
       <div class="jd-field"><div class="jd-lbl">Status</div>
         <div class="jd-inp" style="height:auto;padding:8px 12px;display:flex;align-items:center;">
-          <span class="badge ${(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'badge-comp':j.status==='booked'?'badge-book':'badge-quot'}" style="font-size:11px;">
-            ${(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'✅ Completed':j.status==='booked'?'📅 Booked':'💬 Quoted'}
+          <span class="badge ${(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'badge-comp':j.status==='booked'?'badge-book':j.status==='pending'?'badge-pend':'badge-quot'}" style="font-size:11px;">
+            ${(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'✅ Completed':j.status==='booked'?'📅 Booked':j.status==='pending'?'⏳ Pending Approval':'💬 Quoted'}
           </span>
         </div>
       </div>
@@ -1129,6 +1149,17 @@ function jHTML(j){
     </div>
     <div class="jactions">
       <button class="btn-save" onclick="saveJob(${j.id})">Save Changes</button>
+      ${j.status==='pending' && isAdmin ? `
+      <div class="approval-bar">
+        <h4>⏳ Pending Your Approval</h4>
+        <div class="pending-banner">💡 Review the quote above, add notes for Chloe, then Approve, Revise or Decline.</div>
+        <textarea class="approval-notes" id="apnotes-${j.id}" placeholder="Notes for Chloe (optional — e.g. watch for hidden damage, agreed £X verbally)...">${esc(j.notes||'')}</textarea>
+        <div class="approval-actions">
+          <button class="btn-approve" onclick="approveJob(${j.id})">✅ Approve Quote</button>
+          <button class="btn-revise" onclick="reviseJob(${j.id})">✏️ Send Back for Revision</button>
+          <button class="btn-decline" onclick="declineJob(${j.id})">✕ Decline</button>
+        </div>
+      </div>` : ''}
       <button class="btn-setmore ${j.booking_date?'booked':''}" onclick="bookJob(${j.id})">${j.booking_date?'✓ Booked — '+fmtDate(j.booking_date):'📅 Book'}</button>
       ${isAdmin?`<button class="btn-del" onclick="delJob(${j.id})">Delete</button>`:''}
     </div>
@@ -1512,6 +1543,55 @@ function calcProjected(jobs){
   // Booked jobs not yet paid — potential future revenue
   return jobs.filter(j=>j.status==='booked'&&!['paid','card','cash'].includes(j.paid))
     .reduce((s,j)=>s+(parseFloat((j.invoice_amount||'').replace(/[^0-9.]/g,''))||0),0);
+}
+
+
+// APPROVAL WORKFLOW
+async function approveJob(jobId){
+  const j = allJobs.find(x=>x.id===jobId);
+  if(!j) return;
+  const notes = document.getElementById('apnotes-'+jobId)?.value || j.notes || '';
+  const updates = {
+    status: 'quoted',
+    approved_by: currentProfile?.full_name||currentUser?.email||'Admin',
+    notes: notes
+  };
+  try{
+    await sbRaw('PATCH','jobs',updates,`?id=eq.${jobId}`);
+    Object.assign(j, updates);
+    showToast('✅ Quote approved — now in Quoted');
+    renderCRM();
+    buildDiaryTechFilter();
+    setTimeout(()=>{ document.getElementById('jc-'+jobId)?.classList.add('open'); }, 50);
+  }catch(e){ alert('Failed: '+e.message); }
+}
+
+async function reviseJob(jobId){
+  const j = allJobs.find(x=>x.id===jobId);
+  if(!j) return;
+  const notes = document.getElementById('apnotes-'+jobId)?.value || '';
+  if(!notes.trim()){ showToast('⚠️ Please add revision notes before sending back'); return; }
+  const updates = {
+    status: 'pending',
+    notes: notes
+  };
+  try{
+    await sbRaw('PATCH','jobs',updates,`?id=eq.${jobId}`);
+    Object.assign(j, updates);
+    showToast('✏️ Sent back for revision');
+    renderCRM();
+    setTimeout(()=>{ document.getElementById('jc-'+jobId)?.classList.add('open'); }, 50);
+  }catch(e){ alert('Failed: '+e.message); }
+}
+
+async function declineJob(jobId){
+  if(!confirm('Decline this quote? It will be archived.')) return;
+  try{
+    await sbRaw('PATCH','jobs',{archived:true, status:'pending'},`?id=eq.${jobId}`);
+    allJobs = allJobs.filter(j=>j.id!==jobId);
+    showToast('✕ Quote declined and archived');
+    renderCRM();
+  }catch(e){ alert('Failed: '+e.message); }
 }
 
 // SIGN-OFF
