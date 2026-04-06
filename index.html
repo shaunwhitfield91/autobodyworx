@@ -352,6 +352,51 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
 .dtf-btn.tc-charles.on{background:var(--blue);border-color:var(--blue);}
 .dtf-btn.tc-both.on{background:var(--purple);border-color:var(--purple);}
 
+/* BOOKING MODAL */
+.book-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:700;display:flex;align-items:center;justify-content:center;padding:16px;}
+.book-modal{background:var(--card);border:1px solid var(--border2);border-radius:12px;width:100%;max-width:820px;max-height:92vh;overflow-y:auto;display:flex;flex-direction:column;}
+.book-modal-hd{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.book-modal-hd h3{font-family:'Montserrat',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--white);margin:0;}
+.book-modal-hd button{background:none;border:none;color:var(--grey3);font-size:20px;cursor:pointer;line-height:1;}
+.book-modal-hd button:hover{color:var(--white);}
+.book-modal-body{display:grid;grid-template-columns:260px 1fr;gap:0;flex:1;}
+@media(max-width:640px){.book-modal-body{grid-template-columns:1fr;}}
+.book-form{padding:20px 24px;border-right:1px solid var(--border);}
+.book-form .fg{margin-bottom:14px;}
+.book-form label{font-family:'Montserrat',sans-serif;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--grey3);display:block;margin-bottom:6px;}
+.book-form input,.book-form select{width:100%;background:var(--bg);border:1px solid var(--border2);color:var(--white);padding:9px 12px;border-radius:6px;font-family:'Open Sans',sans-serif;font-size:13px;}
+.book-form input[type=date]{color-scheme:dark;}
+.book-form input:focus,.book-form select:focus{outline:none;border-color:var(--accent);}
+.book-form input.required-empty{border-color:var(--red)!important;}
+.book-btn{background:var(--accent);color:var(--bg);border:none;padding:11px 20px;border-radius:6px;font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;width:100%;margin-top:4px;}
+.book-btn:hover{background:var(--accent-h);}
+.book-btn:disabled{background:var(--border2);color:var(--grey3);cursor:not-allowed;}
+.book-calendar{padding:16px;}
+.book-cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.book-cal-nav span{font-family:'Montserrat',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--white);}
+.book-cal-nav button{background:var(--card2);border:1px solid var(--border2);color:var(--grey1);padding:4px 12px;border-radius:5px;cursor:pointer;font-size:14px;font-weight:700;}
+.book-cal-nav button:hover{border-color:var(--accent);color:var(--accent);}
+.book-week{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;}
+.book-day{background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:hidden;min-height:90px;cursor:pointer;transition:border-color .15s;}
+.book-day:hover{border-color:var(--accent);}
+.book-day.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent);background:rgba(74,222,128,.05);}
+.book-day.today{border-color:rgba(74,222,128,.4);}
+.book-day-hd{padding:5px 6px;border-bottom:1px solid var(--border);}
+.book-day-name{font-family:'Montserrat',sans-serif;font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--grey3);}
+.book-day.today .book-day-name,.book-day.today .book-day-num{color:var(--accent);}
+.book-day.selected .book-day-name,.book-day.selected .book-day-num{color:var(--accent);}
+.book-day-num{font-family:'Montserrat',sans-serif;font-size:16px;font-weight:800;color:var(--white);line-height:1;}
+.book-day-jobs{padding:4px 5px;}
+.book-slot{border-radius:3px;padding:2px 5px;margin-bottom:2px;font-size:9px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.book-slot.tc-shaun{background:rgba(74,222,128,.2);color:var(--accent);}
+.book-slot.tc-charles{background:rgba(96,165,250,.2);color:var(--blue);}
+.book-slot.tc-both{background:rgba(167,139,250,.2);color:var(--purple);}
+.book-slot.tc-none{background:rgba(120,120,120,.15);color:var(--grey2);}
+.book-day-empty{font-size:9px;color:var(--grey3);font-style:italic;padding:3px 0;}
+.book-legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;}
+.book-legend-item{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--grey3);}
+.book-legend-dot{width:8px;height:8px;border-radius:2px;}
+
 </style>
 </head>
 <body>
@@ -594,6 +639,67 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
       </div>
     </div>
   </div>
+
+<!-- BOOKING MODAL -->
+<div class="book-overlay" id="bookModal" style="display:none;" onclick="if(event.target===this)closeBookModal()">
+  <div class="book-modal">
+    <div class="book-modal-hd">
+      <h3 id="bookModalTitle">📅 Book Job</h3>
+      <button onclick="closeBookModal()">✕</button>
+    </div>
+    <div class="book-modal-body">
+      <div class="book-form">
+        <div class="fg">
+          <label>Date <span style="color:var(--red);">*</span></label>
+          <input type="date" id="bm-date" onchange="bmDateChange()">
+        </div>
+        <div class="fg">
+          <label>Time</label>
+          <select id="bm-time">
+            <option value="">— Select time —</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Duration</label>
+          <select id="bm-duration">
+            <option value="">— Select —</option>
+            <option value="3 Hours">3 Hours</option>
+            <option value="5 Hours">5 Hours</option>
+            <option value="Full Day">Full Day</option>
+            <option value="2 Days">2 Days</option>
+            <option value="3 Days">3 Days</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Assigned Tech</label>
+          <select id="bm-tech">
+            <option value="">— Assign —</option>
+            <option value="Shaun">Shaun</option>
+            <option value="Charles">Charles</option>
+            <option value="Both">Both</option>
+          </select>
+        </div>
+        <button class="book-btn" id="bmConfirmBtn" onclick="confirmBooking()" disabled>
+          Confirm Booking
+        </button>
+        <p style="font-size:11px;color:var(--grey3);margin-top:8px;text-align:center;">Select a date to confirm booking</p>
+      </div>
+      <div class="book-calendar">
+        <div class="book-cal-nav">
+          <button onclick="bmPrevWeek()">&#8249;</button>
+          <span id="bmWeekTitle"></span>
+          <button onclick="bmNextWeek()">&#8250;</button>
+        </div>
+        <div class="book-week" id="bmWeekGrid"></div>
+        <div class="book-legend">
+          <div class="book-legend-item"><div class="book-legend-dot" style="background:rgba(74,222,128,.4);"></div>Shaun</div>
+          <div class="book-legend-item"><div class="book-legend-dot" style="background:rgba(96,165,250,.4);"></div>Charles</div>
+          <div class="book-legend-item"><div class="book-legend-dot" style="background:rgba(167,139,250,.4);"></div>Both</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ADD JOB MODAL -->
 <div class="overlay" id="addModal" onclick="if(event.target===this)closeAddModal()">
@@ -1045,7 +1151,7 @@ function jHTML(j){
     </div>
     <div class="jactions">
       <button class="btn-save" onclick="saveJob(${j.id})">Save Changes</button>
-      <button class="btn-setmore ${j.booking_date?'booked':''}" onclick="bookIntoDiary(${j.id})">${j.booking_date?'✓ Booked — '+fmtDate(j.booking_date):'📅 Book'}</button>
+      <button class="btn-setmore ${j.booking_date?'booked':''}" onclick="openBookModal(${j.id})">${j.booking_date?'✓ Booked — '+fmtDate(j.booking_date):'📅 Book'}</button>
       ${isAdmin?`<button class="btn-del" onclick="delJob(${j.id})">Delete</button>`:''}
     </div>
   </div>
@@ -1332,6 +1438,187 @@ function goToDiaryForJob(j){
     if(b) b.className='dvt-btn'+(v==='day'?' on':'');
   });
   switchTab('diary');
+}
+
+
+// BOOKING MODAL
+let bmJobId = null;
+let bmWeekOffset = 0;
+let bmSelectedDate = '';
+
+function openBookModal(jobId){
+  const j = allJobs.find(x=>x.id===jobId);
+  if(!j) return;
+  bmJobId = jobId;
+  bmSelectedDate = j.booking_date || '';
+  bmWeekOffset = 0;
+
+  // If job already has a date, jump to that week
+  if(j.booking_date){
+    const today = new Date(); today.setHours(0,0,0,0);
+    const jobDay = new Date(j.booking_date+'T00:00:00');
+    const diff = Math.round((jobDay-today)/(1000*60*60*24));
+    const dow = today.getDay();
+    const daysToMon = dow===0?6:dow-1;
+    bmWeekOffset = Math.floor((diff+daysToMon)/7);
+  }
+
+  // Populate form
+  document.getElementById('bookModalTitle').textContent = '📅 Book — '+esc(j.customer_name||'Job');
+  document.getElementById('bm-date').value = j.booking_date||'';
+  document.getElementById('bm-tech').value = j.assigned_tech||'';
+  document.getElementById('bm-duration').value = j.duration||'';
+
+  // Time options
+  let timeHtml = '<option value="">— Select time —</option>';
+  for(let hh=8;hh<=18;hh++) for(let mm of[0,30]){
+    const v=String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+    timeHtml+=`<option value="${v}" ${j.booking_time===v?'selected':''}>${v}</option>`;
+  }
+  document.getElementById('bm-time').innerHTML = timeHtml;
+
+  // Update button state
+  bmUpdateBtn();
+
+  // Show modal and render calendar
+  document.getElementById('bookModal').style.display='flex';
+  bmRenderWeek();
+}
+
+function closeBookModal(){
+  document.getElementById('bookModal').style.display='none';
+  bmJobId=null; bmSelectedDate='';
+}
+
+function bmDateChange(){
+  bmSelectedDate = document.getElementById('bm-date').value;
+  bmUpdateBtn();
+  // Jump calendar to selected date's week
+  if(bmSelectedDate){
+    const today=new Date(); today.setHours(0,0,0,0);
+    const sel=new Date(bmSelectedDate+'T00:00:00');
+    const diff=Math.round((sel-today)/(1000*60*60*24));
+    const dow=today.getDay(); const daysToMon=dow===0?6:dow-1;
+    bmWeekOffset=Math.floor((diff+daysToMon)/7);
+    bmRenderWeek();
+  }
+}
+
+function bmUpdateBtn(){
+  const btn=document.getElementById('bmConfirmBtn');
+  const note=btn.nextElementSibling;
+  if(bmSelectedDate){
+    btn.disabled=false;
+    if(note) note.style.display='none';
+  } else {
+    btn.disabled=true;
+    if(note) note.style.display='block';
+  }
+}
+
+function bmPrevWeek(){ bmWeekOffset--; bmRenderWeek(); }
+function bmNextWeek(){ bmWeekOffset++; bmRenderWeek(); }
+
+function bmGetWeekDays(){
+  const now=new Date(); now.setHours(0,0,0,0);
+  const dow=now.getDay();
+  const mon=new Date(now);
+  mon.setDate(now.getDate()-(dow===0?6:dow-1)+(bmWeekOffset*7));
+  return Array.from({length:6},function(_,i){ const d=new Date(mon); d.setDate(mon.getDate()+i); return d; });
+}
+
+function bmRenderWeek(){
+  const days=bmGetWeekDays();
+  const MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const DN=['Mon','Tue','Wed','Thu','Fri','Sat'];
+  const todayMs=new Date().setHours(0,0,0,0);
+  const s=days[0],e=days[5];
+  const mo=s.getMonth()===e.getMonth()?MO[s.getMonth()]:MO[s.getMonth()]+'–'+MO[e.getMonth()];
+  document.getElementById('bmWeekTitle').textContent=s.getDate()+' '+mo+' '+e.getFullYear();
+
+  const grid=document.getElementById('bmWeekGrid');
+  grid.innerHTML='';
+  days.forEach(function(day,di){
+    const isToday=day.getTime()===todayMs;
+    const ds=day.getFullYear()+'-'+String(day.getMonth()+1).padStart(2,'0')+'-'+String(day.getDate()).padStart(2,'0');
+    const isSelected=ds===bmSelectedDate;
+    const jobs=allJobs.filter(function(j){ return j.booking_date===ds&&j.status!=='completed'&&j.id!==bmJobId; });
+    const spanJobs=allJobs.filter(function(j){
+      if(!j.booking_date||j.status==='completed'||j.id===bmJobId) return false;
+      const nd=jobDurDays(j.duration); if(nd<=1) return false;
+      const st=new Date(j.booking_date+'T00:00:00');
+      const en=new Date(st); en.setDate(st.getDate()+nd-1);
+      return day>st&&day<=en;
+    });
+
+    const col=document.createElement('div');
+    col.className='book-day'+(isToday?' today':'')+(isSelected?' selected':'');
+    col.onclick=function(){ bmSelectDay(ds,col); };
+
+    let slotsHtml='';
+    jobs.concat(spanJobs).slice(0,3).forEach(function(j){
+      const tc=tcClass(j);
+      const name=(j.customer_name||'?').split(' ')[0];
+      const time=j.booking_time?j.booking_time.slice(0,5)+' ':'';
+      slotsHtml+='<div class="book-slot '+tc+'">'+time+esc(name)+'</div>';
+    });
+    if(!jobs.length&&!spanJobs.length) slotsHtml='<div class="book-day-empty">Free</div>';
+
+    col.innerHTML='<div class="book-day-hd"><div class="book-day-name">'+DN[di]+'</div><div class="book-day-num">'+day.getDate()+'</div></div><div class="book-day-jobs">'+slotsHtml+'</div>';
+    grid.appendChild(col);
+  });
+}
+
+function bmSelectDay(ds, col){
+  bmSelectedDate=ds;
+  document.getElementById('bm-date').value=ds;
+  // Highlight selected day
+  document.querySelectorAll('.book-day').forEach(d=>d.classList.remove('selected'));
+  col.classList.add('selected');
+  bmUpdateBtn();
+}
+
+async function confirmBooking(){
+  if(!bmSelectedDate){ alert('Please select a date first.'); return; }
+  if(!bmJobId) return;
+  const btn=document.getElementById('bmConfirmBtn');
+  btn.disabled=true; btn.textContent='Saving...';
+
+  const updates={
+    booking_date: bmSelectedDate,
+    status: 'booked',
+    booking_time: document.getElementById('bm-time').value||null,
+    duration: document.getElementById('bm-duration').value||null,
+    assigned_tech: document.getElementById('bm-tech').value||null,
+  };
+  // Remove nulls
+  Object.keys(updates).forEach(k=>{ if(updates[k]===null||updates[k]==='') delete updates[k]; });
+  updates.status='booked'; updates.booking_date=bmSelectedDate;
+
+  // Merge pending changes
+  const pend=pending[bmJobId]||{};
+  Object.assign(updates,pend);
+
+  try{
+    await sbRaw('PATCH','jobs',updates,`?id=eq.${bmJobId}`);
+    delete pending[bmJobId];
+    const job=allJobs.find(j=>j.id===bmJobId);
+    if(job) Object.assign(job,updates);
+    showToast('Booked ✓');
+    closeBookModal();
+    renderCRM();
+    buildDiaryTechFilter();
+    // Switch to diary at the booked date
+    diaryView='day';
+    const today=new Date(); today.setHours(0,0,0,0);
+    const jobDay=new Date(bmSelectedDate+'T00:00:00');
+    diaryOffset=Math.round((jobDay-today)/(1000*60*60*24));
+    ['day','week','month'].forEach(v=>{ const b=document.getElementById('dvt-'+v); if(b) b.className='dvt-btn'+(v==='day'?' on':''); });
+    switchTab('diary');
+  }catch(e){
+    alert('Booking failed: '+e.message);
+    btn.disabled=false; btn.textContent='Confirm Booking';
+  }
 }
 
 // SIGN-OFF
