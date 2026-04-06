@@ -256,6 +256,7 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
 .diary-job.tc-both{background:rgba(167,139,250,.15);border-left:3px solid var(--purple);}
 .diary-job.tc-none{background:rgba(120,120,120,.1);border-left:3px solid var(--grey3);}
 .diary-job.done{opacity:.45;border-left-style:dashed;}
+.diary-day-job.done{opacity:.5;border-left-style:dashed;}
 .diary-job.done .diary-job-name::after{content:" ✓";color:var(--accent);font-size:10px;}
 .diary-job-name{font-size:11px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .diary-job-sub{font-size:10px;color:var(--grey2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -320,6 +321,7 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
 .diary-month-dot.tc-charles{background:rgba(96,165,250,.4);}
 .diary-month-dot.tc-both{background:rgba(167,139,250,.4);}
 .diary-month-dot.tc-none{background:rgba(120,120,120,.3);}
+.diary-month-dot.done{opacity:.5;text-decoration:line-through;}
 .diary-month-more{font-size:9px;color:var(--grey3);padding:1px 4px;}
 
 .badge-comp{background:rgba(74,222,128,.15);color:var(--accent);border:1px solid rgba(74,222,128,.3);padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
@@ -1770,13 +1772,14 @@ function renderDiary(){
         const tc=tcClass(j);
         const cdIcon=j.cd_required?'🚗 ':'';
         const partsIcon=j.parts_required?(j.parts_instock?' ✅':j.parts_ordered?' 📦':' ⏳'):'';
-        html+='<div class="diary-day-job '+tc+'" onclick="openDiaryJob('+j.id+')">'
-          +'<div class="diary-day-job-title">'+cdIcon+esc(j.customer_name||'Unknown')+partsIcon+'</div>'
+        const isDayDone=(j.status==='completed'||['card','cash','paid'].includes(j.paid));
+        const dayDur=abbrDur(j.duration);
+        html+='<div class="diary-day-job '+tc+(isDayDone?' done':'')+'" onclick="openDiaryJob('+j.id+')">'
+          +'<div class="diary-day-job-title">'+cdIcon+esc(j.customer_name||'Unknown')+(dayDur?' <span style="font-size:10px;opacity:.7;font-weight:600;">'+dayDur+'</span>':'')+(isDayDone?' <span style="color:var(--accent);font-size:11px;">✓</span>':'')+partsIcon+'</div>'
           +'<div class="diary-day-job-meta">'
           +(j.booking_time?'<span>🕐 '+j.booking_time.slice(0,5)+'</span>':'')
           +(j.vehicle?'<span>🚘 '+esc(j.vehicle)+'</span>':'')
           +(j.panels?'<span>'+esc(j.panels)+'</span>':'')
-          +(j.duration?'<span>⏱ '+esc(j.duration)+'</span>':'')
           +(j.assigned_tech?'<span>👤 '+esc(j.assigned_tech)+'</span>':'')
           +(j.quote_price?'<span>'+esc(j.quote_price)+'</span>':'')
           +'</div>'
@@ -1853,7 +1856,14 @@ function renderDiary(){
       const jobs=filteredJobs.filter(function(j){return j.booking_date===ds;});
       let dots='';
       jobs.slice(0,3).forEach(function(j){
-        dots+='<div class="diary-month-dot '+tcClass(j)+'" onclick="openDiaryJob('+j.id+')">'+esc((j.customer_name||'Unknown').split(' ')[0])+'</div>';
+        const isMDone=(j.status==='completed'||['card','cash','paid'].includes(j.paid));
+        const mDur=abbrDur(j.duration);
+        const mTime=j.booking_time?j.booking_time.slice(0,5):'';
+        const mLabel=esc((j.customer_name||'Unknown').split(' ')[0])
+          +(mTime?' '+mTime:'')
+          +(mDur?' '+mDur:'')
+          +(isMDone?' ✓':'');
+        dots+='<div class="diary-month-dot '+tcClass(j)+(isMDone?' done':'')+'" onclick="openDiaryJob('+j.id+')">'+mLabel+'</div>';
       });
       if(jobs.length>3) dots+='<div class="diary-month-more">+'+( jobs.length-3)+' more</div>';
       html+='<div class="diary-month-cell'+(isToday?' today':'')+'">'
