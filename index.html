@@ -914,7 +914,8 @@ function setFilter(f,btn){crmFilter=f;document.querySelectorAll('.fpill').forEac
 function renderCRM(){
   const q=(document.getElementById('crmSearch')?.value||'').toLowerCase();
   const filtered=allJobs.filter(j=>{
-    const mf=crmFilter==='all'||j.status===crmFilter;
+    const isCompleted=j.status==='completed'||['card','cash','paid'].includes(j.paid);
+    const mf=crmFilter==='all'||(crmFilter==='completed'?isCompleted:j.status===crmFilter);
     const ms=!q||[j.customer_name,j.vehicle,j.customer_phone,j.panels].some(x=>x&&x.toLowerCase().includes(q));
     return mf&&ms;
   });
@@ -949,7 +950,7 @@ function jHTML(j){
   const techName=j.assigned_tech||'';
   const techBadge=techName?`<span class="badge badge-${techName.toLowerCase()}">${techName}</span>`:'';
   const dateMeta=j.booking_date?`📅 ${fmtDate(j.booking_date)}${j.booking_time?' at '+j.booking_time:''}`:'';
-  const payBadge=['paid','card','cash'].includes(j.paid)?`<span class="badge badge-dep">${j.paid==='card'?'💳 Card':j.paid==='cash'?'💵 Cash':'✓ Paid'}</span>`:'';
+  const payBadge=['paid','card','cash'].includes(j.paid)?`<span class="badge badge-dep">${j.paid==='card'?'💳 Card':j.paid==='cash'?'💵 Cash':j.paid==='paid'?'🏦 BACS':'✓ Paid'}</span>`:'';
   const photos=j.job_photos||[];
   const dmgPh=photos.filter(p=>p.photo_type==='damage');
   const cmpPh=photos.filter(p=>p.photo_type==='completion');
@@ -1038,8 +1039,8 @@ function jHTML(j){
       </div>
       <div class="jd-field"><div class="jd-lbl">Status</div>
         <div class="jd-inp" style="height:auto;padding:8px 12px;display:flex;align-items:center;">
-          <span class="badge ${j.status==='completed'?'badge-comp':j.status==='booked'?'badge-book':'badge-quot'}" style="font-size:11px;">
-            ${j.status==='completed'?'✅ Completed':j.status==='booked'?'📅 Booked':'💬 Quoted'}
+          <span class="badge ${(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'badge-comp':j.status==='booked'?'badge-book':'badge-quot'}" style="font-size:11px;">
+            ${(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'✅ Completed':j.status==='booked'?'📅 Booked':'💬 Quoted'}
           </span>
         </div>
       </div>
@@ -1049,6 +1050,7 @@ function jHTML(j){
           <option value="paid" ${j.paid==='paid'?'selected':''}>Paid ✓</option>
           <option value="card" ${j.paid==='card'?'selected':''}>💳 Card</option>
           <option value="cash" ${j.paid==='cash'?'selected':''}>💵 Cash</option>
+          <option value="paid" ${j.paid==='paid'?'selected':''}>🏦 BACS</option>
           <option value="partial" ${j.paid==='partial'?'selected':''}>Part Paid</option>
         </select>
       </div>
