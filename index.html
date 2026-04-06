@@ -1152,12 +1152,11 @@ function jHTML(j){
       ${j.status==='pending' && isAdmin ? `
       <div class="approval-bar">
         <h4>⏳ Pending Your Approval</h4>
-        <div class="pending-banner">💡 Review the quote above, add notes for Chloe, then Approve, Revise or Decline.</div>
+        <div class="pending-banner">💡 Edit any fields above (price, duration, panels etc), add notes for Chloe below, then Approve or Decline.</div>
         <textarea class="approval-notes" id="apnotes-${j.id}" placeholder="Notes for Chloe (optional — e.g. watch for hidden damage, agreed £X verbally)...">${esc(j.notes||'')}</textarea>
         <div class="approval-actions">
           <button class="btn-approve" onclick="approveJob(${j.id})">✅ Approve Quote</button>
-          <button class="btn-revise" onclick="reviseJob(${j.id})">✏️ Send Back for Revision</button>
-          <button class="btn-decline" onclick="declineJob(${j.id})">✕ Decline</button>
+<button class="btn-decline" onclick="declineJob(${j.id})">✕ Decline</button>
         </div>
       </div>` : ''}
       <button class="btn-setmore ${j.booking_date?'booked':''}" onclick="bookJob(${j.id})">${j.booking_date?'✓ Booked — '+fmtDate(j.booking_date):'📅 Book'}</button>
@@ -1551,13 +1550,15 @@ async function approveJob(jobId){
   const j = allJobs.find(x=>x.id===jobId);
   if(!j) return;
   const notes = document.getElementById('apnotes-'+jobId)?.value || j.notes || '';
-  const updates = {
+  // Merge any pending field edits (price, duration, panels etc) made in the job card
+  const updates = Object.assign({}, pending[jobId]||{}, {
     status: 'quoted',
     approved_by: currentProfile?.full_name||currentUser?.email||'Admin',
     notes: notes
-  };
+  });
   try{
     await sbRaw('PATCH','jobs',updates,`?id=eq.${jobId}`);
+    delete pending[jobId];
     Object.assign(j, updates);
     showToast('✅ Quote approved — now in Quoted');
     renderCRM();
@@ -1566,23 +1567,6 @@ async function approveJob(jobId){
   }catch(e){ alert('Failed: '+e.message); }
 }
 
-async function reviseJob(jobId){
-  const j = allJobs.find(x=>x.id===jobId);
-  if(!j) return;
-  const notes = document.getElementById('apnotes-'+jobId)?.value || '';
-  if(!notes.trim()){ showToast('⚠️ Please add revision notes before sending back'); return; }
-  const updates = {
-    status: 'pending',
-    notes: notes
-  };
-  try{
-    await sbRaw('PATCH','jobs',updates,`?id=eq.${jobId}`);
-    Object.assign(j, updates);
-    showToast('✏️ Sent back for revision');
-    renderCRM();
-    setTimeout(()=>{ document.getElementById('jc-'+jobId)?.classList.add('open'); }, 50);
-  }catch(e){ alert('Failed: '+e.message); }
-}
 
 async function declineJob(jobId){
   if(!confirm('Decline this quote? It will be archived.')) return;
