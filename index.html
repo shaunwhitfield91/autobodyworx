@@ -920,7 +920,7 @@ function renderCRM(){
     return mf&&ms;
   });
   document.getElementById('sQ').textContent=allJobs.filter(j=>j.status==='quoted').length;
-  document.getElementById('sB').textContent=allJobs.filter(j=>j.status==='booked').length;
+  document.getElementById('sB').textContent=allJobs.filter(j=>j.status==='booked'&&!['card','cash','paid'].includes(j.paid)).length;
   document.getElementById('sC').textContent=allJobs.filter(j=>j.status==='completed'||['card','cash','paid'].includes(j.paid)).length;
   const rev=calcRevenue(allJobs);
   const proj=calcProjected(allJobs);
