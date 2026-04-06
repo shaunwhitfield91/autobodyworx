@@ -969,7 +969,8 @@ function jHTML(j){
 
   function timeOpts(){let o='<option value="">— Select time —</option>';for(let h=8;h<=20;h++)for(let m of[0,30]){if(h===20&&m===30)continue;const v=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;o+=`<option value="${v}" ${j.booking_time===v?'selected':''}>${v}</option>`;}return o;}
 
-  return `<div class="jcard s-${j.status}" id="jc-${j.id}">
+  const effStatus=(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'completed':j.status;
+  return `<div class="jcard s-${effStatus}" id="jc-${j.id}">
   <div class="jcard-hd" onclick="togCard(${j.id})">
     <div class="ji">
       <div class="ji-name">${esc(j.customer_name)} ${srcBadge}${cdBadge}${durBadge}${depBadge}${techBadge}${payBadge}</div>
@@ -977,7 +978,7 @@ function jHTML(j){
     </div>
     <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
       <div class="j-price">${(j.quote_price||'—').split(' ')[0]}</div>
-      <div class="j-sbadge">${j.status}</div>
+      <div class="j-sbadge ${(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'comp':j.status==='booked'?'book':'quot'}">${(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'Completed':j.status==='booked'?'Booked':'Quoted'}</div>
       <div class="j-chevron">▼</div>
     </div>
   </div>
