@@ -1705,14 +1705,22 @@ function buildTechJobBody(j){
 
   let html='<div class="tech-info-grid">';
   html+='<div class="tech-info-item"><div class="tech-info-lbl">Customer</div><div class="tech-info-val">'+esc(j.customer_name||'—')+'</div></div>';
-  html+='<div class="tech-info-item"><div class="tech-info-lbl">Phone</div><div class="tech-info-val"><a href="tel:'+esc(j.customer_phone||'')+'" style="color:var(--accent);">'+esc(j.customer_phone||'—')+'</a></div></div>';
+  const phoneHtml=j.customer_phone
+    ? esc(j.customer_phone)+'<div style="display:flex;gap:8px;margin-top:6px;">'
+      +'<a href="tel:'+esc(j.customer_phone)+'" style="flex:1;background:rgba(74,222,128,.15);color:var(--accent);border:1px solid rgba(74,222,128,.3);border-radius:5px;padding:5px 10px;text-align:center;font-size:11px;font-weight:700;font-family:Montserrat,sans-serif;text-decoration:none;">📞 Call</a>'
+      +'<a href="sms:'+esc(j.customer_phone)+'" style="flex:1;background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3);border-radius:5px;padding:5px 10px;text-align:center;font-size:11px;font-weight:700;font-family:Montserrat,sans-serif;text-decoration:none;">💬 Text</a>'
+      +'</div>'
+    : '—';
+  html+='<div class="tech-info-item"><div class="tech-info-lbl">Phone</div><div class="tech-info-val">'+phoneHtml+'</div></div>';
   html+='<div class="tech-info-item"><div class="tech-info-lbl">Vehicle</div><div class="tech-info-val">'+esc(j.vehicle||'—')+'</div></div>';
   html+='<div class="tech-info-item"><div class="tech-info-lbl">Colour</div><div class="tech-info-val">'+esc(j.colour||'—')+'</div></div>';
   html+='<div class="tech-info-item full"><div class="tech-info-lbl">Panels / Damage</div><div class="tech-info-val">'+esc(j.panels||'—')+'</div></div>';
-  if(j.job_location||j.customer_address){
-    const locLabel=j.job_location==='customer'?'Customer Address':j.job_location==='workshop'?'Workshop':j.job_location||'';
-    html+='<div class="tech-info-item full"><div class="tech-info-lbl">Location</div><div class="tech-info-val">'+esc(locLabel)+(j.customer_address?' — '+esc(j.customer_address):'')+'</div></div>';
-  }
+  const locLabel=j.job_location==='customer'?'📍 Customer Address':j.job_location==='workshop'?'🏭 Workshop':j.job_location==='other'?'📍 Other':'📍 Location';
+  const mapsUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(j.customer_address||'');
+  const addrDisplay=j.customer_address
+    ? '<a href="'+mapsUrl+'" target="_blank" style="color:var(--accent);text-decoration:underline;">'+esc(j.customer_address)+' 🗺️</a>'
+    : 'Not specified';
+  html+='<div class="tech-info-item full"><div class="tech-info-lbl">'+locLabel+'</div><div class="tech-info-val">'+addrDisplay+'</div></div>';
   if(j.booking_time||j.duration){
     html+='<div class="tech-info-item"><div class="tech-info-lbl">Time</div><div class="tech-info-val">'+esc(j.booking_time||'—')+'</div></div>';
     html+='<div class="tech-info-item"><div class="tech-info-lbl">Duration</div><div class="tech-info-val">'+esc(j.duration||'—')+'</div></div>';
