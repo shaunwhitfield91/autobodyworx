@@ -745,6 +745,7 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
         <div class="dpr"><span class="dpl">Location</span><span class="dpv" id="dp-loc"></span></div>
         <div class="dpr"><span class="dpl">Price</span><span class="dpv" id="dp-price"></span></div>
         <div class="dpr"><span class="dpl">Phone</span><span class="dpv" id="dp-phone"></span></div>
+        <div class="dpr" id="dp-address-row" style="display:none;"><span class="dpl">Address</span><span class="dpv" id="dp-address"></span></div>
         <div class="dpr" id="dp-notes-row" style="display:none;"><span class="dpl">Notes</span><span class="dpv" id="dp-notes"></span></div>
         <button class="btn-primary" style="margin-top:16px;width:100%;" onclick="closeDiaryPopup()">Close</button>
       </div>
@@ -2029,6 +2030,13 @@ async function signOffJob(jobId){
 }
 
 
+function locIcon(j){
+  const loc=(j.job_location||'').toLowerCase();
+  if(loc==='workshop') return '🏭';
+  if(loc==='customer'||loc==='mobile'||loc==='other') return '🚐';
+  return '';
+}
+
 // DIARY TECH FILTER
 let diaryTechFilter = 'all';
 
@@ -2166,7 +2174,7 @@ function renderDiary(){
         const isDayDone=(j.status==='completed'||['card','cash','paid'].includes(j.paid));
         const dayDur=abbrDur(j.duration);
         html+='<div class="diary-day-job '+tc+(isDayDone?' done':'')+'" onclick="openDiaryJob('+j.id+')">'
-          +'<div class="diary-day-job-title">'+cdIcon+esc(j.customer_name||'Unknown')+(dayDur?' <span style="font-size:10px;opacity:.7;font-weight:600;">'+dayDur+'</span>':'')+(isDayDone?' <span style="color:var(--accent);font-size:11px;">✓</span>':'')+partsIcon+'</div>'
+          +'<div class="diary-day-job-title">'+(locIcon(j)?locIcon(j)+' ':'')+cdIcon+esc(j.customer_name||'Unknown')+(dayDur?' <span style="font-size:10px;opacity:.7;font-weight:600;">'+dayDur+'</span>':'')+(isDayDone?' <span style="color:var(--accent);font-size:11px;">✓</span>':'')+partsIcon+'</div>'
           +'<div class="diary-day-job-meta">'
           +(j.booking_time?'<span>🕐 '+j.booking_time.slice(0,5)+'</span>':'')
           +(j.vehicle?'<span>🚘 '+esc(j.vehicle)+'</span>':'')
@@ -2209,7 +2217,7 @@ function renderDiary(){
         const isDone=(j.status==='completed'||['card','cash','paid'].includes(j.paid));
         const dur=abbrDur(j.duration);
         body+='<div class="diary-job '+tc+(isDone?' done':'')+'" onclick="openDiaryJob('+j.id+')">'
-          +'<div class="diary-job-name">'+cdIcon+esc(j.customer_name||'Unknown')+(dur?' <span style="font-size:9px;opacity:.7;font-weight:600;">'+esc(dur)+'</span>':'')+'</div>'
+          +'<div class="diary-job-name">'+(locIcon(j)?locIcon(j)+' ':'')+cdIcon+esc(j.customer_name||'Unknown')+(dur?' <span style="font-size:9px;opacity:.7;font-weight:600;">'+esc(dur)+'</span>':'')+'</div>'
           +'<div class="diary-job-sub">'+esc(j.vehicle||j.panels||'')+'</div>'
           +(timeStr?'<div class="diary-job-sub" style="color:var(--grey3);">'+timeStr+'</div>':'')
           +'</div>';
@@ -2250,7 +2258,8 @@ function renderDiary(){
         const isMDone=(j.status==='completed'||['card','cash','paid'].includes(j.paid));
         const mDur=abbrDur(j.duration);
         const mTime=j.booking_time?j.booking_time.slice(0,5):'';
-        const mLabel=esc((j.customer_name||'Unknown').split(' ')[0])
+        const mLoc=locIcon(j);
+        const mLabel=(mLoc?mLoc+' ':'')+esc((j.customer_name||'Unknown').split(' ')[0])
           +(mTime?' '+mTime:'')
           +(mDur?' '+mDur:'')
           +(isMDone?' ✓':'');
@@ -2286,6 +2295,15 @@ function openDiaryJob(jobId){
   document.getElementById('dp-loc').textContent=j.job_location||j.location||'—';
   document.getElementById('dp-price').textContent=j.quote_price||'—';
   document.getElementById('dp-phone').textContent=j.customer_phone||'—';
+  const addrRow=document.getElementById('dp-address-row');
+  const addrEl=document.getElementById('dp-address');
+  if(j.customer_address){
+    const mapsUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(j.customer_address);
+    addrEl.innerHTML='<a href="'+mapsUrl+'" target="_blank" style="color:var(--accent);text-decoration:underline;">'+j.customer_address+' 🗺️</a>';
+    addrRow.style.display='flex';
+  } else {
+    addrRow.style.display='none';
+  }
   const nr=document.getElementById('dp-notes-row');
   if(j.notes){document.getElementById('dp-notes').textContent=j.notes;nr.style.display='flex';}else nr.style.display='none';
   document.getElementById('dp-cd-flag').style.display=j.cd_required?'inline-block':'none';
