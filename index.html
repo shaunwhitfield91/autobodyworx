@@ -812,20 +812,20 @@ async function initApp(user){
   if(appInitialised) return;
   appInitialised=true;
   currentUser=user;
-  // Try to load profile from Supabase — fallback to admin if not found
-  try{
-    const pr=await sbRaw('GET','profiles','','?id=eq.'+user.id+'&select=full_name,role');
-    if(pr&&pr.length){
-      currentProfile={full_name:pr[0].full_name||user.email,role:pr[0].role||'admin'};
-    } else {
-      // No profile row yet — default to admin (owner)
-      const emailName=user.email.split('@')[0];
-      const name=emailName.charAt(0).toUpperCase()+emailName.slice(1);
-      currentProfile={full_name:name,role:'admin'};
-    }
-  }catch(e){
+  // Determine role and name from email
+  const PROFILES = {
+    'shaun@auto-bodyworx.com':   {full_name:'Shaun',   role:'admin'},
+    'admin@auto-bodyworx.com':   {full_name:'Chloe',   role:'admin'},
+    'charleshurst2003@gmail.com':{full_name:'Charles', role:'tech'}
+  };
+  const emailKey = user.email.toLowerCase();
+  if(PROFILES[emailKey]){
+    currentProfile = PROFILES[emailKey];
+  } else {
+    // Unknown user — default to tech (safest)
     const emailName=user.email.split('@')[0];
-    currentProfile={full_name:emailName,role:'admin'};
+    const name=emailName.charAt(0).toUpperCase()+emailName.slice(1);
+    currentProfile={full_name:name,role:'tech'};
   }
   document.getElementById('userLabel').textContent=currentProfile.full_name;
   document.getElementById('loginScreen').style.display='none';
