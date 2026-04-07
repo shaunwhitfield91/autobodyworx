@@ -2252,18 +2252,30 @@ function renderDiary(){
       const day=new Date(viewMonth.getFullYear(),viewMonth.getMonth(),d);
       const isToday=day.getTime()===todayMs;
       const ds=day.getFullYear()+'-'+String(day.getMonth()+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-      const jobs=filteredJobs.filter(function(j){return j.booking_date===ds;});
+      const jobs=filteredJobs.filter(function(j){
+        if(!j.booking_date) return false;
+        if(j.booking_date===ds) return true;
+        const nd=jobDurDays(j.duration);
+        if(nd<=1) return false;
+        const st=new Date(j.booking_date+'T00:00:00');
+        const en=new Date(st);
+        en.setDate(st.getDate()+nd-1);
+        const d2=new Date(ds+'T00:00:00');
+        return d2>st && d2<=en;
+      });
       let dots='';
       jobs.slice(0,3).forEach(function(j){
         const isMDone=(j.status==='completed'||['card','cash','paid'].includes(j.paid));
         const mDur=abbrDur(j.duration);
         const mTime=j.booking_time?j.booking_time.slice(0,5):'';
         const mLoc=locIcon(j);
-        const mLabel=(mLoc?mLoc+' ':'')+esc((j.customer_name||'Unknown').split(' ')[0])
-          +(mTime?' '+mTime:'')
-          +(mDur?' '+mDur:'')
+        const isSpan=j.booking_date!==ds;
+        const mLabel=(isSpan?'↳ ':'')
+          +(mLoc?mLoc+' ':'')+esc((j.customer_name||'Unknown').split(' ')[0])
+          +(mTime&&!isSpan?' '+mTime:'')
+          +(mDur&&!isSpan?' '+mDur:'')
           +(isMDone?' ✓':'');
-        dots+='<div class="diary-month-dot '+tcClass(j)+(isMDone?' done':'')+'" onclick="openDiaryJob('+j.id+')">'+mLabel+'</div>';
+        dots+='<div class="diary-month-dot '+tcClass(j)+(isMDone?' done':'')+(isSpan?' span':'')+'" style="'+(isSpan?'opacity:.7;':'')+'" onclick="openDiaryJob('+j.id+')">'+mLabel+'</div>';
       });
       if(jobs.length>3) dots+='<div class="diary-month-more">+'+( jobs.length-3)+' more</div>';
       html+='<div class="diary-month-cell'+(isToday?' today':'')+'">'
