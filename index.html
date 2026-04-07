@@ -1146,7 +1146,7 @@ function jHTML(j){
             <input type="radio" name="loc-type-${j.id}" value="workshop" ${(!j.job_location||j.job_location==='workshop')?'checked':''} onchange="updJob(${j.id},'job_location','workshop');document.getElementById('loc-other-${j.id}').style.display='none';"> 🏭 Workshop
           </label>
           <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--grey1);cursor:pointer;">
-            <input type="radio" name="loc-type-${j.id}" value="customer" ${j.job_location==='customer'?'checked':''} onchange="updJob(${j.id},'job_location','customer');document.getElementById('loc-other-${j.id}').style.display='none';"> 🏠 Customer's Address
+            <input type="radio" name="loc-type-${j.id}" value="customer" ${j.job_location==='customer'?'checked':''} onchange="updJob(${j.id},'job_location','customer');document.getElementById('loc-other-${j.id}').style.display='none';"> 🚐 Mobile (Customer's Address)
           </label>
           <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--grey1);cursor:pointer;">
             <input type="radio" name="loc-type-${j.id}" value="other" ${(j.job_location&&j.job_location!=='workshop'&&j.job_location!=='customer')?'checked':''} onchange="document.getElementById('loc-other-${j.id}').style.display='block';"> 📍 Other
@@ -1814,7 +1814,7 @@ function buildTechJobBody(j){
   html+='<div class="tech-info-item"><div class="tech-info-lbl">Vehicle</div><div class="tech-info-val">'+esc(j.vehicle||'—')+'</div></div>';
   html+='<div class="tech-info-item"><div class="tech-info-lbl">Colour</div><div class="tech-info-val">'+esc(j.colour||'—')+'</div></div>';
   html+='<div class="tech-info-item full"><div class="tech-info-lbl">Panels / Damage</div><div class="tech-info-val">'+esc(j.panels||'—')+'</div></div>';
-  const locLabel=j.job_location==='customer'?'📍 Customer Address':j.job_location==='workshop'?'🏭 Workshop':j.job_location==='other'?'📍 Other':'📍 Location';
+  const locLabel=j.job_location==='customer'?'🚐 Mobile (Customer Address)':j.job_location==='workshop'?'🏭 Workshop':j.job_location==='other'?'📍 Other':'';
   const mapsUrl='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(j.customer_address||'');
   const addrDisplay=j.customer_address
     ? '<a href="'+mapsUrl+'" target="_blank" style="color:var(--accent);text-decoration:underline;">'+esc(j.customer_address)+' 🗺️</a>'
@@ -2031,9 +2031,8 @@ async function signOffJob(jobId){
 
 
 function locIcon(j){
-  const loc=(j.job_location||'').toLowerCase();
-  if(loc==='workshop') return '🏭';
-  if(loc==='customer'||loc==='mobile'||loc==='other') return '🚐';
+  if(j.job_location==='workshop') return '🏭';
+  if(j.job_location==='customer') return '🚐';
   return '';
 }
 
@@ -2304,7 +2303,8 @@ function openDiaryJob(jobId){
   document.getElementById('dp-time').textContent=j.booking_time||'—';
   document.getElementById('dp-dur').textContent=j.duration||'—';
   document.getElementById('dp-tech').textContent=j.assigned_tech||'Unassigned';
-  document.getElementById('dp-loc').textContent=j.job_location||j.location||'—';
+  const locLabels={'workshop':'🏭 Workshop','customer':'🚐 Mobile (Customer Address)','other':'📍 Other'};
+  document.getElementById('dp-loc').textContent=locLabels[j.job_location]||'Not set';
   document.getElementById('dp-price').textContent=j.quote_price||'—';
   document.getElementById('dp-phone').textContent=j.customer_phone||'—';
   const addrRow=document.getElementById('dp-address-row');
