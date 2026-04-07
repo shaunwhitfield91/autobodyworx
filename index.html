@@ -222,8 +222,7 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
 .empty{text-align:center;padding:60px 20px;color:var(--grey3);}
 .empty-icon{font-size:40px;margin-bottom:12px;}
 .role-hidden{display:none!important;}
-.role-tech{display:none;}
-.show-tech .role-tech{display:inline-flex;}
+/* role-tech visibility controlled by JS role-hidden class */
 @media(max-width:640px){
   .fg-grid,.jd-grid,.m-grid{grid-template-columns:1fr 1fr;}
   .fg-grid .full,.jd-grid .full,.m-grid .full{grid-column:1/-1;}
@@ -843,16 +842,17 @@ function applyRoleUI(){
   const role=currentProfile?.role||'tech';
   document.querySelectorAll('.role-admin').forEach(el=>el.classList.toggle('role-hidden',role!=='admin'));
   document.querySelectorAll('.role-admin_staff').forEach(el=>el.classList.toggle('role-hidden',!['admin','admin_staff'].includes(role)));
-  // Show/hide tech-only elements
   const isTechRole=role==='tech';
-  document.querySelectorAll('.role-tech').forEach(el=>el.classList.toggle('role-hidden',!isTechRole));
-  // Hide quote/settings tabs from techs
   if(isTechRole){
+    // Tech: show only My Jobs tab
     document.getElementById('t-quote')?.classList.add('role-hidden');
     document.getElementById('t-crm')?.classList.add('role-hidden');
     document.getElementById('t-diary')?.classList.add('role-hidden');
+    document.getElementById('t-settings')?.classList.add('role-hidden');
+    document.getElementById('t-tech')?.classList.remove('role-hidden');
     switchTab('tech');
   } else {
+    // Admin: hide My Jobs tab, show everything else
     document.getElementById('t-tech')?.classList.add('role-hidden');
     switchTab('crm');
   }
