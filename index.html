@@ -814,7 +814,7 @@ async function initApp(user){
   currentUser=user;
   // Try to load profile from Supabase — fallback to admin if not found
   try{
-    const pr=await sbRaw('GET','profiles','',`?id=eq.${user.id}&select=full_name,role`);
+    const pr=await sbRaw('GET','profiles','','?id=eq.'+user.id+'&select=full_name,role');
     if(pr&&pr.length){
       currentProfile={full_name:pr[0].full_name||user.email,role:pr[0].role||'admin'};
     } else {
@@ -1729,7 +1729,7 @@ function buildTechJobBody(j){
     html+='<div class="tech-section-title">📷 Damage Photos</div><div class="tech-photos-row">';
     dmgPhotos.forEach(p=>{
       const url='https://isxycoxqlummscxmdckj.supabase.co/storage/v1/object/public/job-photos/'+p.storage_path;
-      html+='<img class="tech-photo-thumb" src="'+url+'" onclick="window.open(''+url+'','_blank')">';
+      html+='<img class="tech-photo-thumb" src="'+url+'" onclick="window.open(this.src,\'_blank\')">';
     });
     html+='</div>';
   }
@@ -1742,7 +1742,7 @@ function buildTechJobBody(j){
       html+='<div class="tech-section-title">✅ Completion Photos</div><div class="tech-photos-row">';
       cmpPhotos.forEach(p=>{
         const url='https://isxycoxqlummscxmdckj.supabase.co/storage/v1/object/public/job-photos/'+p.storage_path;
-        html+='<img class="tech-photo-thumb" src="'+url+'" onclick="window.open(''+url+'','_blank')">';
+        html+='<img class="tech-photo-thumb" src="'+url+'" onclick="window.open(this.src,\'_blank\')">';
       });
       html+='</div>';
     }
@@ -1753,15 +1753,15 @@ function buildTechJobBody(j){
     // After photo upload
     html+='<div class="tech-section-title">1. Upload completion photos</div>';
     html+='<input type="file" id="tech-file-'+j.id+'" accept="image/*" multiple style="display:none;" onchange="techAddPhotos('+j.id+',this)">';
-    html+='<div class="tech-upload-area" onclick="document.getElementById('tech-file-'+j.id+'').click()">📷 Tap to add photos<p>Take a photo or choose from your gallery</p></div>';
+    html+='<div class="tech-upload-area" onclick="document.getElementById(\"tech-file-\"+'+j.id+').click()">📷 Tap to add photos<p>Take a photo or choose from your gallery</p></div>';
     html+='<div class="tech-after-thumbs" id="tech-thumbs-'+j.id+'"></div>';
     // Payment method
     html+='<div class="tech-section-title">2. Payment received</div>';
     html+='<div class="tech-pay-row">';
-    html+='<div class="tech-pay-btn" id="tpay-'+j.id+'-card" onclick="techSetPay('+j.id+','card',this)">💳 Card</div>';
-    html+='<div class="tech-pay-btn" id="tpay-'+j.id+'-cash" onclick="techSetPay('+j.id+','cash',this)">💵 Cash</div>';
-    html+='<div class="tech-pay-btn" id="tpay-'+j.id+'-paid" onclick="techSetPay('+j.id+','paid',this)">🏦 BACS</div>';
-    html+='<div class="tech-pay-btn" id="tpay-'+j.id+'-nopay" onclick="techSetPay('+j.id+','nopay',this)">📋 Invoice Later</div>';
+    html+='<div class="tech-pay-btn" id="tpay-'+j.id+'-card" onclick="techSetPay('+j.id+',\"card\",this)">💳 Card</div>';
+    html+='<div class="tech-pay-btn" id="tpay-'+j.id+'-cash" onclick="techSetPay('+j.id+',\"cash\",this)">💵 Cash</div>';
+    html+='<div class="tech-pay-btn" id="tpay-'+j.id+'-paid" onclick="techSetPay('+j.id+',\"paid\",this)">🏦 BACS</div>';
+    html+='<div class="tech-pay-btn" id="tpay-'+j.id+'-nopay" onclick="techSetPay('+j.id+',\"nopay\",this)">📋 Invoice Later</div>';
     html+='</div>';
     html+='<button class="tech-complete-btn" id="tech-done-btn-'+j.id+'" onclick="techCompleteJob('+j.id+')" disabled>Mark as Complete</button>';
     html+='</div>';
