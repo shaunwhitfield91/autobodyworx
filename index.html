@@ -754,7 +754,56 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
         <div class="dpr"><span class="dpl">Phone</span><span class="dpv" id="dp-phone"></span></div>
         <div class="dpr" id="dp-address-row" style="display:none;"><span class="dpl">Address</span><span class="dpv" id="dp-address"></span></div>
         <div class="dpr" id="dp-notes-row" style="display:none;"><span class="dpl">Notes</span><span class="dpv" id="dp-notes"></span></div>
-        <button class="btn-primary" style="margin-top:16px;width:100%;" onclick="closeDiaryPopup()">Close</button>
+        <div style="display:flex;gap:8px;margin-top:16px;">
+          <button class="btn-primary" style="flex:1;" onclick="closeDiaryPopup()">Close</button>
+          <button class="btn-primary" style="flex:1;background:var(--card2);color:var(--white);border:1px solid var(--border2);" onclick="openDiaryEdit()">✏️ Edit Job</button>
+        </div>
+        <!-- EDIT FORM (hidden by default) -->
+        <div id="dp-edit-form" style="display:none;border-top:1px solid var(--border2);margin-top:16px;padding-top:16px;">
+          <div style="font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--grey3);margin-bottom:12px;">Edit Job Details</div>
+          <div class="fg"><label>Customer Name</label><input class="jd-inp" id="dpe-name" placeholder="Customer name"></div>
+          <div class="fg"><label>Phone</label><input class="jd-inp" id="dpe-phone" placeholder="Phone number"></div>
+          <div class="fg"><label>Vehicle</label><input class="jd-inp" id="dpe-vehicle" placeholder="Make, model, year"></div>
+          <div class="fg"><label>Colour</label><input class="jd-inp" id="dpe-colour" placeholder="Colour"></div>
+          <div class="fg"><label>Panels / Damage</label><input class="jd-inp" id="dpe-panels" placeholder="Panels affected"></div>
+          <div class="fg"><label>Price</label><input class="jd-inp" id="dpe-price" placeholder="e.g. £480 inc VAT"></div>
+          <div class="fg"><label>Booking Date</label><input class="jd-inp" type="date" id="dpe-date"></div>
+          <div class="fg"><label>Booking Time</label><input class="jd-inp" type="time" id="dpe-time"></div>
+          <div class="fg"><label>Duration</label>
+            <select class="jd-sel" id="dpe-duration">
+              <option value="">— Select —</option>
+              <option value="3 Hours">3 Hours</option>
+              <option value="5 Hours">5 Hours</option>
+              <option value="Full Day">Full Day</option>
+              <option value="2 Days">2 Days</option>
+              <option value="3 Days">3 Days</option>
+              <option value="4 Days">4 Days</option>
+              <option value="5 Days">5 Days</option>
+            </select>
+          </div>
+          <div class="fg"><label>Assigned Tech</label>
+            <select class="jd-sel" id="dpe-tech">
+              <option value="">— Unassigned —</option>
+              <option value="Shaun">Shaun</option>
+              <option value="Charles">Charles</option>
+              <option value="Both">Both</option>
+              <option value="PDR">🔧 PDR (Subcontract)</option>
+              <option value="Alloys">💿 Alloys (Subcontract)</option>
+            </select>
+          </div>
+          <div class="fg"><label>Location</label>
+            <select class="jd-sel" id="dpe-location">
+              <option value="">— Not set —</option>
+              <option value="workshop">🏭 Workshop</option>
+              <option value="customer">🚐 Mobile (Customer Address)</option>
+            </select>
+          </div>
+          <div class="fg"><label>Notes</label><textarea class="jd-inp" id="dpe-notes" rows="3" style="resize:vertical;height:auto;min-height:60px;" placeholder="Notes..."></textarea></div>
+          <div style="display:flex;gap:8px;margin-top:4px;">
+            <button class="btn-primary" style="flex:1;background:var(--accent);color:var(--bg);border:none;" onclick="saveDiaryEdit()">💾 Save Changes</button>
+            <button class="btn-primary" style="flex:1;background:transparent;border:1px solid var(--border2);color:var(--grey2);" onclick="cancelDiaryEdit()">Cancel</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1098,7 +1147,22 @@ function renderCRM(){
     const rangeLabel = revFilter!=='all' ? revLabel[revFilter]+' · ' : '';
     sub.textContent = rangeLabel + (proj>0?'+ £'+proj.toFixed(0)+' projected':'');
   }
-  document.getElementById('crmCount').textContent=allJobs.length;
+  // Role-based tab count: Shaun sees pending (needs approval), Chloe sees quoted (needs booking)
+  const role = currentProfile?.role;
+  const email = currentUser?.email?.toLowerCase();
+  let crmBadgeCount = 0;
+  if(email === 'shaun@auto-bodyworx.com'){
+    crmBadgeCount = allJobs.filter(j=>j.status==='pending').length;
+  } else if(email === 'admin@auto-bodyworx.com'){
+    crmBadgeCount = allJobs.filter(j=>j.status==='quoted').length;
+  } else {
+    crmBadgeCount = allJobs.filter(j=>j.status==='pending').length; // default admins see pending
+  }
+  const crmCountEl = document.getElementById('crmCount');
+  if(crmCountEl){
+    crmCountEl.textContent = crmBadgeCount;
+    crmCountEl.style.display = crmBadgeCount > 0 ? '' : 'none';
+  }
   const col=document.getElementById('jobsCol');
   if(!filtered.length){col.innerHTML=`<div class="empty"><div class="empty-icon">🚗</div><p>${allJobs.length===0?'No jobs yet — approve a quote to get started.':'No jobs match your search.'}</p></div>`;return;}
   col.innerHTML=filtered.map(j=>jHTML(j)).join('');
@@ -2083,6 +2147,63 @@ function locIcon(j){
   return '';
 }
 
+
+// DIARY EDIT
+function openDiaryEdit(){
+  const j = allJobs.find(x=>x.id===diaryEditJobId);
+  if(!j) return;
+  // Populate fields
+  document.getElementById('dpe-name').value = j.customer_name||'';
+  document.getElementById('dpe-phone').value = j.customer_phone||'';
+  document.getElementById('dpe-vehicle').value = j.vehicle||'';
+  document.getElementById('dpe-colour').value = j.colour||'';
+  document.getElementById('dpe-panels').value = j.panels||'';
+  document.getElementById('dpe-price').value = j.quote_price||'';
+  document.getElementById('dpe-date').value = j.booking_date||'';
+  document.getElementById('dpe-time').value = j.booking_time||'';
+  document.getElementById('dpe-duration').value = j.duration||'';
+  document.getElementById('dpe-tech').value = j.assigned_tech||'';
+  document.getElementById('dpe-location').value = j.job_location||'';
+  document.getElementById('dpe-notes').value = j.notes||'';
+  document.getElementById('dp-edit-form').style.display='block';
+}
+
+function cancelDiaryEdit(){
+  document.getElementById('dp-edit-form').style.display='none';
+}
+
+async function saveDiaryEdit(){
+  const j = allJobs.find(x=>x.id===diaryEditJobId);
+  if(!j) return;
+  const updates = {
+    customer_name: document.getElementById('dpe-name').value.trim()||j.customer_name,
+    customer_phone: document.getElementById('dpe-phone').value.trim(),
+    vehicle: document.getElementById('dpe-vehicle').value.trim(),
+    colour: document.getElementById('dpe-colour').value.trim(),
+    panels: document.getElementById('dpe-panels').value.trim(),
+    quote_price: document.getElementById('dpe-price').value.trim(),
+    invoice_amount: document.getElementById('dpe-price').value.trim(),
+    booking_date: document.getElementById('dpe-date').value||null,
+    booking_time: document.getElementById('dpe-time').value||null,
+    duration: document.getElementById('dpe-duration').value,
+    assigned_tech: document.getElementById('dpe-tech').value,
+    job_location: document.getElementById('dpe-location').value,
+    notes: document.getElementById('dpe-notes').value.trim()
+  };
+  try{
+    await sbRaw('PATCH','jobs',updates,`?id=eq.${diaryEditJobId}`);
+    Object.assign(j, updates);
+    showToast('✅ Job updated!');
+    // Refresh popup display
+    openDiaryJob(diaryEditJobId);
+    // Refresh CRM and diary
+    renderCRM();
+    renderDiary();
+  } catch(e){
+    alert('Save failed: '+e.message);
+  }
+}
+
 // DIARY TECH FILTER
 let diaryTechFilter = 'all';
 
@@ -2139,6 +2260,7 @@ function getFilteredJobs(){
 // DIARY
 let diaryOffset = 0;
 let diaryView = 'day';
+let diaryEditJobId = null;
 
 function setDiaryView(v){
   diaryView = v;
@@ -2367,6 +2489,9 @@ function openDiaryJob(jobId){
   if(j.notes){document.getElementById('dp-notes').textContent=j.notes;nr.style.display='flex';}else nr.style.display='none';
   document.getElementById('dp-cd-flag').style.display=j.cd_required?'inline-block':'none';
   document.getElementById('dp-parts-flag').style.display=j.parts_required?'inline-block':'none';
+  diaryEditJobId = jobId;
+  // Reset edit form visibility
+  document.getElementById('dp-edit-form').style.display='none';
   document.getElementById('diaryPopup').style.display='flex';
 }
 function closeDiaryPopup(){ document.getElementById('diaryPopup').style.display='none'; }
