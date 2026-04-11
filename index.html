@@ -628,6 +628,7 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
         <button class="rfp on" id="rfp-all" onclick="setRevFilter('all',this)">All Time</button>
         <button class="rfp" id="rfp-month" onclick="setRevFilter('month',this)">This Month</button>
         <button class="rfp" id="rfp-last" onclick="setRevFilter('last',this)">Last Month</button>
+        <button class="rfp" id="rfp-next-month" onclick="setRevFilter('nextmonth',this)">Next Month</button>
         <button class="rfp" id="rfp-year" onclick="setRevFilter('year',this)">This Year</button>
         <input type="month" id="rfp-custom" class="rfp" style="padding:4px 8px;cursor:pointer;" onchange="setRevFilter('custom',null);revCustomMonth=this.value;renderCRM();" title="Pick a specific month">
       </div>
@@ -1140,7 +1141,7 @@ function renderCRM(){
   document.getElementById('sC').textContent=allJobs.filter(j=>j.status==='completed'||['card','cash','paid'].includes(j.paid)).length;
   const rev=calcRevenue(allJobs);
   const proj=calcProjected(allJobs);
-  const revLabel={'all':'All Time','month':'This Month','last':'Last Month','year':'This Year'};
+  const revLabel={'all':'All Time','month':'This Month','last':'Last Month','nextmonth':'Next Month','year':'This Year'};
   document.getElementById('sR').textContent='£'+rev.toFixed(0);
   const sub=document.getElementById('sRsub');
   if(sub){
@@ -1782,6 +1783,11 @@ function getRevDateRange(){
     const e = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
     return {s,e};
   }
+  if(revFilter==='nextmonth'){
+    const s = new Date(now.getFullYear(), now.getMonth()+1, 1);
+    const e = new Date(now.getFullYear(), now.getMonth()+2, 0, 23, 59, 59);
+    return {s,e};
+  }
   if(revFilter==='year'){
     const s = new Date(now.getFullYear(), 0, 1);
     const e = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
@@ -1864,7 +1870,7 @@ function renderTechPortal(){
       const isDone=j.status==='completed'||['card','cash','paid'].includes(j.paid);
       const dur=abbrDur(j.duration);
       const timeStr=j.booking_time?j.booking_time.slice(0,5):'';
-      html+='<div class="tech-job-card'+(isDone?' done':'')+'">'        +'<div class="tech-job-hd" onclick="togTechJob('+j.id+')">'        +'<div class="tech-job-info">'        +'<div class="tech-job-name">'+esc(j.customer_name||'Unknown')+(isDone?' ✓':'')+'</div>'        +'<div class="tech-job-sub">'+esc(j.vehicle||'')+(timeStr?' · 🕐 '+timeStr:'')+(dur?' · '+dur:'')+'</div>'        +'</div>'        +'<div class="tech-job-badges">'        +(j.cd_required?'<span class="badge badge-cd">🚗 C&D</span>':'')        +(j.parts_required&&!j.parts_instock?'<span class="badge badge-dep-due">🔧 Parts</span>':'')        +'<span style="color:var(--grey3);font-size:18px;">▼</span>'        +'</div></div>'        +'<div class="tech-job-body" id="tjb-'+j.id+'">'        +buildTechJobBody(j)        +'</div></div>';
+      html+='<div class="tech-job-card'+(isDone?' done':'')+'">'        +'<div class="tech-job-hd" onclick="togTechJob('+j.id+')">'        +'<div class="tech-job-info">'        +'<div class="tech-job-name">'+(locIcon(j)?locIcon(j)+' ':'')+esc(j.customer_name||'Unknown')+(isDone?' ✓':'')+'</div>'        +'<div class="tech-job-sub">'+esc(j.vehicle||'')+(timeStr?' · 🕐 '+timeStr:'')+(dur?' · '+dur:'')+(j.cd_required?' · 🚗 C&D':'')+'</div>'        +'</div>'        +'<div class="tech-job-badges">'        +(j.cd_required?'<span class="badge badge-cd">🚗 C&D</span>':'')        +(j.parts_required&&!j.parts_instock?'<span class="badge badge-dep-due">🔧 Parts</span>':'')        +'<span style="color:var(--grey3);font-size:18px;">▼</span>'        +'</div></div>'        +'<div class="tech-job-body" id="tjb-'+j.id+'">'        +buildTechJobBody(j)        +'</div></div>';
     });
     html+='</div>';
   });
