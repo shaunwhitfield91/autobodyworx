@@ -638,6 +638,13 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
         <div class="stat"><div class="stat-lbl">Completed</div><div class="stat-val sv-g" id="sC">0</div></div>
         <div class="stat"><div class="stat-lbl">Revenue (Paid)</div><div class="stat-val sv-w" id="sR">£0</div><div class="stat-sub" id="sRsub"></div></div>
       </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
+        <span style="font-family:'Montserrat',sans-serif;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--grey3);margin-right:2px;">Date:</span>
+        <button class="rfp on" id="dfp-all" onclick="setDateFilter('all',this)">All</button>
+        <button class="rfp" id="dfp-today" onclick="setDateFilter('today',this)">Today</button>
+        <button class="rfp" id="dfp-week" onclick="setDateFilter('week',this)">This Week</button>
+        <button class="rfp" id="dfp-next" onclick="setDateFilter('next',this)">Next Week</button>
+      </div>
       <div class="toolbar">
         <input type="text" class="srch" id="crmSearch" placeholder="Search name, vehicle, phone..." oninput="renderCRM()">
         <button class="fpill on" onclick="setFilter('all',this)">All</button>
@@ -1063,11 +1070,20 @@ function setFilter(f,btn){crmFilter=f;document.querySelectorAll('.fpill').forEac
 
 function renderCRM(){
   const q=(document.getElementById('crmSearch')?.value||'').toLowerCase();
+  const dateRange = getDateFilterRange();
   const filtered=allJobs.filter(j=>{
     const isCompleted=j.status==='completed'||['card','cash','paid'].includes(j.paid);
     const mf=crmFilter==='all'||(crmFilter==='completed'?isCompleted:crmFilter==='pending'?j.status==='pending':j.status===crmFilter);
+    // Date filter — based on booking_date
+    let df=true;
+    if(dateRange && j.booking_date){
+      const bd=new Date(j.booking_date+'T00:00:00');
+      df=bd>=dateRange.s&&bd<=dateRange.e;
+    } else if(dateRange && !j.booking_date){
+      df=false; // no booking date — exclude from date-filtered views
+    }
     const ms=!q||[j.customer_name,j.vehicle,j.customer_phone,j.panels].some(x=>x&&x.toLowerCase().includes(q));
-    return mf&&ms;
+    return mf&&ms&&df;
   });
   document.getElementById('sP').textContent=allJobs.filter(j=>j.status==='pending').length;
   document.getElementById('sQ').textContent=allJobs.filter(j=>j.status==='quoted').length;
@@ -1988,6 +2004,37 @@ function abbrDur(dur){
   const m=d.match(/(\d+)/);
   if(m) return m[1]+'hr';
   return dur;
+}
+
+
+// DATE FILTER
+let dateFilter = 'all';
+function setDateFilter(f, btn){
+  dateFilter = f;
+  document.querySelectorAll('[id^="dfp-"]').forEach(b=>b.classList.remove('on'));
+  if(btn) btn.classList.add('on');
+  renderCRM();
+}
+
+function getDateFilterRange(){
+  const now = new Date(); now.setHours(0,0,0,0);
+  if(dateFilter==='today'){
+    const end = new Date(now); end.setHours(23,59,59,999);
+    return {s:now, e:end};
+  }
+  if(dateFilter==='week'){
+    const dow = now.getDay();
+    const mon = new Date(now); mon.setDate(now.getDate()-(dow===0?6:dow-1));
+    const sun = new Date(mon); sun.setDate(mon.getDate()+6); sun.setHours(23,59,59,999);
+    return {s:mon, e:sun};
+  }
+  if(dateFilter==='next'){
+    const dow = now.getDay();
+    const mon = new Date(now); mon.setDate(now.getDate()-(dow===0?6:dow-1)+7);
+    const sun = new Date(mon); sun.setDate(mon.getDate()+6); sun.setHours(23,59,59,999);
+    return {s:mon, e:sun};
+  }
+  return null;
 }
 
 // SIGN-OFF
