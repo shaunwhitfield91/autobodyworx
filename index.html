@@ -2,7 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ABWorx">
+  <meta name="theme-color" content="#0e1012">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Auto Bodyworx</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -181,9 +186,6 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
 .btn-save:hover{background:var(--accent-h);}
 .btn-del{background:transparent;color:var(--grey3);border:1px solid var(--border2);padding:9px 18px;border-radius:5px;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;cursor:pointer;}
 .btn-del:hover{color:var(--red);border-color:var(--red);}
-.btn-setmore{background:transparent;color:var(--blue);border:1px solid rgba(96,165,250,.4);padding:9px 18px;border-radius:5px;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .15s;}
-.btn-setmore:hover{background:rgba(96,165,250,.1);border-color:var(--blue);}
-.btn-setmore.booked{color:var(--accent);border-color:rgba(74,222,128,.4);}
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center;padding:20px;}
 .overlay.show{display:flex;}
 .modal{background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;}
@@ -664,7 +666,7 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
   <!-- SETTINGS PAGE -->
   <div class="page" id="settingsPage">
     <div class="wrap">
-      <div class="pg-head"><h1>Settings</h1><p>Setmore integration and preferences</p></div>
+      <div class="pg-head"><h1>Settings</h1><p>System preferences and API settings</p></div>
       <div class="card">
         <div class="card-lbl">🤖 Anthropic API Key</div>
         <p style="color:var(--grey2);font-size:13px;margin-bottom:18px;line-height:1.7;">Required for the quote generator. Stored only in this browser, never sent anywhere except Anthropic's servers.</p>
@@ -681,28 +683,16 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
         </div>
         <div id="anthropicStatus" style="display:none;"></div>
       </div>
+      
 
       <div class="card">
-        <div class="card-lbl">📅 Diary Booking</div>
-        <p style="color:var(--grey2);font-size:13px;margin-bottom:18px;line-height:1.7;">Your refresh token is stored only in this browser and sent directly to Setmore — never stored on any server.</p>
-        <div class="fg" style="margin-bottom:14px;">
-          <label>Setmore Refresh Token</label>
-          <div style="display:flex;gap:8px;">
-            <input type="password" id="smToken" placeholder="Paste your Setmore refresh token..." style="flex:1;background:var(--bg);border:1px solid var(--border2);color:var(--white);padding:10px 12px;border-radius:6px;font-family:'Open Sans',sans-serif;font-size:14px;">
-            <button onclick="toggleTok()" style="background:var(--card2);border:1px solid var(--border2);color:var(--grey1);padding:0 14px;border-radius:6px;cursor:pointer;font-size:14px;">👁</button>
-          </div>
-        </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
-          <button class="btn-sm" onclick="saveTok()">Save Token</button>
-          <button class="btn-ghost" id="testBtn" onclick="testSetmore()">Test Connection</button>
-          <button class="btn-danger" onclick="clearTok()">Clear</button>
-        </div>
-        <div id="smStatus" style="display:none;"></div>
+        <div class="card-lbl">🔔 Push Notifications</div>
+        <p style="color:var(--grey2);font-size:13px;margin-bottom:14px;line-height:1.7;">Shaun gets notified when a job needs approval. Chloe gets notified when a quote is approved and ready to book. Works best when saved to your Home Screen via Safari.</p>
+        <button id="notifToggleBtn" onclick="localStorage.getItem('abw_notif_enabled')==='1'?disableNotifications():enableNotifications()" style="background:transparent;border:1px solid var(--border2);color:var(--grey2);padding:10px 18px;border-radius:6px;font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .15s;width:100%;">🔕 Enable Notifications</button>
+        <p style="color:var(--grey3);font-size:11px;margin-top:10px;">On iPhone: Open in Safari → Share → Add to Home Screen, then enable notifications here.</p>
       </div>
-      <div class="card">
-        <div class="card-lbl">👥 Setmore Staff</div>
-        <div id="staffList" style="display:flex;flex-direction:column;gap:8px;"><p style="color:var(--grey3);font-size:13px;font-style:italic;">Test your connection to load staff</p></div>
-      </div>
+
+      <div class="sec-div"></div>
       <div class="card">
         <div class="card-lbl">📋 How It Works</div>
         <div style="display:flex;flex-direction:column;gap:12px;">
@@ -939,10 +929,8 @@ async function initApp(user){
   applyRoleUI();
   await loadJobs();
   setupRealtime();
-  loadSmToken();
   loadAnthropicKey();
-  const saved=JSON.parse(localStorage.getItem('abw_sm_staff')||'[]');
-  if(saved.length) renderSmStaff(saved);
+  startPendingWatcher();
 }
 
 function applyRoleUI(){
@@ -1545,71 +1533,6 @@ function toggleAnthropicKey(){const i=document.getElementById('anthropicKey');i.
 function loadAnthropicKey(){const k=localStorage.getItem('abw_anthropic_key');if(k)document.getElementById('anthropicKey').value=k;}
 
 // SETMORE
-let smAccess=null;
-function loadSmToken(){const t=localStorage.getItem('abw_sm_token');if(t)document.getElementById('smToken').value=t;}
-function saveTok(){const t=document.getElementById('smToken').value.trim();if(!t)return;localStorage.setItem('abw_sm_token',t);showSmSt('✓ Token saved','ok');showToast('Saved');}
-function clearTok(){localStorage.removeItem('abw_sm_token');document.getElementById('smToken').value='';smAccess=null;showSmSt('Cleared','err');}
-function toggleTok(){const i=document.getElementById('smToken');i.type=i.type==='password'?'text':'password';}
-function showSmSt(msg,type){const el=document.getElementById('smStatus');el.style.display='block';el.className='status-'+type;el.textContent=msg;}
-async function getSmAT(){
-  const rt=localStorage.getItem('abw_sm_token');
-  if(!rt)throw new Error('No Setmore token. Go to Settings → save your refresh token.');
-  const res=await fetch(`https://developer.setmore.com/api/v1/o/oauth2/token?refreshToken=${rt}`,{method:'GET',headers:{'Content-Type':'application/json'}});
-  const data=await res.json();
-  if(!data.data?.token?.access_token)throw new Error('Invalid token. Check your refresh token in Settings.');
-  smAccess=data.data.token.access_token;return smAccess;
-}
-async function testSetmore(){
-  const btn=document.getElementById('testBtn');btn.textContent='Testing...';btn.disabled=true;
-  showSmSt('Connecting...','info');
-  try{
-    await getSmAT();
-    const res=await fetch('https://developer.setmore.com/api/v1/bookingapi/staffs',{headers:{Authorization:`Bearer ${smAccess}`}});
-    const data=await res.json();
-    if(data.data?.staffs){showSmSt(`✓ Connected! Staff: ${data.data.staffs.map(s=>s.first_name).join(', ')}`,'ok');localStorage.setItem('abw_sm_staff',JSON.stringify(data.data.staffs));renderSmStaff(data.data.staffs);}
-    else showSmSt('✓ Connected','ok');
-  }catch(e){showSmSt('✗ '+e.message,'err');}
-  finally{btn.textContent='Test Connection';btn.disabled=false;}
-}
-function renderSmStaff(staff){
-  const el=document.getElementById('staffList');if(!el||!staff?.length)return;
-  el.innerHTML=`<div style="display:flex;flex-direction:column;gap:8px;">${staff.map(s=>`<div class="staff-item"><div class="staff-av">${s.first_name?.[0]||'?'}</div><div><div style="font-weight:600;">${s.first_name} ${s.last_name||''}</div><div style="font-size:11px;color:var(--grey3);">Key: ${s.key}</div></div></div>`).join('')}</div>`;
-}
-async function bookSetmore(jobId){
-  const j=allJobs.find(x=>x.id===jobId);if(!j)return;
-  if(!j.booking_date||!j.booking_time){alert('Please set a Booking Date and Time first.');return;}
-  try{
-    await getSmAT();
-    const [svcR,stR]=await Promise.all([
-      fetch('https://developer.setmore.com/api/v1/bookingapi/services',{headers:{Authorization:`Bearer ${smAccess}`}}),
-      fetch('https://developer.setmore.com/api/v1/bookingapi/staffs',{headers:{Authorization:`Bearer ${smAccess}`}})
-    ]);
-    const service=(await svcR.json()).data?.services?.[0];
-    const staffList=(await stR.json()).data?.staffs||[];
-    if(!service)throw new Error('No services found in Setmore.');
-    let staff=staffList[0];
-    if(j.assigned_tech){const m=staffList.find(s=>(s.first_name+' '+(s.last_name||'')).toLowerCase().includes(j.assigned_tech.toLowerCase()));if(m)staff=m;}
-    if(!staff)throw new Error('No staff found in Setmore.');
-    let custKey='';
-    try{const cr=await fetch(`https://developer.setmore.com/api/v1/bookingapi/customer/search?name=${encodeURIComponent(j.customer_name)}`,{headers:{Authorization:`Bearer ${smAccess}`}});custKey=(await cr.json()).data?.customer?.key||'';}catch(e){}
-    if(!custKey){
-      const parts=j.customer_name.trim().split(' ');
-      const cr2=await fetch('https://developer.setmore.com/api/v1/bookingapi/customer/create',{method:'POST',headers:{Authorization:`Bearer ${smAccess}`,'Content-Type':'application/json'},body:JSON.stringify({first_name:parts[0]||j.customer_name,last_name:parts.slice(1).join(' ')||'',cell_phone:j.customer_phone||'',comment:`${j.vehicle||''} | ${j.panels||''}`})});
-      custKey=(await cr2.json()).data?.customer?.key||'';
-    }
-    const startDT=`${j.booking_date}T${j.booking_time}`;
-    const durMins=j.duration==='3hr'||j.duration==='3 Hours'?180:j.duration==='fullday'||j.duration==='Full Day'?480:300;
-    const endDT=new Date(new Date(startDT).getTime()+durMins*60000).toISOString().slice(0,16);
-    const ar=await fetch('https://developer.setmore.com/api/v1/bookingapi/appointment/create',{method:'POST',headers:{Authorization:`Bearer ${smAccess}`,'Content-Type':'application/json'},body:JSON.stringify({staff_key:staff.key,service_key:service.key,customer_key:custKey,start_time:startDT,end_time:endDT,comment:`${j.vehicle||''} | ${j.panels||''} | ${j.quote_price||''}`})});
-    const ad=await ar.json();
-    if(ad.response===true||ad.data?.appointment){
-      await sbRaw('PATCH','jobs',{setmore_booked:true,status:'booked'},`?id=eq.${jobId}`);
-      showToast('Booked into Setmore ✓');await loadJobs();
-    }else throw new Error(ad.message||JSON.stringify(ad));
-  }catch(e){alert('Setmore booking failed: '+e.message);}
-}
-
-
 
 async function bookIntoDiary(jobId){
   const j = allJobs.find(x=>x.id===jobId);
@@ -2111,6 +2034,160 @@ function getDateFilterRange(){
   return null;
 }
 
+
+
+// PWA & PUSH NOTIFICATIONS
+const VAPID_PUBLIC_KEY = 'BPDooC2FLp_wTQheFiovlbKInaR-2_fmU06XbgLB_L5rp4tEHHv8N0ZwbrCfay8rIqbPKvvkcF4NMJF0b1W8_gY';
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+}
+
+async function registerSW() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.register('/sw.js');
+    console.log('SW registered');
+    return reg;
+  } catch(e) {
+    console.log('SW error:', e);
+  }
+}
+
+async function requestPushPermission() {
+  if (!('Notification' in window)) {
+    showToast('Push notifications not supported on this browser');
+    return false;
+  }
+  if (Notification.permission === 'granted') return true;
+  const perm = await Notification.requestPermission();
+  return perm === 'granted';
+}
+
+async function subscribeToPush() {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const existing = await reg.pushManager.getSubscription();
+    if (existing) return existing;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+    });
+    // Save subscription to localStorage for this device
+    localStorage.setItem('abw_push_sub', JSON.stringify(sub));
+    return sub;
+  } catch(e) {
+    console.log('Push subscribe error:', e);
+    return null;
+  }
+}
+
+async function enableNotifications() {
+  const granted = await requestPushPermission();
+  if (!granted) {
+    showToast('⚠️ Notifications blocked — please allow in browser settings');
+    return;
+  }
+  const sub = await subscribeToPush();
+  if (sub) {
+    localStorage.setItem('abw_notif_enabled', '1');
+    showToast('🔔 Notifications enabled!');
+    updateNotifBtn();
+  }
+}
+
+function disableNotifications() {
+  localStorage.removeItem('abw_notif_enabled');
+  localStorage.removeItem('abw_push_sub');
+  showToast('🔕 Notifications disabled');
+  updateNotifBtn();
+}
+
+function updateNotifBtn() {
+  const btn = document.getElementById('notifToggleBtn');
+  if (!btn) return;
+  const enabled = localStorage.getItem('abw_notif_enabled') === '1' && Notification.permission === 'granted';
+  btn.textContent = enabled ? '🔔 Notifications On' : '🔕 Enable Notifications';
+  btn.style.background = enabled ? 'rgba(74,222,128,.15)' : 'transparent';
+  btn.style.borderColor = enabled ? 'rgba(74,222,128,.4)' : 'var(--border2)';
+  btn.style.color = enabled ? 'var(--accent)' : 'var(--grey2)';
+}
+
+// Watch for new pending jobs via Supabase realtime and notify
+let notifLastCount = 0;
+function startPendingWatcher() {
+  if (!currentUser) return;
+  const email = currentUser.email?.toLowerCase();
+
+  if (email === 'shaun@auto-bodyworx.com') {
+    // Shaun: watch for new pending jobs needing approval
+    setInterval(() => {
+      if (Notification.permission !== 'granted') return;
+      if (localStorage.getItem('abw_notif_enabled') !== '1') return;
+      const pending = allJobs.filter(j => j.status === 'pending');
+      if (pending.length > notifLastCount && notifLastCount >= 0) {
+        const newCount = pending.length - notifLastCount;
+        if (document.visibilityState !== 'visible') {
+          new Notification('🚗 Auto Bodyworx', {
+            body: `${newCount} new job${newCount > 1 ? 's' : ''} waiting for your approval`,
+            icon: '/icon-192.png',
+            tag: 'pending-jobs'
+          });
+        }
+      }
+      notifLastCount = pending.length;
+    }, 60000);
+    return;
+  }
+
+  if (email === 'admin@auto-bodyworx.com') {
+    // Chloe: watch for newly approved quotes ready to book
+    setInterval(() => {
+      if (Notification.permission !== 'granted') return;
+      if (localStorage.getItem('abw_notif_enabled') !== '1') return;
+      const quoted = allJobs.filter(j => j.status === 'quoted').length;
+      const storedLast = parseInt(localStorage.getItem('abw_quoted_last') || '0');
+      if (quoted > storedLast) {
+        const newCount = quoted - storedLast;
+        if (document.visibilityState !== 'visible') {
+          new Notification('🚗 Auto Bodyworx', {
+            body: `${newCount} quote${newCount > 1 ? 's' : ''} approved and ready to book!`,
+            icon: '/icon-192.png',
+            tag: 'quoted-jobs'
+          });
+        }
+      }
+      localStorage.setItem('abw_quoted_last', quoted.toString());
+    }, 60000);
+    return;
+  }
+}
+
+// Init PWA on load
+window.addEventListener('load', async () => {
+  await registerSW();
+  updateNotifBtn();
+});
+
+
+function notifyChloePending() {
+  // Only fire if Chloe has notifications enabled on her device
+  // Since we can't push cross-device easily without a server,
+  // we store a flag in Supabase that Chloe's watcher picks up
+  // For now — fire a local notification if Chloe is logged in on this device
+  const email = currentUser?.email?.toLowerCase();
+  if (email !== 'admin@auto-bodyworx.com') return;
+  if (Notification.permission !== 'granted') return;
+  if (localStorage.getItem('abw_notif_enabled') !== '1') return;
+  new Notification('🚗 Auto Bodyworx', {
+    body: 'A quote has been approved — ready to book!',
+    icon: '/icon-192.png',
+    tag: 'quoted-jobs'
+  });
+}
 
 // SIGN-OFF
 function selectPayMethod(jobId, method, el){
