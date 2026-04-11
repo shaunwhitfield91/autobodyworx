@@ -566,6 +566,7 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
           </div>
           <div class="fg"><label>Customer Name</label><input type="text" id="q_custName" placeholder="For CRM"></div>
           <div class="fg"><label>Customer Phone</label><input type="text" id="q_custPhone" placeholder="07..."></div>
+          <div class="fg"><label>Customer Email</label><input type="email" id="q_custEmail" placeholder="email@example.com"></div>
           <div class="fg full"><label>Enquiry Source</label>
             <div class="pills" id="srcPills">
               <button class="pill on" data-v="whatsapp">💬 WhatsApp</button>
@@ -1036,7 +1037,7 @@ Return ONLY valid JSON: {"price":"£XXX inc VAT","rung":"Rung X - Name","reasoni
     const data=await res.json();
     const raw=data.content.map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
     const result=JSON.parse(raw);
-    currentQuote={result,vehicle:`${year} ${make} ${model}`,colour,panels,locVal,srcVal,custName:gv('q_custName'),custPhone:gv('q_custPhone'),notes,photos:[...quoteImgs]};
+    currentQuote={result,vehicle:`${year} ${make} ${model}`,colour,panels,locVal,srcVal,custName:gv('q_custName'),custPhone:gv('q_custPhone'),custEmail:gv('q_custEmail'),notes,photos:[...quoteImgs]};
     document.getElementById('rPrice').textContent=result.price.replace(' inc VAT','');
     document.getElementById('rRung').textContent='▲  '+result.rung;
     document.getElementById('rVehicle').textContent=`${year} ${make} ${model}${colour?' - '+colour:''}${result.duration?' - '+result.duration:''}`;
@@ -1089,11 +1090,11 @@ async function sbRawInsert(table, body){
 
 async function approveQuote(){
   if(!currentQuote)return;
-  const {result,vehicle,colour,panels,locVal,srcVal,custName,custPhone,notes,photos}=currentQuote;
+  const {result,vehicle,colour,panels,locVal,srcVal,custName,custPhone,custEmail,notes,photos}=currentQuote;
   const btn=document.getElementById('approveBtn');btn.disabled=true;btn.textContent='Saving...';
   try{
     const job=await sbRawInsert('jobs',{
-      customer_name:custName||'Unknown Customer',customer_phone:custPhone||'',
+      customer_name:custName||'Unknown Customer',customer_phone:custPhone||'',customer_email:custEmail||'',
       vehicle,colour,panels,quote_price:result.price,invoice_amount:result.price,
       rung:result.rung,reasoning:result.reasoning,internal_breakdown:result.internal_breakdown||'',
       status:'pending',location:locVal,source:srcVal,notes,duration:result.duration||'',
@@ -1113,7 +1114,7 @@ async function approveQuote(){
   }catch(e){alert('Save failed: '+e.message);}
   finally{btn.disabled=false;btn.textContent='✓ Approve & Save to CRM';}
 }
-function revise(){document.getElementById('resultWrap').style.display='none';const tr=document.getElementById('q_training_result');if(tr)tr.value='';window.scrollTo({top:0,behavior:'smooth'});}
+function revise(){if(document.getElementById('q_custEmail'))document.getElementById('q_custEmail').value='';document.getElementById('resultWrap').style.display='none';const tr=document.getElementById('q_training_result');if(tr)tr.value='';window.scrollTo({top:0,behavior:'smooth'});}
 
 // CRM
 function setFilter(f,btn){crmFilter=f;document.querySelectorAll('.fpill').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderCRM();}
