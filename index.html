@@ -2424,11 +2424,14 @@ async function approveJob(jobId){
 
 
 async function declineJob(jobId){
-  if(!confirm('Decline this job? It will be moved to the Declined section so Chloe can contact the customer.')) return;
+  const reason = prompt('Reason for declining? (Chloe will see this — optional, press OK to skip)');
+  if(reason === null) return; // cancelled
   try{
     // Suppress realtime reload so it doesn't undo our in-memory change
     window._suppressReload = true;
-    await sbRaw('PATCH','jobs',{archived:false, status:'declined'},`?id=eq.${jobId}`);
+    const updates = {archived:false, status:'declined'};
+    if(reason.trim()) updates.notes = reason.trim();
+    await sbRaw('PATCH','jobs', updates, `?id=eq.${jobId}`);
     // Remove from main job list immediately
     allJobs = allJobs.filter(j=>j.id!==jobId);
     showToast('✕ Job declined');
@@ -3148,12 +3151,14 @@ function renderDeclinedList(){
           </div>
           <div class="jcard-sub">${j.vehicle||'—'} · ${j.panels||'—'}</div>
           ${j.customer_phone?`<div class="jcard-sub" style="margin-top:4px;"><a href="tel:${j.customer_phone}" style="color:var(--accent);">📞 ${j.customer_phone}</a></div>`:''}
+          ${j.customer_email?`<div class="jcard-sub"><a href="mailto:${j.customer_email}" style="color:var(--blue);">✉️ ${j.customer_email}</a></div>`:''}
         </div>
         <div style="text-align:right;">
           <div class="jcard-price">${j.quote_price||'—'}</div>
           <div class="jcard-sub">${fmtDate(j.created_at?.split('T')[0])}</div>
         </div>
       </div>
+      ${j.notes?`<div style="margin-top:8px;padding:8px 10px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:6px;font-size:12px;color:var(--grey2);line-height:1.5;"><span style="font-family:Montserrat,sans-serif;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--yellow);display:block;margin-bottom:4px;">📝 Decline Notes</span>${esc(j.notes)}</div>`:''}
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
         ${!j.customer_contacted?`<button class="btn-primary" style="flex:1;min-width:120px;font-size:10px;padding:7px;background:rgba(74,222,128,.15);border:1px solid rgba(74,222,128,.3);color:var(--accent);" onclick="markCustomerContacted(${j.id})">✅ Customer Notified</button>`:''}
         <button class="btn-primary" style="flex:1;min-width:100px;font-size:10px;padding:7px;background:var(--card2);border:1px solid var(--border2);" onclick="restoreDeclinedJob(${j.id})">↩️ Restore</button>
