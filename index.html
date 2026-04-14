@@ -106,18 +106,6 @@ header{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 24p
 .flag.info{background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.18);color:var(--accent);}
 .result-actions{padding:16px 22px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
 .result-actions p{color:var(--grey3);font-size:12px;flex:1;}
-.result-edit-panel{padding:18px 22px;border-top:1px solid var(--border);background:var(--card2);}
-.result-edit-panel .fg{margin-bottom:10px;}
-.result-edit-panel label{font-family:'Montserrat',sans-serif;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--grey3);display:block;margin-bottom:6px;}
-.result-edit-panel input,.result-edit-panel select,.result-edit-panel textarea{background:var(--bg);border:1px solid var(--border2);color:var(--white);padding:9px 12px;border-radius:6px;font-family:'Open Sans',sans-serif;font-size:13px;width:100%;}
-.result-edit-panel input:focus,.result-edit-panel select:focus,.result-edit-panel textarea:focus{outline:none;border-color:var(--accent);}
-.result-edit-panel textarea{resize:vertical;min-height:60px;}
-.result-edit-panel select option{background:var(--card);}
-.edit-panel-title{font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--grey2);margin-bottom:14px;}
-.edit-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;}
-.btn-ai-revise{background:var(--purple);color:white;border:none;padding:9px 18px;border-radius:6px;font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;}
-.btn-ai-revise:hover{background:#8b5cf6;}
-.btn-ai-revise:disabled{background:var(--border2);color:var(--grey3);cursor:not-allowed;}
 .approved-msg{display:none;margin-top:12px;background:rgba(74,222,128,.07);border:1px solid rgba(74,222,128,.2);border-radius:6px;padding:13px 16px;color:var(--accent);font-size:13px;font-weight:500;}
 .approved-msg.show{display:block;}
 .lrow{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;}
@@ -621,38 +609,8 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
           </div>
           <div class="result-actions">
             <p>Review before sending to customer.</p>
-            <button class="btn-ghost" onclick="revise()">✏️ Revise</button>
+            <button class="btn-ghost" onclick="revise()">Revise</button>
             <button class="btn-sm" id="approveBtn" onclick="approveQuote()">📤 Send for Approval</button>
-          </div>
-          <!-- REVISION PANEL -->
-          <div class="result-edit-panel" id="resultEditPanel" style="display:none;">
-            <div class="edit-panel-title">✏️ Revise Quote</div>
-            <div class="fg">
-              <label>Adjust Price</label>
-              <input type="text" id="edit_price" placeholder="e.g. £420 inc VAT">
-            </div>
-            <div class="fg">
-              <label>Adjust Rung</label>
-              <select id="edit_rung">
-                <option value="">— Keep current —</option>
-                <option value="Rung 1 - Precision SMART Mobile">Rung 1 — £250–£280 Precision SMART Mobile</option>
-                <option value="Rung 2 - Full Bumper Corner Mobile">Rung 2 — £280–£320 Full Bumper Corner</option>
-                <option value="Rung 3 - Grey Zone">Rung 3 — £360–£420 Grey Zone</option>
-                <option value="Rung 4 - Workshop Preferred">Rung 4 — £460–£520 Workshop Preferred</option>
-                <option value="Rung 5 - Workshop Only">Rung 5 — £520–£700 Workshop Only</option>
-                <option value="Rung 6 - Multi-Panel Workshop">Rung 6 — £700+ Multi-Panel</option>
-              </select>
-            </div>
-            <div class="fg">
-              <label>What should change? <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--grey3);">Describe the revision — used for manual edit or AI re-generate</span></label>
-              <textarea id="edit_notes" placeholder="e.g. 'Customer said previous quote was £380 — adjust down' or 'Forgot to mention stress crack on the door'"></textarea>
-            </div>
-            <div class="edit-actions">
-              <button class="btn-sm" onclick="applyManualRevision()">💾 Apply Manual Edit</button>
-              <button class="btn-ai-revise" onclick="aiRevise()" id="aiReviseBtn">🤖 Re-generate with AI</button>
-              <button class="btn-ghost" onclick="cancelRevise()">Cancel</button>
-              <button class="btn-danger" onclick="resetQuote()">Start Over</button>
-            </div>
           </div>
         </div>
         <div class="approved-msg" id="approvedMsg"></div>
@@ -708,6 +666,14 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
         <button class="fpill" onclick="setFilter('completed',this)">Completed</button>
       </div>
       <div class="jobs-col" id="jobsCol"><div class="empty"><div class="empty-icon">🚗</div><p>Loading jobs...</p></div></div>
+      <!-- DECLINED JOBS SECTION -->
+      <div id="declinedSection" style="display:none;margin-top:24px;padding-bottom:24px;">
+        <div style="font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:12px;display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 0;border-top:1px solid var(--border2);" onclick="toggleDeclinedSection()">
+          <span>✕ Declined / Non-Booked</span><span id="declinedCount" style="background:rgba(239,68,68,.15);color:var(--red);border-radius:10px;padding:1px 8px;font-size:9px;">0</span>
+          <span id="declinedChevron" style="margin-left:auto;font-size:12px;">▼</span>
+        </div>
+        <div id="declinedList" style="display:none;"></div>
+      </div>
     </div>
   </div>
 
@@ -799,6 +765,9 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
         <div style="display:flex;gap:8px;margin-top:16px;">
           <button class="btn-primary" style="flex:1;" onclick="closeDiaryPopup()">Close</button>
           <button class="btn-primary" style="flex:1;background:var(--card2);color:var(--white);border:1px solid var(--border2);" onclick="openDiaryEdit()">✏️ Edit Job</button>
+        </div>
+        <div style="margin-top:8px;">
+          <button class="btn-decline" style="width:100%;padding:10px;" onclick="deleteDiaryAppointment()">🗑️ Delete Appointment</button>
         </div>
         <!-- EDIT FORM (hidden by default) -->
         <div id="dp-edit-form" style="display:none;border-top:1px solid var(--border2);margin-top:16px;padding-top:16px;">
@@ -1014,7 +983,7 @@ function setupRealtime(){
 }
 
 async function loadJobs(){
-  const data=await sbRaw('GET','jobs',null,`?select=*,job_parts(*),job_photos(*)&archived=eq.false&order=created_at.desc`);
+  const data=await sbRaw('GET','jobs',null,`?select=*,job_parts(*),job_photos(*)&archived=eq.false&status=neq.declined&order=created_at.desc`);
   allJobs=data||[];
   renderCRM();
   buildDiaryTechFilter();
@@ -1054,40 +1023,14 @@ async function generateQuote(){
   document.getElementById('loadingDiv').classList.add('show');
   document.getElementById('resultWrap').style.display='none';
   document.getElementById('approvedMsg').classList.remove('show');
-  const trainingResult=document.getElementById('q_training_result')?.value?.trim()||'';
-  const hasTraining = training || trainingResult;
-  const sys=`You are an expert auto body repair quoting assistant for Auto Bodyworx UK, run by Shaun Whitfield.${hasTraining?'\n\n⚠️ CRITICAL: This job includes ENGINEER TRAINING NOTES. These are real-world pricing data from Shaun and MUST heavily influence your quote. If a training note says a similar job went for a certain price, anchor your quote to that figure. Do not ignore or underweight training notes — they override your default ladder estimates.':''}
-
-QUOTING LADDER (inc VAT):
-RUNG 1 £250–£280 — Precision SMART repair, swage-contained, no blends. Mobile only.
-RUNG 2 £280–£320 — Full bumper corner. Standard bumper corner repair starts at £280. Mobile ceiling.
-RUNG 3 £360–£420 — Grey zone, steer toward workshop.
-RUNG 4 £460–£520 — Wing repairs, door dents, blending required. Workshop preferred.
-RUNG 5 £520–£700 — Quarter panels, two-panel jobs, black/dark cars, aluminium, premium vehicles. Workshop only.
-RUNG 6 £700+ — Multi-panel compound, high-spec vehicles, complex repairs. NO UPPER LIMIT. Some jobs legitimately reach £1000, £1500, £2000 or more. Do not cap your estimate artificially — large complex jobs should be priced fully and accurately.
-
-PRICING RULES:
-- Bumper corners start at £280. This is the floor, not negotiable downward.
-- Damaged trims alongside the main repair must be priced as a separate additional item using these rules:
-  * NON-PAINTED trims (textured/unpainted wheel arch trims, textured mouldings, rubber or plastic sill trims etc.) = add £60–£100 extra. Different repair technique to standard bodywork, priced separately.
-  * PAINTED trims (colour-matched wheel arch trims, painted mouldings, painted sill covers etc.) = add £150 or more depending on size, as they require full paint process. Larger painted trims push toward the higher end or beyond.
-  * If it is unclear whether a trim is painted or textured, flag it as a question in the quote and provide a price range covering both scenarios.
-- Black and dark-coloured cars (black, dark grey, dark navy, dark green etc.) require extra care on filler repairs as imperfections show more clearly in clearcoat. Add a premium to reflect the additional time and attention — typically push toward the higher end of the relevant rung or add £40–£80 depending on severity.
-- New cars (0–2 years old): from Rung 2 upward, price toward the top of the rung or slightly above it.
-- Older cars (10+ years old): do NOT apply premium brand pricing increases. Age overrides brand — a 12-year-old BMW gets no brand premium.
-- Cars aged 3–9 years on premium brands (BMW, Audi, Mercedes, Porsche, Range Rover, Volvo, Lexus etc.): price toward top of rung.
-- Blend adjacent panels unless colour is black or very dark — blending dark colours risks mismatch so no-blend is often correct.
-- Steel wings are default assumption unless stated otherwise.
-- Never discount metal repairs just because a panel is plastic nearby.
-- Stress cracks add £80–£120 to base price.
-- Mobile jobs larger than a bumper corner should flag workshop recommendation.
-- Travel 30+ mins: note as discretionary charge consideration.
-
-Return ONLY valid JSON: {"price":"£XXX inc VAT","rung":"Rung X - Name","reasoning":"3-5 sentences explaining the price including any extras like trims or dark colour premium.","flags":[{"type":"warn|info","text":"..."}],"internal_breakdown":"...","duration":"3 Hours|5 Hours|Full Day"}`;
+  const sys=`You are an expert auto body repair quoting assistant for Auto Bodyworx UK run by Shaun Whitfield.
+Quoting Ladder (inc VAT): RUNG 1 GBP250-280 precision SMART mobile. RUNG 2 GBP280-320 full bumper corner mobile ceiling min £280. RUNG 3 GBP360-420 grey zone push workshop. RUNG 4 GBP460-520 wing door dents workshop preferred. RUNG 5 GBP520-700 quarter panels two-panel black aluminium premium. RUNG 6 GBP700+ multi-panel compound.
+RULES: Blend adjacent panels unless black. Steel wing default. Never discount metal only plastic. Stress cracks +GBP80-120. Black no blend highest risk. New/premium cars top of rung. Mobile bigger than bumper corner flag workshop. Travel 30+ mins note discretionary.
+Return ONLY valid JSON: {"price":"£XXX inc VAT","rung":"Rung X - Name","reasoning":"3-5 sentences.","flags":[{"type":"warn|info","text":"..."}],"internal_breakdown":"...","duration":"3 Hours|5 Hours|Full Day"}`;
   const content=[];
   quoteImgs.slice(0,4).forEach(x=>{content.push({type:'image',source:{type:'base64',media_type:x.b64.split(';')[0].split(':')[1],data:x.b64.split(',')[1]}});});
-  const trainingBlock = hasTraining ? `\n\n⚠️ ENGINEER TRAINING NOTES — READ FIRST AND APPLY TO YOUR QUOTE:\n${training?'Pre-quote context from engineer: '+training+'\n':''}${trainingResult?'Post-quote feedback / real-world data: '+trainingResult+'\n':''}\nUse these notes to anchor your price. If they reference an actual accepted job price or a lost quote, factor that directly into your estimate.\n---\n` : '';
-  content.push({type:'text',text:`${trainingBlock}Job details: ${year} ${make} ${model}, ${colour||'colour unknown'}, panels: ${panels}, location: ${locVal}, travel: ${trvVal}, notes: ${notes||'none'}. ${quoteImgs.length} photo(s).`});
+  const trainingResult=document.getElementById('q_training_result')?.value?.trim()||'';
+  content.push({type:'text',text:`Quote: ${year} ${make} ${model}, ${colour||'colour unknown'}, panels: ${panels}, location: ${locVal}, travel: ${trvVal}, notes: ${notes||'none'}. ${quoteImgs.length} photo(s).${training?'\n\nTraining context from engineer: '+training:''}${trainingResult?'\n\nPost-quote feedback: '+trainingResult:''}`});
   try{
     const apiKey=localStorage.getItem('abw_anthropic_key');
     if(!apiKey){throw new Error('No API key saved. Go to Settings and save your Anthropic API key.');}
@@ -1179,59 +1122,7 @@ async function approveQuote(){
   }catch(e){alert('Save failed: '+e.message);}
   finally{btn.disabled=false;btn.textContent='✓ Approve & Save to CRM';}
 }
-function revise(){
-  const panel=document.getElementById('resultEditPanel');
-  const currentPrice=document.getElementById('rPrice')?.textContent||'';
-  if(currentPrice&&currentPrice!=='—') document.getElementById('edit_price').value=currentPrice+' inc VAT';
-  panel.style.display='block';
-  panel.scrollIntoView({behavior:'smooth',block:'nearest'});
-}
-function cancelRevise(){document.getElementById('resultEditPanel').style.display='none';}
-function resetQuote(){
-  document.getElementById('resultWrap').style.display='none';
-  document.getElementById('resultEditPanel').style.display='none';
-  const tr=document.getElementById('q_training_result');if(tr)tr.value='';
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-function applyManualRevision(){
-  const price=document.getElementById('edit_price').value.trim();
-  const rung=document.getElementById('edit_rung').value.trim();
-  const notes=document.getElementById('edit_notes').value.trim();
-  if(!price&&!rung&&!notes){alert('Please enter at least one change.');return;}
-  if(price){
-    const displayPrice=price.replace(/\s*inc\s*VAT/i,'').trim();
-    document.getElementById('rPrice').textContent=displayPrice;
-    if(currentQuote) currentQuote.result.price=displayPrice+' inc VAT';
-  }
-  if(rung){
-    document.getElementById('rRung').textContent='▲  '+rung;
-    if(currentQuote) currentQuote.result.rung=rung;
-  }
-  if(notes&&currentQuote){
-    currentQuote.result.reasoning+=' [Revision note: '+notes+']';
-    const reasoning=document.getElementById('rReasoning');
-    if(reasoning) reasoning.textContent=currentQuote.result.reasoning+(currentQuote.result.internal_breakdown?'\n\n Internal: '+currentQuote.result.internal_breakdown:'');
-  }
-  document.getElementById('resultEditPanel').style.display='none';
-  document.getElementById('edit_price').value='';
-  document.getElementById('edit_rung').value='';
-  document.getElementById('edit_notes').value='';
-  showToast('Quote updated ✓');
-}
-async function aiRevise(){
-  const revisionNote=document.getElementById('edit_notes').value.trim();
-  if(!revisionNote){alert('Describe what to change in the "What should change?" box first.');return;}
-  const btn=document.getElementById('aiReviseBtn');
-  btn.disabled=true;btn.textContent='Re-generating...';
-  const prevPrice=currentQuote?.result?.price||'';
-  const prevRung=currentQuote?.result?.rung||'';
-  const originalTraining=document.getElementById('q_training').value||'';
-  document.getElementById('q_training').value=`REVISION REQUEST — Previous quote was ${prevPrice} (${prevRung}). Requested change: ${revisionNote}${originalTraining?'\n\nAdditional context: '+originalTraining:''}`;
-  document.getElementById('resultEditPanel').style.display='none';
-  await generateQuote();
-  document.getElementById('q_training').value=originalTraining;
-  btn.disabled=false;btn.textContent='🤖 Re-generate with AI';
-}
+function revise(){if(document.getElementById('q_custEmail'))document.getElementById('q_custEmail').value='';document.getElementById('resultWrap').style.display='none';const tr=document.getElementById('q_training_result');if(tr)tr.value='';window.scrollTo({top:0,behavior:'smooth'});}
 
 // CRM
 function setFilter(f,btn){crmFilter=f;document.querySelectorAll('.fpill').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderCRM();}
@@ -1255,6 +1146,8 @@ function renderCRM(){
   });
   document.getElementById('sP').textContent=allJobs.filter(j=>j.status==='pending').length;
   document.getElementById('sQ').textContent=allJobs.filter(j=>j.status==='quoted').length;
+  // Load declined jobs separately for the declined section
+  loadDeclinedJobs();
   document.getElementById('sB').textContent=allJobs.filter(j=>j.status==='booked'&&!['card','cash','paid'].includes(j.paid)).length;
   document.getElementById('sC').textContent=allJobs.filter(j=>j.status==='completed'||['card','cash','paid'].includes(j.paid)).length;
   const rev=calcRevenue(allJobs);
@@ -1999,8 +1892,7 @@ function buildTechJobBody(j){
     html+='<h4>✅ Complete This Job</h4>';
     // After photo upload
     html+='<div class="tech-section-title">1. Upload completion photos</div>';
-    html+='<input type="file" id="tech-file-'+j.id+'" accept="image/*" multiple style="display:none;" onchange="techAddPhotos('+j.id+',this)">';
-    html+='<div class="tech-upload-area" onclick="document.getElementById(\"tech-file-\"+'+j.id+').click()">📷 Tap to add photos<p>Take a photo or choose from your gallery</p></div>';
+    html+='<label for="tech-file-'+j.id+'" class="tech-upload-area" style="display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;">📷 Tap to add photos<p>Take a photo or choose from your gallery</p><input type="file" id="tech-file-'+j.id+'" accept="image/*" multiple style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;" onchange="techAddPhotos('+j.id+',this)"></label>';
     html+='<div class="tech-after-thumbs" id="tech-thumbs-'+j.id+'"></div>';
     // Payment method
     html+='<div class="tech-section-title">2. Payment received</div>';
@@ -2106,12 +1998,27 @@ async function approveJob(jobId){
 
 
 async function declineJob(jobId){
-  if(!confirm('Decline this quote? It will be archived.')) return;
+  if(!confirm('Decline this quote? The job will be stored in Declined Jobs and removed from the active list.')) return;
   try{
-    await sbRaw('PATCH','jobs',{archived:true, status:'pending'},`?id=eq.${jobId}`);
-    allJobs = allJobs.filter(j=>j.id!==jobId);
-    showToast('✕ Quote declined and archived');
+    await sbRaw('PATCH','jobs',{archived:false, status:'declined'},`?id=eq.${jobId}`);
+    allJobs = allJobs.map(j=>j.id===jobId?{...j,status:'declined'}:j);
+    showToast('✕ Quote declined');
     renderCRM();
+  }catch(e){ alert('Failed: '+e.message); }
+}
+
+async function deleteDiaryAppointment(){
+  const jobId = diaryEditJobId;
+  if(!jobId) return;
+  const j = allJobs.find(x=>x.id===jobId);
+  if(!j) return;
+  if(!confirm('Delete this appointment for '+( j.customer_name||'this customer')+'? The job record will be removed.')) return;
+  try{
+    await sbRaw('PATCH','jobs',{archived:true},`?id=eq.${jobId}`);
+    allJobs = allJobs.filter(x=>x.id!==jobId);
+    closeDiaryPopup();
+    showToast('🗑️ Appointment deleted');
+    renderCRM(); renderDiary();
   }catch(e){ alert('Failed: '+e.message); }
 }
 
@@ -2709,6 +2616,79 @@ function openDiaryJob(jobId){
   document.getElementById('diaryPopup').style.display='flex';
 }
 function closeDiaryPopup(){ document.getElementById('diaryPopup').style.display='none'; }
+
+let declinedJobs = [];
+let declinedSectionOpen = false;
+
+async function loadDeclinedJobs(){
+  try{
+    const data = await sbRaw('GET','jobs',null,`?select=*&status=eq.declined&archived=eq.false&order=created_at.desc`);
+    declinedJobs = data||[];
+    const section = document.getElementById('declinedSection');
+    const countEl = document.getElementById('declinedCount');
+    if(!section) return;
+    if(declinedJobs.length > 0){
+      section.style.display='block';
+      if(countEl) countEl.textContent = declinedJobs.length;
+    } else {
+      section.style.display='none';
+    }
+    if(declinedSectionOpen) renderDeclinedList();
+  }catch(e){ console.warn('Declined jobs load failed',e); }
+}
+
+function toggleDeclinedSection(){
+  declinedSectionOpen = !declinedSectionOpen;
+  const list = document.getElementById('declinedList');
+  const chevron = document.getElementById('declinedChevron');
+  if(list) list.style.display = declinedSectionOpen ? 'block' : 'none';
+  if(chevron) chevron.textContent = declinedSectionOpen ? '▲' : '▼';
+  if(declinedSectionOpen) renderDeclinedList();
+}
+
+function renderDeclinedList(){
+  const container = document.getElementById('declinedList');
+  if(!container) return;
+  if(declinedJobs.length === 0){ container.innerHTML='<p style="color:var(--grey3);font-size:12px;padding:8px 0;">No declined jobs</p>'; return; }
+  container.innerHTML = declinedJobs.map(j=>`
+    <div class="jcard" style="border-left:3px solid var(--red);opacity:0.8;">
+      <div class="jcard-top">
+        <div>
+          <div class="jcard-name">${j.customer_name||'Unknown'}</div>
+          <div class="jcard-sub">${j.vehicle||'—'} · ${j.panels||'—'}</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="jcard-price">${j.quote_price||'—'}</div>
+          <div class="jcard-sub">${fmtDate(j.created_at?.split('T')[0])}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn-primary" style="flex:1;font-size:10px;padding:7px;" onclick="restoreDeclinedJob(${j.id})">↩️ Restore to Quoted</button>
+        <button class="btn-decline" style="flex:1;font-size:10px;padding:7px;" onclick="permanentlyDeleteJob(${j.id})">🗑️ Delete</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function restoreDeclinedJob(jobId){
+  if(!confirm('Restore this job to Quoted status?')) return;
+  try{
+    await sbRaw('PATCH','jobs',{status:'quoted'},`?id=eq.${jobId}`);
+    declinedJobs = declinedJobs.filter(j=>j.id!==jobId);
+    showToast('↩️ Job restored to Quoted');
+    await loadJobs(); renderCRM();
+  }catch(e){ alert('Failed: '+e.message); }
+}
+
+async function permanentlyDeleteJob(jobId){
+  if(!confirm('Permanently delete this declined job? This cannot be undone.')) return;
+  try{
+    await sbRaw('PATCH','jobs',{archived:true},`?id=eq.${jobId}`);
+    declinedJobs = declinedJobs.filter(j=>j.id!==jobId);
+    showToast('🗑️ Job deleted');
+    loadDeclinedJobs();
+  }catch(e){ alert('Failed: '+e.message); }
+}
 
 
 // UTILS
