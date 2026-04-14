@@ -634,21 +634,34 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
         <h2>Job Tracker</h2>
         <button class="btn-sm role-admin role-admin_staff" onclick="openAddModal()">+ Add Job</button>
       </div>
-      <div class="rev-filter">
-        <span>Revenue:</span>
-        <button class="rfp on" id="rfp-all" onclick="setRevFilter('all',this)">All Time</button>
-        <button class="rfp" id="rfp-month" onclick="setRevFilter('month',this)">This Month</button>
-        <button class="rfp" id="rfp-last" onclick="setRevFilter('last',this)">Last Month</button>
-        <button class="rfp" id="rfp-next-month" onclick="setRevFilter('nextmonth',this)">Next Month</button>
-        <button class="rfp" id="rfp-year" onclick="setRevFilter('year',this)">This Year</button>
-        <input type="month" id="rfp-custom" class="rfp" style="padding:4px 8px;cursor:pointer;" onchange="setRevFilter('custom',null);revCustomMonth=this.value;renderCRM();" title="Pick a specific month">
-      </div>
-      <div class="stats-grid">
+      <!-- JOB COUNTERS — always visible -->
+      <div class="stats-grid" style="margin-bottom:0;">
         <div class="stat"><div class="stat-lbl">Pending</div><div class="stat-val sv-y" id="sP">0</div></div>
         <div class="stat"><div class="stat-lbl">Quoted</div><div class="stat-val sv-y" id="sQ">0</div></div>
         <div class="stat"><div class="stat-lbl">Booked</div><div class="stat-val sv-b" id="sB">0</div></div>
-        <div class="stat"><div class="stat-lbl">Completed</div><div class="stat-val sv-g" id="sC">0</div></div>
-        <div class="stat"><div class="stat-lbl">Revenue (Paid)</div><div class="stat-val sv-w" id="sR">£0</div><div class="stat-sub" id="sRsub"></div></div>
+        <div class="stat"><div class="stat-lbl">Done</div><div class="stat-val sv-g" id="sC">0</div></div>
+      </div>
+
+      <!-- REVENUE — collapsible, collapsed by default -->
+      <div style="margin:10px 0 4px;">
+        <button onclick="toggleRevenue()" id="revToggleBtn" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:'Montserrat',sans-serif;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--grey3);padding:4px 0;">
+          <span>💰 Revenue</span><span id="revChevron" style="font-size:11px;">▶</span>
+          <span id="revSummary" style="color:var(--accent);margin-left:4px;font-size:10px;">£0</span>
+        </button>
+        <div id="revPanel" style="display:none;">
+          <div class="stats-grid" style="margin-bottom:6px;">
+            <div class="stat" style="grid-column:1/-1;"><div class="stat-lbl">Revenue (Paid)</div><div class="stat-val sv-w" id="sR">£0</div><div class="stat-sub" id="sRsub"></div></div>
+          </div>
+          <div class="rev-filter">
+            <span>Period:</span>
+            <button class="rfp on" id="rfp-all" onclick="setRevFilter('all',this)">All Time</button>
+            <button class="rfp" id="rfp-month" onclick="setRevFilter('month',this)">This Month</button>
+            <button class="rfp" id="rfp-last" onclick="setRevFilter('last',this)">Last Month</button>
+            <button class="rfp" id="rfp-next-month" onclick="setRevFilter('nextmonth',this)">Next Month</button>
+            <button class="rfp" id="rfp-year" onclick="setRevFilter('year',this)">This Year</button>
+            <input type="month" id="rfp-custom" class="rfp" style="padding:4px 8px;cursor:pointer;" onchange="setRevFilter('custom',null);revCustomMonth=this.value;renderCRM();" title="Pick a specific month">
+          </div>
+        </div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
         <span style="font-family:'Montserrat',sans-serif;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--grey3);margin-right:2px;">Date:</span>
@@ -897,7 +910,7 @@ const sb = createClient('https://isxycoxqlummscxmdckj.supabase.co','eyJhbGciOiJI
 });
 
 let currentUser=null,currentProfile=null,allJobs=[],quoteImgs=[],currentQuote=null;
-let locVal='mobile',trvVal='local',srcVal='whatsapp',crmFilter='all';
+let locVal='mobile',trvVal='local',srcVal='whatsapp',crmFilter='all',dateFilter='all';
 const dpState={};
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 
@@ -986,6 +999,15 @@ async function loadJobs(){
   const data=await sbRaw('GET','jobs',null,`?select=*,job_parts(*),job_photos(*)&archived=eq.false&status=neq.declined&order=created_at.desc`);
   allJobs=data||[];
   renderCRM();
+  // Restore revenue panel state
+  try{
+    if(localStorage.getItem('pp_rev_open')==='1'){
+      const p=document.getElementById('revPanel');
+      const c=document.getElementById('revChevron');
+      if(p) p.style.display='block';
+      if(c) c.textContent='▼';
+    }
+  }catch(e){}
   buildDiaryTechFilter();
   if(currentProfile?.role==='tech' || ['admin','admin_staff'].includes(currentProfile?.role)) renderTechPortal();
 }
@@ -996,7 +1018,22 @@ function switchTab(t){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById(t+'Page').classList.add('active');
   document.getElementById('t-'+t)?.classList.add('active');
-  if(t==='crm') renderCRM();
+  if(t==='crm'){
+    // Auto-set My Jobs + Today for Shaun when opening jobs tab
+    const email = currentUser?.email?.toLowerCase();
+    if(email === 'shaun@auto-bodyworx.com'){
+      // Set My Jobs filter
+      crmFilter = 'mine';
+      document.querySelectorAll('.fpill').forEach(b=>b.classList.remove('on'));
+      const mineBtn = Array.from(document.querySelectorAll('.fpill')).find(b=>b.textContent.includes('My Jobs'));
+      if(mineBtn) mineBtn.classList.add('on');
+      // Set Today date filter
+      dateFilter = 'today';
+      document.querySelectorAll('.rfp').forEach(b=>b.classList.remove('on'));
+      document.getElementById('dfp-today')?.classList.add('on');
+    }
+    renderCRM();
+  }
   if(t==='diary'){buildDiaryTechFilter();renderDiary();}
   if(t==='tech') renderTechPortal();
 }
@@ -1132,7 +1169,9 @@ function renderCRM(){
   const dateRange = getDateFilterRange();
   const filtered=allJobs.filter(j=>{
     const isCompleted=j.status==='completed'||['card','cash','paid'].includes(j.paid);
-    const mf=crmFilter==='all'||(crmFilter==='completed'?isCompleted:crmFilter==='pending'?j.status==='pending':j.status===crmFilter);
+    const myName = currentProfile?.full_name || '';
+    const isMineJob = !j.assigned_tech || j.assigned_tech===myName || j.assigned_tech==='Both';
+    const mf=crmFilter==='all'||(crmFilter==='mine'?isMineJob:(crmFilter==='completed'?isCompleted:crmFilter==='pending'?j.status==='pending':j.status===crmFilter));
     // Date filter — based on booking_date
     let df=true;
     if(dateRange && j.booking_date){
@@ -1154,6 +1193,9 @@ function renderCRM(){
   const proj=calcProjected(allJobs);
   const revLabel={'all':'All Time','month':'This Month','last':'Last Month','nextmonth':'Next Month','year':'This Year'};
   document.getElementById('sR').textContent='£'+rev.toFixed(0);
+  // Update collapsed revenue summary badge
+  const revSummaryEl = document.getElementById('revSummary');
+  if(revSummaryEl) revSummaryEl.textContent = '£'+rev.toFixed(0);
   const sub=document.getElementById('sRsub');
   if(sub){
     const rangeLabel = revFilter!=='all' ? revLabel[revFilter]+' · ' : '';
@@ -1710,6 +1752,15 @@ async function bookJob(jobId){
 // REVENUE FILTER
 let revFilter = 'all';
 let revCustomMonth = '';
+function toggleRevenue(){
+  const panel = document.getElementById('revPanel');
+  const chevron = document.getElementById('revChevron');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  chevron.textContent = isOpen ? '▶' : '▼';
+  try{ localStorage.setItem('pp_rev_open', isOpen ? '0' : '1'); }catch(e){}
+}
+
 function setRevFilter(f, btn){
   revFilter = f;
   document.querySelectorAll('.rfp').forEach(b=>b.classList.remove('on'));
@@ -2045,7 +2096,7 @@ function abbrDur(dur){
 
 
 // DATE FILTER
-let dateFilter = 'all';
+// dateFilter declared above
 function setDateFilter(f, btn){
   dateFilter = f;
   document.querySelectorAll('[id^="dfp-"]').forEach(b=>b.classList.remove('on'));
