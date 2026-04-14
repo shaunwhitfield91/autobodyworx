@@ -134,7 +134,7 @@ header{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 24p
 .ji-meta{font-size:11px;color:var(--grey3);margin-top:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .j-price{font-family:'Montserrat',sans-serif;font-size:17px;font-weight:700;color:var(--accent);flex-shrink:0;}
 .j-sbadge{font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:3px 9px;border-radius:3px;flex-shrink:0;}
-.s-quoted .j-sbadge{background:rgba(245,158,11,.12);color:var(--yellow);}.s-booked .j-sbadge{background:rgba(96,165,250,.12);color:var(--blue);}.s-completed .j-sbadge{background:rgba(74,222,128,.12);color:var(--accent);}
+.s-quoted .j-sbadge{background:rgba(245,158,11,.12);color:var(--yellow);}.s-booked .j-sbadge{background:rgba(96,165,250,.12);color:var(--blue);}.s-completed .j-sbadge{background:rgba(74,222,128,.12);color:var(--accent);}.decl.j-sbadge{background:rgba(239,68,68,.15);color:var(--red);}
 .badge{font-size:10px;padding:2px 7px;border-radius:3px;font-family:'Montserrat',sans-serif;font-weight:700;}
 .badge-src{background:var(--card2);color:var(--grey3);}.badge-cd{background:rgba(96,165,250,.12);color:var(--blue);}.badge-dep{background:rgba(74,222,128,.12);color:var(--accent);}.badge-dep-due{background:rgba(245,158,11,.12);color:var(--yellow);}.badge-dur{background:var(--card2);color:var(--grey2);}
 .badge-shaun{background:rgba(167,139,250,.12);color:var(--purple);}.badge-charles{background:rgba(96,165,250,.12);color:var(--blue);}.badge-both{background:rgba(74,222,128,.12);color:var(--accent);}
@@ -336,6 +336,7 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
 .badge-comp{background:rgba(74,222,128,.15);color:var(--accent);border:1px solid rgba(74,222,128,.3);padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
 .badge-book{background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.3);padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
 .badge-quot{background:rgba(245,158,11,.15);color:var(--yellow);border:1px solid rgba(245,158,11,.3);padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+.badge-decl{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3);padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
 
 /* REVENUE FILTER */
 .rev-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;align-items:center;}
@@ -531,6 +532,7 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
         <button class="tab-btn role-admin role-admin_staff" onclick="switchTab('declined')" id="t-declined" style="color:var(--red);">✕ Declined <span class="tab-count" id="declinedTabCount" style="display:none;background:rgba(239,68,68,.2);color:var(--red);">0</span></button>
         <button class="tab-btn" onclick="switchTab('diary')" id="t-diary">📅 Diary</button>
         <button class="tab-btn role-admin role-admin_staff" onclick="switchTab('settings')" id="t-settings">⚙️ Settings</button>
+        <button class="tab-btn role-admin role-admin_staff" onclick="switchTab('declined')" id="t-declined">🚫 Declined <span class="tab-count" id="declinedTabCount" style="display:none;">0</span></button>
       </div>
     </div>
     <div class="hdr-r">
@@ -1060,6 +1062,7 @@ function switchTab(t){
   }
   if(t==='diary'){buildDiaryTechFilter();renderDiary();}
   if(t==='tech') renderTechPortal();
+  if(t==='declined'){ loadDeclinedJobs(); }
   if(t==='declined'){ loadDeclinedJobs().then(()=>renderDeclinedPage()); }
 }
 
@@ -1310,7 +1313,7 @@ function jHTML(j){
     </div>
     <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
       <div class="j-price">${(j.quote_price||'—').split(' ')[0]}</div>
-      <div class="j-sbadge ${(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'comp':j.status==='booked'?'book':j.status==='pending'?'pend':'quot'}">${(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'Completed':j.status==='booked'?'Booked':j.status==='pending'?'Pending Approval':'Quoted'}</div>
+      <div class="j-sbadge ${(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'comp':j.status==='booked'?'book':j.status==='pending'?'pend':j.status==='declined'?'decl':'quot'}">${(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'Completed':j.status==='booked'?'Booked':j.status==='pending'?'Pending Approval':j.status==='declined'?'Declined':'Quoted'}</div>
       <div class="j-chevron">▼</div>
     </div>
   </div>
@@ -1386,8 +1389,8 @@ function jHTML(j){
       </div>
       <div class="jd-field"><div class="jd-lbl">Status</div>
         <div class="jd-inp" style="height:auto;padding:8px 12px;display:flex;align-items:center;">
-          <span class="badge ${(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'badge-comp':j.status==='booked'?'badge-book':j.status==='pending'?'badge-pend':'badge-quot'}" style="font-size:11px;">
-            ${(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'✅ Completed':j.status==='booked'?'📅 Booked':j.status==='pending'?'⏳ Pending Approval':'💬 Quoted'}
+          <span class="badge ${(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'badge-comp':j.status==='booked'?'badge-book':j.status==='pending'?'badge-pend':j.status==='declined'?'badge-decl':'badge-quot'}" style="font-size:11px;">
+            ${(j.status==='completed'||['card','cash','paid'].includes(j.paid))?'✅ Completed':j.status==='booked'?'📅 Booked':j.status==='pending'?'⏳ Pending Approval':j.status==='declined'?'✕ Declined':'💬 Quoted'}
           </span>
         </div>
       </div>
@@ -1515,9 +1518,14 @@ function updJob(id,field,val){
 async function saveJob(id){
   const updates=pending[id]||{};
   if(!Object.keys(updates).length){showToast('Nothing to save');return;}
-  // If a booking date is being saved, automatically set status to booked
   const job=allJobs.find(j=>j.id===id);
-  if(updates.booking_date && job && job.status==='quoted'){
+  // If a booking date is being saved, set status to booked
+  // (works from quoted, pending, or any non-completed status)
+  if(updates.booking_date && job && !['completed','booked'].includes(job.status)){
+    updates.status='booked';
+  }
+  // Also — if already booked and date is being changed, keep booked
+  if(updates.booking_date && job && job.status==='booked'){
     updates.status='booked';
   }
   try{
@@ -1979,10 +1987,8 @@ async function bookJob(jobId){
     // Update allJobs in memory so renderCRM shows correct status immediately
     allJobs = allJobs.map(x=>x.id===jobId?{...x,...updates}:x);
     showToast('📅 Booked ✓');
-    renderCRM();
-    buildDiaryTechFilter();
-    renderDiary();
-    setTimeout(()=>{ document.getElementById('jc-'+jobId)?.classList.add('open'); }, 50);
+    await loadJobs(); // Full reload to ensure status reflects correctly
+    setTimeout(()=>{ document.getElementById('jc-'+jobId)?.classList.add('open'); }, 100);
   }catch(e){
     alert('Booking failed: '+e.message);
     if(btn){ btn.disabled=false; btn.textContent='📅 Book'; }
@@ -2421,9 +2427,18 @@ async function declineJob(jobId){
   if(!confirm('Decline this quote? It will appear in the Declined Jobs section below so Chloe can follow up.')) return;
   try{
     await sbRaw('PATCH','jobs',{archived:false, status:'declined'},`?id=eq.${jobId}`);
-    allJobs = allJobs.map(j=>j.id===jobId?{...j,status:'declined'}:j);
+    // Remove from main job list immediately
+    const declinedJob = allJobs.find(j=>j.id===jobId);
+    allJobs = allJobs.filter(j=>j.id!==jobId);
+    // Add to declined list
+    if(declinedJob){ declinedJobs.unshift({...declinedJob, status:'declined'}); }
     showToast('✕ Quote declined');
     renderCRM();
+    // Show declined section open
+    declinedSectionOpen = true;
+    const panel = document.getElementById('declinedSection');
+    if(panel) panel.style.display='block';
+    renderDeclinedList();
     loadDeclinedJobs();
   }catch(e){ alert('Failed: '+e.message); }
 }
@@ -3056,6 +3071,15 @@ async function loadDeclinedJobs(){
       if(declinedJobs.length > 0){
         section.style.display='block';
         if(countEl) countEl.textContent = declinedJobs.length;
+        // Auto-open if any need customer contact
+        const needsContact = declinedJobs.some(j=>!j.customer_contacted);
+        if(needsContact && !declinedSectionOpen){
+          declinedSectionOpen = true;
+          const list = document.getElementById('declinedList');
+          const chevron = document.getElementById('declinedChevron');
+          if(list) list.style.display='block';
+          if(chevron) chevron.textContent='▲';
+        }
       } else {
         section.style.display='none';
       }
