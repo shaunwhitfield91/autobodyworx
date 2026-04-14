@@ -89,7 +89,8 @@ function buildLineItems(job) {
     Quantity:    1,
     UnitAmount:  parseFloat((job.quote_price || '0').replace(/[^0-9.]/g, '')) || 0,
     AccountCode: '200',
-    TaxType:     'OUTPUT2' // 20% VAT (standard UK)
+    TaxType:     'OUTPUT2', // 20% VAT inclusive
+    LineAmountTypes: 'INCLUSIVE' // prices already include VAT
   }];
 }
 
@@ -151,6 +152,7 @@ exports.handler = async (event) => {
         Status:      invoiceStatus,
         Contact:     contact ? { ContactID: contact.ContactID } : buildContact(job),
         Reference:   reference,
+        LineAmountTypes: 'INCLUSIVE', // all prices include VAT
         LineItems:   buildLineItems(job),
         DueDate:     new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0], // 3 days
         CurrencyCode: 'GBP'
