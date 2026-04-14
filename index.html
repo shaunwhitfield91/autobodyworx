@@ -711,6 +711,15 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
         </div>
         <div id="anthropicStatus" style="display:none;"></div>
       </div>
+
+      <!-- XERO INTEGRATION -->
+      <div class="card">
+        <div class="card-lbl">🧾 Xero Integration</div>
+        <p style="color:var(--grey2);font-size:13px;margin-bottom:18px;line-height:1.7;">Connect Xero to automatically create invoices (BACS/Invoice Later) and receipts (Card) when jobs are completed. Cash payments are not sent to Xero.</p>
+        <div id="xeroStatus" style="margin-bottom:14px;font-size:13px;color:var(--grey3);">Checking connection...</div>
+        <button class="btn-primary" onclick="connectXero()" id="xeroConnectBtn" style="margin-right:8px;">🔗 Connect Xero</button>
+        <button class="btn-primary" onclick="disconnectXero()" id="xeroDisconnectBtn" style="display:none;background:transparent;border:1px solid var(--red);color:var(--red);">Disconnect</button>
+      </div>
       
 
       <div class="card">
@@ -961,6 +970,7 @@ async function initApp(user){
   await loadJobs();
   setupRealtime();
   loadAnthropicKey();
+  checkXeroStatus();
   startPendingWatcher();
 }
 
@@ -1598,6 +1608,49 @@ function clearAnthropicKey(){
 function toggleAnthropicKey(){const i=document.getElementById('anthropicKey');i.type=i.type==='password'?'text':'password';}
 function loadAnthropicKey(){const k=localStorage.getItem('abw_anthropic_key');if(k)document.getElementById('anthropicKey').value=k;}
 
+function connectXero(){ window.location.href='/.netlify/functions/xero-auth'; }
+
+function disconnectXero(){
+  localStorage.removeItem('pp_xero_connected');
+  document.getElementById('xeroStatus').textContent='Disconnected from Xero.';
+  document.getElementById('xeroConnectBtn').style.display='';
+  document.getElementById('xeroDisconnectBtn').style.display='none';
+}
+
+function checkXeroStatus(){
+  const el = document.getElementById('xeroStatus');
+  if(!el) return;
+  const params = new URLSearchParams(window.location.search);
+  if(params.get('xero')==='connected'){
+    localStorage.setItem('pp_xero_connected','1');
+    window.history.replaceState({}, '', window.location.pathname);
+    showToast('🧾 Xero connected successfully!');
+  }
+  if(params.get('xero')==='error'){
+    showToast('❌ Xero connection failed — please try again');
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+  const connected = localStorage.getItem('pp_xero_connected')==='1';
+  el.textContent = connected ? '✅ Connected to Xero' : '⚠️ Not connected to Xero';
+  el.style.color = connected ? 'var(--accent)' : 'var(--grey3)';
+  const connectBtn = document.getElementById('xeroConnectBtn');
+  const disconnBtn = document.getElementById('xeroDisconnectBtn');
+  if(connectBtn) connectBtn.style.display = connected ? 'none' : '';
+  if(disconnBtn) disconnBtn.style.display = connected ? '' : 'none';
+}
+
+async function sendToXero(job, payMethod){
+  if(localStorage.getItem('pp_xero_connected')!=='1') return;
+  if(payMethod==='cash') return; // cash — do nothing
+  try{
+    await fetch('/.netlify/functions/xero-invoice',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({job, payMethod})
+    });
+  }catch(e){ console.warn('Xero invoice failed silently:',e.message); }
+}
+
 // SETMORE
 
 async function bookIntoDiary(jobId){
@@ -2073,6 +2126,9 @@ async function techCompleteJob(jobId){
     delete techAfterPhotos[jobId];
     delete techPayMethod[jobId];
     showToast('✅ Job marked complete!');
+    // Send to Xero (silently, non-blocking)
+    const completedJob = allJobs.find(x=>x.id===jobId)||{};
+    sendToXero({...completedJob, ...updates}, method);
     renderTechPortal();
     renderCRM();
     renderDiary();
