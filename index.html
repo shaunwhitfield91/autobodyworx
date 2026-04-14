@@ -1078,7 +1078,7 @@ Return ONLY valid JSON: {"price":"£XXX inc VAT","rung":"Rung X - Name","reasoni
         'Content-Type':'application/json',
         'x-api-key':apiKey,
       },
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:sys,messages:[{role:'user',content}]})
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:sys,messages:[{role:'user',content}]})
     });
     const data=await res.json();
     const raw=data.content.map(c=>c.text||'').join('').replace(/```json|```/g,'').trim();
@@ -1935,6 +1935,21 @@ function buildTechJobBody(j){
     html+='</div>';
   }
 
+  // Editable job details — panels, notes, price
+  if(!isDone){
+    html+='<div style="margin:14px 0 0;border:1px solid var(--border2);border-radius:8px;padding:12px;background:var(--card2);">';
+    html+='<div class="tech-section-title" style="margin-top:0;">✏️ Edit Job Details</div>';
+    html+='<div style="display:flex;flex-direction:column;gap:8px;">';
+    html+='<div><label style="font-family:Montserrat,sans-serif;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--grey3);display:block;margin-bottom:4px;">Panels / Damage Area</label>';
+    html+='<textarea id="tech-edit-panels-'+j.id+'" rows="2" style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:6px;padding:8px;color:var(--white);font-size:13px;font-family:inherit;resize:none;box-sizing:border-box;">'+esc(j.panels||'')+'</textarea></div>';
+    html+='<div><label style="font-family:Montserrat,sans-serif;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--grey3);display:block;margin-bottom:4px;">Price</label>';
+    html+='<input id="tech-edit-price-'+j.id+'" type="text" placeholder="e.g. £480 inc VAT" value="'+esc(j.quote_price||'')+'" style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:6px;padding:8px;color:var(--white);font-size:13px;font-family:inherit;box-sizing:border-box;"></div>';
+    html+='<div><label style="font-family:Montserrat,sans-serif;font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--grey3);display:block;margin-bottom:4px;">Notes</label>';
+    html+='<textarea id="tech-edit-notes-'+j.id+'" rows="3" style="width:100%;background:var(--card);border:1px solid var(--border2);border-radius:6px;padding:8px;color:var(--white);font-size:13px;font-family:inherit;resize:none;box-sizing:border-box;">'+esc(j.notes||'')+'</textarea></div>';
+    html+='<button onclick="techSaveDetails('+j.id+')" style="background:var(--accent);color:#0c0a1e;border:none;border-radius:6px;padding:9px 16px;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;width:100%;">💾 Save Changes</button>';
+    html+='</div></div>';
+  }
+
   // Complete section
   if(isDone){
     const payLabel=j.paid==='card'?'💳 Card':j.paid==='cash'?'💵 Cash':j.paid==='paid'?'🏦 BACS':'Paid';
@@ -1963,6 +1978,7 @@ function buildTechJobBody(j){
     html+='<div class="tech-pay-btn" id="tpay-'+j.id+'-paid" onclick="techSetPay('+j.id+',\"paid\",this)">🏦 BACS</div>';
     html+='<div class="tech-pay-btn" id="tpay-'+j.id+'-nopay" onclick="techSetPay('+j.id+',\"nopay\",this)">📋 Invoice Later</div>';
     html+='</div>';
+    html+='<div style="font-size:10px;color:var(--grey3);text-align:center;margin-bottom:4px;font-family:Montserrat,sans-serif;letter-spacing:.5px;">Add a photo and select payment to complete</div>';
     html+='<button class="tech-complete-btn" id="tech-done-btn-'+j.id+'" onclick="techCompleteJob('+j.id+')" disabled>Mark as Complete</button>';
     html+='</div>';
   }
@@ -1973,9 +1989,8 @@ function techSetPay(jobId, method, el){
   techPayMethod[jobId]=method;
   document.querySelectorAll('[id^="tpay-'+jobId+'-"]').forEach(b=>b.classList.remove('on'));
   el.classList.add('on');
-  // Enable complete button once payment selected
-  const btn=document.getElementById('tech-done-btn-'+jobId);
-  if(btn) btn.disabled=false;
+  // Enable button only when BOTH payment and photo are present
+  checkTechComplete(jobId);
 }
 
 function techAddPhotos(jobId, input){
@@ -1991,9 +2006,41 @@ function techAddPhotos(jobId, input){
         img.src=e.target.result;
         container.appendChild(img);
       }
+      // Enable button if payment already selected
+      checkTechComplete(jobId);
     };
     reader.readAsDataURL(file);
   });
+}
+
+async function techSaveDetails(jobId){
+  const panels = document.getElementById('tech-edit-panels-'+jobId)?.value?.trim();
+  const price  = document.getElementById('tech-edit-price-'+jobId)?.value?.trim();
+  const notes  = document.getElementById('tech-edit-notes-'+jobId)?.value?.trim();
+  const updates = {};
+  if(panels !== undefined) updates.panels = panels;
+  if(price  !== undefined){ updates.quote_price = price; updates.invoice_amount = price; }
+  if(notes  !== undefined) updates.notes = notes;
+  if(!Object.keys(updates).length) return;
+  try{
+    await sbRaw('PATCH','jobs', updates, `?id=eq.${jobId}`);
+    // Update local allJobs record
+    const j = allJobs.find(x=>x.id===jobId);
+    if(j) Object.assign(j, updates);
+    showToast('💾 Job updated');
+    // Re-render so info grid reflects new values
+    renderTechPortal();
+    // Re-open the card
+    setTimeout(()=>{ const el=document.getElementById('tjb-'+jobId); if(el) el.classList.add('open'); }, 50);
+  }catch(e){ alert('Failed to save: '+e.message); }
+}
+
+function checkTechComplete(jobId){
+  const btn = document.getElementById('tech-done-btn-'+jobId);
+  if(!btn) return;
+  const hasPayment = !!techPayMethod[jobId];
+  const hasPhoto = techAfterPhotos[jobId] && techAfterPhotos[jobId].length > 0;
+  btn.disabled = !(hasPayment && hasPhoto);
 }
 
 async function techCompleteJob(jobId){
