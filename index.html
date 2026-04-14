@@ -635,7 +635,10 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
     <div class="crm-wrap">
       <div class="crm-top">
         <h2>Job Tracker</h2>
-        <button class="btn-sm role-admin role-admin_staff" onclick="openAddModal()">+ Add Job</button>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn-sm" onclick="scrollToDeclined()" style="background:transparent;border:1px solid rgba(239,68,68,.5);color:var(--red);" id="declinedTopBtn">✕ Declined <span id="declinedTopCount" style="display:none;background:rgba(239,68,68,.2);color:var(--red);border-radius:8px;padding:0 6px;font-size:10px;margin-left:2px;">0</span></button>
+          <button class="btn-sm role-admin role-admin_staff" onclick="openAddModal()">+ Add Job</button>
+        </div>
       </div>
       <!-- JOB COUNTERS — always visible -->
       <div class="stats-grid" style="margin-bottom:0;">
@@ -1005,7 +1008,7 @@ function setupRealtime(){
   if(realtimeSetup) return;
   realtimeSetup=true;
   sb.channel('abw-realtime')
-    .on('postgres_changes',{event:'*',schema:'public',table:'jobs'},()=>loadJobs())
+    .on('postgres_changes',{event:'*',schema:'public',table:'jobs'},()=>{ if(!window._suppressReload) loadJobs(); })
     .on('postgres_changes',{event:'*',schema:'public',table:'job_parts'},()=>loadJobs())
     .on('postgres_changes',{event:'*',schema:'public',table:'job_photos'},()=>loadJobs())
     .subscribe();
@@ -2423,15 +2426,21 @@ async function approveJob(jobId){
 async function declineJob(jobId){
   if(!confirm('Decline this job? It will be moved to the Declined section so Chloe can contact the customer.')) return;
   try{
+    // Suppress realtime reload so it doesn't undo our in-memory change
+    window._suppressReload = true;
     await sbRaw('PATCH','jobs',{archived:false, status:'declined'},`?id=eq.${jobId}`);
     // Remove from main job list immediately
-    const declinedJob = allJobs.find(j=>j.id===jobId);
     allJobs = allJobs.filter(j=>j.id!==jobId);
-    showToast('✕ Quote declined');
+    showToast('✕ Job declined');
     renderCRM();
     // Reload declined section fresh from DB
     await loadDeclinedJobs();
-  }catch(e){ alert('Failed: '+e.message); }
+    // Allow realtime again after 3s
+    setTimeout(()=>{ window._suppressReload = false; }, 3000);
+  }catch(e){
+    window._suppressReload = false;
+    alert('Failed: '+e.message);
+  }
 }
 
 async function deleteDiaryAppointment(){
@@ -3069,7 +3078,24 @@ async function loadDeclinedJobs(){
   }catch(e){ console.warn('Declined jobs load failed',e); }
 }
 
-function updateDeclinedTabBadge(){ /* no-op — tab removed */ }
+function updateDeclinedTabBadge(){
+  // Update the top button badge count
+  const count = declinedJobs.filter(j=>!j.customer_contacted).length;
+  const countEl = document.getElementById('declinedTopCount');
+  if(countEl){
+    countEl.textContent = count;
+    countEl.style.display = count > 0 ? '' : 'none';
+  }
+}
+
+function scrollToDeclined(){
+  const section = document.getElementById('declinedSection');
+  if(!section || section.style.display==='none'){
+    showToast('No declined jobs to show');
+    return;
+  }
+  section.scrollIntoView({behavior:'smooth', block:'start'});
+}
 
 function toggleDeclinedSection(){ renderDeclinedList(); }
 
