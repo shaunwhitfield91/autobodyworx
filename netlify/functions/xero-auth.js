@@ -2,7 +2,8 @@
 exports.handler = async (event) => {
   const clientId     = process.env.XERO_CLIENT_ID;
   const redirectUri  = 'https://panelprocrm.netlify.app/xero-callback';
-  const scope        = 'openid profile email accounting.transactions accounting.contacts offline_access';
+  // New granular scopes required for apps created after 2 March 2026
+  const scope        = 'openid profile email accounting.invoices accounting.payments accounting.contacts offline_access';
   const state        = Math.random().toString(36).slice(2);
 
   const url = new URL('https://login.xero.com/identity/connect/authorize');
