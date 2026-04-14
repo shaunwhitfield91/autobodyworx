@@ -1958,6 +1958,7 @@ function calcProjected(jobs){
 // TECH PORTAL
 const techAfterPhotos = {}; // jobId -> [{file, dataUrl}]
 const techPayMethod = {};   // jobId -> method string
+const techXeroDone  = {};   // jobId -> bool
 
 function renderTechPortal(){
   const portal = document.getElementById('techPortal');
@@ -2111,7 +2112,13 @@ function buildTechJobBody(j){
     html+='<button type="button" class="tech-pay-btn" id="tpay-'+j.id+'-paid" onclick="techSetPay('+j.id+',\'paid\',this)">🏦 BACS</button>';
     html+='<button type="button" class="tech-pay-btn" id="tpay-'+j.id+'-nopay" onclick="techSetPay('+j.id+',\'nopay\',this)">📋 Invoice Later</button>';
     html+='</div>';
-    html+='<div style="font-size:10px;color:var(--grey3);text-align:center;margin-bottom:4px;font-family:Montserrat,sans-serif;letter-spacing:.5px;">Add a photo and select payment to complete</div>';
+    html+='<div class="tech-section-title">3. Send to Xero</div>';
+    html+='<div style="display:flex;gap:8px;margin-bottom:10px;">';
+    html+='<button type="button" class="tech-pay-btn" id="xero-inv-btn-'+j.id+'" onclick="techSendXero('+j.id+',this)" style="flex:1;background:rgba(16,155,120,.15);border-color:rgba(16,155,120,.4);color:#0eb27a;">🧾 Send Invoice / Receipt</button>';
+    html+='<button type="button" class="tech-pay-btn" id="xero-skip-btn-'+j.id+'" onclick="techSkipXero('+j.id+',this)" style="flex:1;">⏭ Skip Xero</button>';
+    html+='</div>';
+    html+='<div id="xero-status-'+j.id+'" style="font-size:11px;text-align:center;color:var(--grey3);margin-bottom:8px;"></div>';
+    html+='<div style="font-size:10px;color:var(--grey3);text-align:center;margin-bottom:4px;font-family:Montserrat,sans-serif;letter-spacing:.5px;">Add photo, select payment and send to Xero to complete</div>';
     html+='<button class="tech-complete-btn" id="tech-done-btn-'+j.id+'" onclick="techCompleteJob('+j.id+')" disabled>Mark as Complete</button>';
     html+='</div>';
   }
@@ -2146,6 +2153,73 @@ function techAddPhotos(jobId, input){
   });
 }
 
+async function techSendXero(jobId, el){
+  const method = techPayMethod[jobId];
+  if(!method){ showToast('⚠️ Select a payment method first'); return; }
+
+  el.disabled = true;
+  el.textContent = 'Sending...';
+  const statusEl = document.getElementById('xero-status-'+jobId);
+
+  if(localStorage.getItem('pp_xero_connected')!=='1'){
+    // Xero not connected — skip silently
+    techXeroDone[jobId] = true;
+    if(statusEl) statusEl.textContent = '⚠️ Xero not connected — skipped';
+    checkTechComplete(jobId);
+    return;
+  }
+
+  if(method === 'cash'){
+    // Cash — skip Xero
+    techXeroDone[jobId] = true;
+    if(statusEl){ statusEl.style.color='var(--accent)'; statusEl.textContent = '✅ Cash payment — no Xero invoice needed'; }
+    checkTechComplete(jobId);
+    return;
+  }
+
+  try{
+    const job = allJobs.find(x=>x.id===jobId)||{};
+    let invoiceJob = {...job};
+    if(job.deposit_taken && job.deposit_amount){
+      const total   = parseFloat((job.quote_price||'0').replace(/[^0-9.]/g,''))||0;
+      const deposit = parseFloat((job.deposit_amount||'0').replace(/[^0-9.]/g,''))||0;
+      const balance = Math.max(0, total - deposit);
+      invoiceJob.quote_price = '£'+balance.toFixed(2);
+      invoiceJob._is_balance = true;
+    }
+    const res = await fetch('/.netlify/functions/xero-invoice',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({job: invoiceJob, payMethod: method})
+    });
+    const data = await res.json();
+    if(data.success || data.invoiceId){
+      techXeroDone[jobId] = true;
+      el.style.background = 'rgba(16,155,120,.3)';
+      el.textContent = '✅ Sent to Xero';
+      if(statusEl){ statusEl.style.color='var(--accent)'; statusEl.textContent = method==='card'?'✅ Receipt created in Xero':'✅ Draft invoice created in Xero'; }
+      checkTechComplete(jobId);
+    } else {
+      throw new Error(data.error||'Unknown error');
+    }
+  }catch(e){
+    el.disabled = false;
+    el.textContent = '🧾 Send Invoice / Receipt';
+    if(statusEl){ statusEl.style.color='var(--red)'; statusEl.textContent = '❌ Xero failed: '+e.message+' — fix or skip'; }
+    showToast('❌ Xero error — you can skip and send manually');
+  }
+}
+
+function techSkipXero(jobId, el){
+  techXeroDone[jobId] = true;
+  el.style.opacity = '0.5';
+  const sendBtn = document.getElementById('xero-inv-btn-'+jobId);
+  if(sendBtn){ sendBtn.disabled=true; sendBtn.style.opacity='0.4'; }
+  const statusEl = document.getElementById('xero-status-'+jobId);
+  if(statusEl){ statusEl.style.color='var(--grey3)'; statusEl.textContent = '⏭ Xero skipped — send manually from Xero'; }
+  checkTechComplete(jobId);
+}
+
 async function techSaveDetails(jobId){
   const panels = document.getElementById('tech-edit-panels-'+jobId)?.value?.trim();
   const price  = document.getElementById('tech-edit-price-'+jobId)?.value?.trim();
@@ -2172,8 +2246,9 @@ function checkTechComplete(jobId){
   const btn = document.getElementById('tech-done-btn-'+jobId);
   if(!btn) return;
   const hasPayment = !!techPayMethod[jobId];
-  const hasPhoto = techAfterPhotos[jobId] && techAfterPhotos[jobId].length > 0;
-  btn.disabled = !(hasPayment && hasPhoto);
+  const hasPhoto   = techAfterPhotos[jobId] && techAfterPhotos[jobId].length > 0;
+  const hasXero    = !!techXeroDone[jobId];
+  btn.disabled = !(hasPayment && hasPhoto && hasXero);
 }
 
 async function techCompleteJob(jobId){
@@ -2205,10 +2280,8 @@ async function techCompleteJob(jobId){
     if(j) Object.assign(j,updates);
     delete techAfterPhotos[jobId];
     delete techPayMethod[jobId];
+    delete techXeroDone[jobId];
     showToast('✅ Job marked complete!');
-    // Send to Xero (silently, non-blocking)
-    const completedJob = allJobs.find(x=>x.id===jobId)||{};
-    sendToXero({...completedJob, ...updates}, method);
     renderTechPortal();
     renderCRM();
     renderDiary();
