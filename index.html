@@ -667,6 +667,7 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
         <span style="font-family:'Montserrat',sans-serif;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--grey3);margin-right:2px;">Date:</span>
         <button class="rfp on" id="dfp-all" onclick="setDateFilter('all',this)">All</button>
         <button class="rfp" id="dfp-today" onclick="setDateFilter('today',this)">Today</button>
+        <button class="rfp" id="dfp-upcoming" onclick="setDateFilter('upcoming',this)">Upcoming Week</button>
         <button class="rfp" id="dfp-week" onclick="setDateFilter('week',this)">This Week</button>
         <button class="rfp" id="dfp-next" onclick="setDateFilter('next',this)">Next Week</button>
       </div>
@@ -910,7 +911,7 @@ const sb = createClient('https://isxycoxqlummscxmdckj.supabase.co','eyJhbGciOiJI
 });
 
 let currentUser=null,currentProfile=null,allJobs=[],quoteImgs=[],currentQuote=null;
-let locVal='mobile',trvVal='local',srcVal='whatsapp',crmFilter='all',dateFilter='all';
+let locVal='mobile',trvVal='local',srcVal='whatsapp',crmFilter='all',dateFilter='upcoming';
 const dpState={};
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 
@@ -1027,10 +1028,10 @@ function switchTab(t){
       document.querySelectorAll('.fpill').forEach(b=>b.classList.remove('on'));
       const mineBtn = Array.from(document.querySelectorAll('.fpill')).find(b=>b.textContent.includes('My Jobs'));
       if(mineBtn) mineBtn.classList.add('on');
-      // Set Today date filter
-      dateFilter = 'today';
-      document.querySelectorAll('.rfp').forEach(b=>b.classList.remove('on'));
-      document.getElementById('dfp-today')?.classList.add('on');
+      // Set Upcoming Week date filter (today → +7 days)
+      dateFilter = 'upcoming';
+      document.querySelectorAll('[id^="dfp-"]').forEach(b=>b.classList.remove('on'));
+      document.getElementById('dfp-upcoming')?.classList.add('on');
     }
     renderCRM();
   }
@@ -1170,7 +1171,11 @@ function renderCRM(){
   const filtered=allJobs.filter(j=>{
     const isCompleted=j.status==='completed'||['card','cash','paid'].includes(j.paid);
     const myName = currentProfile?.full_name || '';
-    const isMineJob = !j.assigned_tech || j.assigned_tech===myName || j.assigned_tech==='Both';
+    const todayCRM = new Date(); todayCRM.setHours(0,0,0,0);
+    const week7CRM = new Date(todayCRM); week7CRM.setDate(todayCRM.getDate()+7); week7CRM.setHours(23,59,59,999);
+    const bdCRM = j.booking_date ? new Date(j.booking_date+'T00:00:00') : null;
+    const inWindow = bdCRM && bdCRM >= todayCRM && bdCRM <= week7CRM;
+    const isMineJob = myName && (j.assigned_tech===myName || j.assigned_tech==='Both') && inWindow;
     const mf=crmFilter==='all'||(crmFilter==='mine'?isMineJob:(crmFilter==='completed'?isCompleted:crmFilter==='pending'?j.status==='pending':j.status===crmFilter));
     // Date filter — based on booking_date
     let df=true;
@@ -1826,20 +1831,18 @@ function renderTechPortal(){
   if(!portal) return;
   const techName = currentProfile?.full_name || '';
 
-  // Get THIS person's booked jobs
-  const isAdmin = ['admin','admin_staff'].includes(currentProfile?.role);
+  // Get THIS person's booked jobs — today through next 7 days only
+  const today7 = new Date(); today7.setHours(0,0,0,0);
+  const week7  = new Date(today7); week7.setDate(today7.getDate()+7); week7.setHours(23,59,59,999);
   const myJobs = allJobs.filter(j=>{
     if(!j.booking_date) return false;
-    const effDone = j.status==='completed'||['card','cash','paid'].includes(j.paid);
-    let isMine;
-    if(isAdmin){
-      // Admins see jobs assigned to them by name, or assigned to 'Both', or unassigned
-      isMine = !j.assigned_tech || j.assigned_tech===techName || j.assigned_tech==='Both';
-    } else {
-      // Tech sees jobs assigned to them or 'Both'
-      isMine = !j.assigned_tech || j.assigned_tech===techName || j.assigned_tech==='Both';
-    }
-    return isMine && (j.status==='booked' || effDone);
+    // Date window: today → +7 days only, no past jobs
+    const bd = new Date(j.booking_date+'T00:00:00');
+    if(bd < today7 || bd > week7) return false;
+    // Only jobs actually assigned to this person or Both (not unassigned)
+    const isMine = techName && (j.assigned_tech===techName || j.assigned_tech==='Both');
+    if(!isMine) return false;
+    return j.status==='booked';
   });
 
   if(!myJobs.length){
@@ -2108,6 +2111,11 @@ function getDateFilterRange(){
   const now = new Date(); now.setHours(0,0,0,0);
   if(dateFilter==='today'){
     const end = new Date(now); end.setHours(23,59,59,999);
+    return {s:now, e:end};
+  }
+  if(dateFilter==='upcoming'){
+    // From today through the next 7 days
+    const end = new Date(now); end.setDate(now.getDate()+7); end.setHours(23,59,59,999);
     return {s:now, e:end};
   }
   if(dateFilter==='week'){
