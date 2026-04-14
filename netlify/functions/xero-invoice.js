@@ -73,10 +73,14 @@ async function refreshIfNeeded(tokens, supabaseUrl, supabaseKey) {
 }
 
 function buildDescription(job) {
-  // Build "Body repairs - NSF Bumper corner" from panels field
   const panels = (job.panels || '').trim();
-  if (!panels) return 'Body repairs - Vehicle bodywork repair';
-  return `Body repairs - ${panels}`;
+  if (job._is_deposit) {
+    return panels ? `Parts deposit - ${panels}` : 'Parts deposit - Vehicle parts';
+  }
+  if (job._is_balance) {
+    return panels ? `Body repairs - ${panels} (balance after deposit)` : 'Body repairs - Vehicle bodywork repair (balance after deposit)';
+  }
+  return panels ? `Body repairs - ${panels}` : 'Body repairs - Vehicle bodywork repair';
 }
 
 function buildLineItems(job) {
@@ -148,7 +152,7 @@ exports.handler = async (event) => {
         Contact:     contact ? { ContactID: contact.ContactID } : buildContact(job),
         Reference:   reference,
         LineItems:   buildLineItems(job),
-        DueDate:     new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0], // 30 days
+        DueDate:     new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0], // 3 days
         CurrencyCode: 'GBP'
       }]
     };
