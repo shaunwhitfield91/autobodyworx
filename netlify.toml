@@ -1,6 +1,10 @@
-[[headers]]
-  for = "/*"
-  [headers.values]
-    Content-Security-Policy = "default-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.supabase.co wss://*.supabase.co https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com https://api.anthropic.com https://developer.setmore.com data: blob:;"
-    Access-Control-Allow-Origin = "*"
-    Access-Control-Allow-Headers = "*"
+[[redirects]]
+  from = "/xero-callback"
+  to = "/.netlify/functions/xero-callback"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
