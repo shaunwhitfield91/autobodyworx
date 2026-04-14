@@ -1,85 +1,40 @@
 // xero-invoice.js — creates invoice or receipt in Xero from a completed PanelPro job
-const https = require('https');
-
-function httpsReq(method, url, data, headers) {
-  return new Promise((resolve, reject) => {
-    const body = data ? JSON.stringify(data) : null;
-    const opts = {
-      method,
-      headers: {
-        'Content-Type':  'application/json',
-        'Accept':        'application/json',
-        ...(body ? { 'Content-Length': Buffer.byteLength(body) } : {}),
-        ...headers
-      }
-    };
-    const req = https.request(url, opts, res => {
-      let buf = '';
-      res.on('data', d => buf += d);
-      res.on('end', () => {
-        try { resolve({ status: res.statusCode, body: JSON.parse(buf) }); }
-        catch { resolve({ status: res.statusCode, body: buf }); }
-      });
-    });
-    req.on('error', reject);
-    if (body) req.write(body);
-    req.end();
-  });
-}
 
 async function getTokens(supabaseUrl, supabaseKey) {
-  const res = await httpsReq('GET', `${supabaseUrl}/rest/v1/xero_tokens?limit=1`, null, {
-    'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`
+  const res = await fetch(`${supabaseUrl}/rest/v1/xero_tokens?limit=1`, {
+    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
   });
-  if (!res.body || !res.body[0]) throw new Error('No Xero tokens found. Please reconnect Xero in Settings.');
-  return res.body[0];
+  const data = await res.json();
+  if (!data || !data[0]) throw new Error('No Xero tokens found. Please reconnect Xero in Settings.');
+  return data[0];
 }
 
 async function refreshIfNeeded(tokens, supabaseUrl, supabaseKey) {
   const expiresAt = new Date(tokens.expires_at);
-  if (expiresAt > new Date(Date.now() + 60000)) return tokens.access_token; // still valid
+  if (expiresAt > new Date(Date.now() + 60000)) return tokens.access_token;
 
-  const clientId     = process.env.XERO_CLIENT_ID;
-  const clientSecret = process.env.XERO_CLIENT_SECRET;
-  const creds = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-
-  const body = new URLSearchParams({ grant_type: 'refresh_token', refresh_token: tokens.refresh_token }).toString();
-  const res  = await httpsReq('POST', 'https://identity.xero.com/connect/token', null, {
-    'Authorization': `Basic ${creds}`,
-    'Content-Type':  'application/x-www-form-urlencoded',
-    'Content-Length': Buffer.byteLength(body)
+  const creds = Buffer.from(`${process.env.XERO_CLIENT_ID}:${process.env.XERO_CLIENT_SECRET}`).toString('base64');
+  const res = await fetch('https://identity.xero.com/connect/token', {
+    method: 'POST',
+    headers: { 'Authorization': `Basic ${creds}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: tokens.refresh_token })
   });
+  const tokenData = await res.json();
+  if (!tokenData.access_token) throw new Error('Token refresh failed: ' + JSON.stringify(tokenData));
 
-  // Need to send the body manually for this one
-  const tokenRes = await new Promise((resolve, reject) => {
-    const req = https.request('https://identity.xero.com/connect/token', {
-      method: 'POST',
-      headers: { 'Authorization': `Basic ${creds}`, 'Content-Type': 'application/x-www-form-urlencoded' }
-    }, r => {
-      let buf = ''; r.on('data', d => buf += d); r.on('end', () => resolve(JSON.parse(buf)));
-    });
-    req.on('error', reject);
-    req.write(body); req.end();
+  const newExpiry = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
+  await fetch(`${supabaseUrl}/rest/v1/xero_tokens?tenant_id=eq.${tokens.tenant_id}`, {
+    method: 'PATCH',
+    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ access_token: tokenData.access_token, refresh_token: tokenData.refresh_token, expires_at: newExpiry, updated_at: new Date().toISOString() })
   });
-
-  const newExpiry = new Date(Date.now() + tokenRes.expires_in * 1000).toISOString();
-  await httpsReq('PATCH',
-    `${supabaseUrl}/rest/v1/xero_tokens?tenant_id=eq.${tokens.tenant_id}`,
-    { access_token: tokenRes.access_token, refresh_token: tokenRes.refresh_token, expires_at: newExpiry, updated_at: new Date().toISOString() },
-    { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
-  );
-
-  return tokenRes.access_token;
+  return tokenData.access_token;
 }
 
 function buildDescription(job) {
   const panels = (job.panels || '').trim();
-  if (job._is_deposit) {
-    return panels ? `Parts deposit - ${panels}` : 'Parts deposit - Vehicle parts';
-  }
-  if (job._is_balance) {
-    return panels ? `Body repairs - ${panels} (balance after deposit)` : 'Body repairs - Vehicle bodywork repair (balance after deposit)';
-  }
+  if (job._is_deposit) return panels ? `Parts deposit - ${panels}` : 'Parts deposit - Vehicle parts';
+  if (job._is_balance) return panels ? `Body repairs - ${panels} (balance after deposit)` : 'Body repairs - Vehicle bodywork repair (balance after deposit)';
   return panels ? `Body repairs - ${panels}` : 'Body repairs - Vehicle bodywork repair';
 }
 
@@ -89,109 +44,77 @@ function buildLineItems(job) {
     Quantity:    1,
     UnitAmount:  parseFloat((job.quote_price || '0').replace(/[^0-9.]/g, '')) || 0,
     AccountCode: '200',
-    TaxType:     'OUTPUT2', // 20% VAT inclusive
-    LineAmountTypes: 'INCLUSIVE' // prices already include VAT
+    TaxType:     'OUTPUT2'
   }];
 }
 
 function buildContact(job) {
-  const contact = { Name: job.customer_name || 'Unknown Customer' };
-  if (job.customer_phone) contact.Phones = [{ PhoneType: 'MOBILE', PhoneNumber: job.customer_phone }];
-  if (job.customer_email) contact.EmailAddress = job.customer_email;
-  if (job.customer_address) contact.Addresses = [{ AddressType: 'STREET', AttentionTo: job.customer_name, AddressLine1: job.customer_address }];
-  return contact;
+  const c = { Name: job.customer_name || 'Unknown Customer' };
+  if (job.customer_email)   c.EmailAddress = job.customer_email;
+  if (job.customer_phone)   c.Phones = [{ PhoneType: 'MOBILE', PhoneNumber: job.customer_phone }];
+  if (job.customer_address) c.Addresses = [{ AddressType: 'STREET', AttentionTo: job.customer_name, AddressLine1: job.customer_address }];
+  return c;
 }
 
 exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
+  if (event.httpMethod !== 'POST') return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
 
   const supabaseUrl = 'https://isxycoxqlummscxmdckj.supabase.co';
   const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
   let job, payMethod;
-  try {
-    const parsed = JSON.parse(event.body);
-    job       = parsed.job;
-    payMethod = parsed.payMethod; // 'card', 'paid' (BACS), 'nopay'
-  } catch {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request body' }) };
-  }
+  try { const p = JSON.parse(event.body); job = p.job; payMethod = p.payMethod; }
+  catch (e) { return { statusCode: 400, body: JSON.stringify({ error: 'Invalid body' }) }; }
 
-  // Cash = do nothing
-  if (payMethod === 'cash') {
-    return { statusCode: 200, body: JSON.stringify({ skipped: true, reason: 'Cash payment — no invoice created' }) };
-  }
+  if (payMethod === 'cash') return { statusCode: 200, body: JSON.stringify({ skipped: true }) };
 
   try {
     const tokens      = await getTokens(supabaseUrl, supabaseKey);
     const accessToken = await refreshIfNeeded(tokens, supabaseUrl, supabaseKey);
     const tenantId    = tokens.tenant_id;
+    const xH = { 'Authorization': `Bearer ${accessToken}`, 'Xero-tenant-id': tenantId, 'Content-Type': 'application/json', 'Accept': 'application/json' };
 
-    const xeroHeaders = {
-      'Authorization': `Bearer ${accessToken}`,
-      'Xero-tenant-id': tenantId
-    };
-
-    // Upsert contact first
-    const contactPayload = { Contacts: [buildContact(job)] };
-    const contactRes = await httpsReq('POST', 'https://api.xero.com/api.xro/2.0/Contacts', contactPayload, xeroHeaders);
-    const contact    = contactRes.body?.Contacts?.[0];
+    // Upsert contact
+    const cRes  = await fetch('https://api.xero.com/api.xro/2.0/Contacts', { method: 'POST', headers: xH, body: JSON.stringify({ Contacts: [buildContact(job)] }) });
+    const cData = await cRes.json();
+    const contact = cData?.Contacts?.[0];
 
     const vehicleInfo = [job.vehicle, job.colour].filter(Boolean).join(' - ');
     const reference   = `PanelPro #${job.id}${vehicleInfo ? ' — ' + vehicleInfo : ''}`;
+    const status      = (payMethod === 'paid' || payMethod === 'nopay') ? 'DRAFT' : 'AUTHORISED';
 
-    // Build invoice or receipt
-    // BACS / Invoice Later = ACCREC (sales invoice, status DRAFT)
-    // Card = ACCREC with status AUTHORISED + payment applied = effectively a receipt
-    const invoiceType   = 'ACCREC';
-    const invoiceStatus = payMethod === 'paid' || payMethod === 'nopay' ? 'DRAFT' : 'AUTHORISED';
-
-    const invoicePayload = {
-      Invoices: [{
-        Type:        invoiceType,
-        Status:      invoiceStatus,
-        Contact:     contact ? { ContactID: contact.ContactID } : buildContact(job),
-        Reference:   reference,
-        LineAmountTypes: 'INCLUSIVE', // all prices include VAT
-        LineItems:   buildLineItems(job),
-        DueDate:     new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0], // 3 days
+    const iRes  = await fetch('https://api.xero.com/api.xro/2.0/Invoices', {
+      method: 'POST', headers: xH,
+      body: JSON.stringify({ Invoices: [{
+        Type: 'ACCREC', Status: status,
+        Contact: contact ? { ContactID: contact.ContactID } : buildContact(job),
+        Reference: reference,
+        LineAmountTypes: 'INCLUSIVE',
+        LineItems: buildLineItems(job),
+        DueDate: new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0],
         CurrencyCode: 'GBP'
-      }]
-    };
+      }]})
+    });
+    const iData   = await iRes.json();
+    const invoice = iData?.Invoices?.[0];
 
-    const invoiceRes = await httpsReq('POST', 'https://api.xero.com/api.xro/2.0/Invoices', invoicePayload, xeroHeaders);
-    const invoice    = invoiceRes.body?.Invoices?.[0];
+    if (!invoice || invoice.HasErrors) throw new Error('Xero error: ' + JSON.stringify(iData?.Invoices?.[0]?.ValidationErrors || iData));
 
-    if (!invoice) throw new Error('Xero invoice creation failed: ' + JSON.stringify(invoiceRes.body));
-
-    // For card payments, record payment against invoice immediately
+    // Card — record payment
     if (payMethod === 'card' && invoice.InvoiceID) {
       const amount = parseFloat((job.quote_price || '0').replace(/[^0-9.]/g, '')) || 0;
       if (amount > 0) {
-        await httpsReq('PUT', 'https://api.xero.com/api.xro/2.0/Payments', {
-          Payments: [{
-            Invoice:   { InvoiceID: invoice.InvoiceID },
-            Account:   { Code: '090' }, // Xero default current account — user can update
-            Date:      new Date().toISOString().split('T')[0],
-            Amount:    amount,
-            Reference: `Card payment — ${reference}`
-          }]
-        }, xeroHeaders);
+        await fetch('https://api.xero.com/api.xro/2.0/Payments', {
+          method: 'PUT', headers: xH,
+          body: JSON.stringify({ Payments: [{ Invoice: { InvoiceID: invoice.InvoiceID }, Account: { Code: '090' }, Date: new Date().toISOString().split('T')[0], Amount: amount, Reference: `Card — ${reference}` }] })
+        });
       }
     }
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        success:    true,
-        invoiceId:  invoice.InvoiceID,
-        invoiceNum: invoice.InvoiceNumber,
-        type:       payMethod === 'card' ? 'receipt' : 'invoice'
-      })
-    };
+    return { statusCode: 200, body: JSON.stringify({ success: true, invoiceId: invoice.InvoiceID, invoiceNum: invoice.InvoiceNumber, type: payMethod === 'card' ? 'receipt' : 'invoice' }) };
 
   } catch (e) {
-    console.error('Xero invoice error:', e.message);
+    console.error('Xero error:', e.message);
     return { statusCode: 500, body: JSON.stringify({ error: e.message }) };
   }
 };
