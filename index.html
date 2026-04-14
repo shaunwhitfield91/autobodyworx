@@ -528,6 +528,7 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
         <button class="tab-btn" onclick="switchTab('tech')" id="t-tech" style="display:none;">🔧 My Jobs</button>
         <button class="tab-btn active role-admin role-admin_staff" onclick="switchTab('quote')" id="t-quote">⚡ Quotes</button>
         <button class="tab-btn" onclick="switchTab('crm')" id="t-crm">📋 Jobs <span class="tab-count" id="crmCount">0</span></button>
+        <button class="tab-btn role-admin role-admin_staff" onclick="switchTab('declined')" id="t-declined" style="color:var(--red);">✕ Declined <span class="tab-count" id="declinedTabCount" style="display:none;background:rgba(239,68,68,.2);color:var(--red);">0</span></button>
         <button class="tab-btn" onclick="switchTab('diary')" id="t-diary">📅 Diary</button>
         <button class="tab-btn role-admin role-admin_staff" onclick="switchTab('settings')" id="t-settings">⚙️ Settings</button>
       </div>
@@ -687,6 +688,18 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
         </div>
         <div id="declinedList" style="display:none;"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- DECLINED PAGE -->
+  <!-- DECLINED PAGE -->
+  <div class="page" id="declinedPage">
+    <div class="crm-wrap">
+      <div class="crm-top">
+        <h2 style="color:var(--red);">✕ Declined Jobs</h2>
+      </div>
+      <p style="color:var(--grey3);font-size:13px;margin-bottom:16px;">Jobs declined by Shaun. Chloe needs to contact the customer and mark as notified.</p>
+      <div id="declinedPageList"><div class="empty"><div class="empty-icon">✕</div><p>No declined jobs</p></div></div>
     </div>
   </div>
 
@@ -1020,6 +1033,7 @@ async function loadJobs(){
   }catch(e){}
   buildDiaryTechFilter();
   if(currentProfile?.role==='tech' || ['admin','admin_staff'].includes(currentProfile?.role)) renderTechPortal();
+  loadDeclinedJobs();
 }
 
 // TABS
@@ -1046,6 +1060,7 @@ function switchTab(t){
   }
   if(t==='diary'){buildDiaryTechFilter();renderDiary();}
   if(t==='tech') renderTechPortal();
+  if(t==='declined'){ loadDeclinedJobs().then(()=>renderDeclinedPage()); }
 }
 
 // PILLS
@@ -1500,12 +1515,17 @@ function updJob(id,field,val){
 async function saveJob(id){
   const updates=pending[id]||{};
   if(!Object.keys(updates).length){showToast('Nothing to save');return;}
+  // If a booking date is being saved, automatically set status to booked
+  const job=allJobs.find(j=>j.id===id);
+  if(updates.booking_date && job && job.status==='quoted'){
+    updates.status='booked';
+  }
   try{
     await sbRaw('PATCH','jobs',updates,`?id=eq.${id}`);
     delete pending[id];
-    // Update in-memory allJobs so diary reflects the change immediately
-    const job=allJobs.find(j=>j.id===id);
     if(job) Object.assign(job,updates);
+    // Update allJobs array too
+    allJobs = allJobs.map(x=>x.id===id?{...x,...updates}:x);
     showToast('Saved ✓');
     renderCRM();
     renderDiary();
@@ -3032,15 +3052,26 @@ async function loadDeclinedJobs(){
     declinedJobs = data||[];
     const section = document.getElementById('declinedSection');
     const countEl = document.getElementById('declinedCount');
-    if(!section) return;
-    if(declinedJobs.length > 0){
-      section.style.display='block';
-      if(countEl) countEl.textContent = declinedJobs.length;
-    } else {
-      section.style.display='none';
+    if(section){
+      if(declinedJobs.length > 0){
+        section.style.display='block';
+        if(countEl) countEl.textContent = declinedJobs.length;
+      } else {
+        section.style.display='none';
+      }
+      if(declinedSectionOpen) renderDeclinedList();
     }
-    if(declinedSectionOpen) renderDeclinedList();
+    updateDeclinedTabBadge();
   }catch(e){ console.warn('Declined jobs load failed',e); }
+}
+
+function updateDeclinedTabBadge(){
+  const needContact = declinedJobs.filter(j=>!j.customer_contacted).length;
+  const badge = document.getElementById('declinedTabCount');
+  if(badge){
+    badge.textContent = needContact;
+    badge.style.display = needContact > 0 ? '' : 'none';
+  }
 }
 
 function toggleDeclinedSection(){
@@ -3050,6 +3081,41 @@ function toggleDeclinedSection(){
   if(list) list.style.display = declinedSectionOpen ? 'block' : 'none';
   if(chevron) chevron.textContent = declinedSectionOpen ? '▲' : '▼';
   if(declinedSectionOpen) renderDeclinedList();
+}
+
+function renderDeclinedPage(){
+  const container = document.getElementById('declinedPageList');
+  if(!container) return;
+  if(!declinedJobs.length){
+    container.innerHTML='<div class="empty"><div class="empty-icon">✕</div><p>No declined jobs — great news!</p></div>';
+    return;
+  }
+  container.innerHTML = declinedJobs.map(j=>`
+    <div class="jcard" style="border-left:3px solid var(--red);${j.customer_contacted?'opacity:0.55;':''}">
+      <div class="jcard-top">
+        <div>
+          <div class="jcard-name">${esc(j.customer_name||'Unknown')}
+            <span style="display:inline-block;background:rgba(239,68,68,.15);color:var(--red);border-radius:4px;padding:1px 7px;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-left:6px;">Declined</span>
+          </div>
+          <div class="jcard-sub">${esc(j.vehicle||'—')} · ${esc(j.panels||'—')}</div>
+          ${j.customer_phone?`<div class="jcard-sub" style="margin-top:4px;"><a href="tel:${esc(j.customer_phone)}" style="color:var(--accent);">📞 ${esc(j.customer_phone)}</a></div>`:''}
+          ${j.customer_email?`<div class="jcard-sub"><a href="mailto:${esc(j.customer_email)}" style="color:var(--blue);">✉️ ${esc(j.customer_email)}</a></div>`:''}
+        </div>
+        <div style="text-align:right;">
+          <div class="jcard-price">${esc(j.quote_price||'—')}</div>
+          <div class="jcard-sub">${fmtDate(j.created_at?.split('T')[0])}</div>
+          <div class="jcard-sub" style="color:${j.customer_contacted?'var(--accent)':'var(--red)'};">
+            ${j.customer_contacted?'✓ Customer notified':'⚠️ Needs contact'}
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+        ${!j.customer_contacted?`<button type="button" style="flex:1;min-width:130px;padding:9px;border-radius:6px;background:rgba(74,222,128,.15);border:1px solid rgba(74,222,128,.3);color:var(--accent);font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;" onclick="markCustomerContacted(${j.id})">✅ Mark as Notified</button>`:''}
+        <button type="button" style="flex:1;min-width:100px;padding:9px;border-radius:6px;background:var(--card2);border:1px solid var(--border2);color:var(--white);font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;" onclick="restoreDeclinedJob(${j.id})">↩️ Restore</button>
+        <button type="button" style="flex:1;min-width:80px;padding:9px;border-radius:6px;background:transparent;border:1px solid var(--red);color:var(--red);font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;" onclick="permanentlyDeleteJob(${j.id})">🗑️ Delete</button>
+      </div>
+    </div>
+  `).join('');
 }
 
 function renderDeclinedList(){
@@ -3081,13 +3147,52 @@ function renderDeclinedList(){
   `).join('');
 }
 
+function renderDeclinedPage(){
+  loadDeclinedJobs().then(()=>{
+    const container = document.getElementById('declinedPageList');
+    if(!container) return;
+    if(!declinedJobs.length){
+      container.innerHTML='<div class="empty"><div class="empty-icon">✕</div><p>No declined jobs — great news!</p></div>';
+      return;
+    }
+    container.innerHTML = declinedJobs.map(j=>`
+      <div class="jcard" style="border-left:4px solid #ef4444;">
+        <div class="jcard-top">
+          <div style="flex:1;">
+            <div class="jcard-name" style="display:flex;align-items:center;gap:8px;">
+              ${j.customer_name||'Unknown'}
+              <span style="background:#ef4444;color:white;font-size:9px;font-weight:700;font-family:Montserrat,sans-serif;letter-spacing:1px;text-transform:uppercase;padding:2px 7px;border-radius:10px;">DECLINED</span>
+              ${j.customer_contacted?'<span style="background:rgba(74,222,128,.15);color:var(--accent);font-size:9px;font-weight:700;font-family:Montserrat,sans-serif;letter-spacing:1px;padding:2px 7px;border-radius:10px;">✓ NOTIFIED</span>':'<span style="background:rgba(245,158,11,.15);color:var(--yellow);font-size:9px;font-weight:700;font-family:Montserrat,sans-serif;letter-spacing:1px;padding:2px 7px;border-radius:10px;">⚠ NEEDS CONTACT</span>'}
+            </div>
+            <div class="jcard-sub" style="margin-top:4px;">${j.vehicle||'—'} · ${j.panels||'—'}</div>
+            <div class="jcard-sub" style="margin-top:2px;">${SRC[j.source]||j.source||''} · ${fmtDate(j.created_at?.split('T')[0])}</div>
+            ${j.customer_phone?`<div style="margin-top:6px;display:flex;gap:8px;">
+              <a href="tel:${j.customer_phone}" style="background:rgba(74,222,128,.12);color:var(--accent);border:1px solid rgba(74,222,128,.3);border-radius:5px;padding:5px 12px;font-size:11px;font-weight:700;font-family:Montserrat,sans-serif;text-decoration:none;">📞 Call</a>
+              <a href="sms:${j.customer_phone}" style="background:rgba(96,165,250,.12);color:var(--blue);border:1px solid rgba(96,165,250,.3);border-radius:5px;padding:5px 12px;font-size:11px;font-weight:700;font-family:Montserrat,sans-serif;text-decoration:none;">💬 Text</a>
+            </div>`:''}
+          </div>
+          <div style="text-align:right;">
+            <div class="jcard-price">${j.quote_price||'—'}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+          ${!j.customer_contacted?`<button class="btn-primary" style="flex:1;min-width:140px;font-size:10px;padding:8px;background:rgba(74,222,128,.15);border:1px solid rgba(74,222,128,.3);color:var(--accent);" onclick="markCustomerContacted(${j.id})">✅ Mark as Notified</button>`:''}
+          <button class="btn-primary" style="flex:1;min-width:100px;font-size:10px;padding:8px;background:var(--card2);border:1px solid var(--border2);" onclick="restoreDeclinedJob(${j.id})">↩️ Restore</button>
+          <button class="btn-decline" style="flex:1;min-width:80px;font-size:10px;padding:8px;" onclick="permanentlyDeleteJob(${j.id})">🗑️ Delete</button>
+        </div>
+      </div>
+    `).join('');
+  });
+}
+
 async function markCustomerContacted(jobId){
   try{
     await sbRaw('PATCH','jobs',{customer_contacted:true},`?id=eq.${jobId}`);
     declinedJobs = declinedJobs.map(j=>j.id===jobId?{...j,customer_contacted:true}:j);
     showToast('✅ Marked as customer notified');
     renderDeclinedList();
-    // Refresh badge count
+    renderDeclinedPage();
+    updateDeclinedTabBadge();
     renderCRM();
   }catch(e){ alert('Failed: '+e.message); }
 }
