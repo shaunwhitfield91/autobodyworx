@@ -1487,7 +1487,15 @@ function jHTML(j){
         <div class="pending-banner">💡 Edit any fields above then Approve or Decline.</div>
         <div class="approval-actions">
           ${isAdmin?`<button class="btn-approve" onclick="approveJob(${j.id})">✅ Approve Quote</button>`:''}
-          <button class="btn-decline" onclick="declineJob(${j.id})">${isAdmin?'✕ Decline':'✕ Decline & Notify'}</button>
+          <button class="btn-decline" onclick="declineJob(${j.id})">✕ Decline</button>
+        </div>
+      </div>` : ''}
+      ${j.status==='quoted' ? `
+      <div class="approval-bar" style="border-color:rgba(239,68,68,.2);background:rgba(239,68,68,.03);">
+        <h4 style="color:var(--red);">Customer Declined?</h4>
+        <div class="pending-banner" style="border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.08);color:var(--red);">If the customer has rejected the quote, decline it so Chloe can follow up.</div>
+        <div class="approval-actions">
+          <button class="btn-decline" onclick="declineJob(${j.id})">✕ Decline Quote</button>
         </div>
       </div>` : ''}
       <button class="btn-setmore ${j.booking_date?'booked':''}" onclick="bookJob(${j.id})">${j.booking_date?'✓ Booked — '+fmtDate(j.booking_date):'📅 Book'}</button>
@@ -2413,7 +2421,7 @@ async function approveJob(jobId){
 
 
 async function declineJob(jobId){
-  if(!confirm('Decline this quote? It will appear in the Declined Jobs section below so Chloe can follow up.')) return;
+  if(!confirm('Decline this job? It will be moved to the Declined section so Chloe can contact the customer.')) return;
   try{
     await sbRaw('PATCH','jobs',{archived:false, status:'declined'},`?id=eq.${jobId}`);
     // Remove from main job list immediately
