@@ -529,10 +529,10 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
         <button class="tab-btn" onclick="switchTab('tech')" id="t-tech" style="display:none;">🔧 My Jobs</button>
         <button class="tab-btn active role-admin role-admin_staff" onclick="switchTab('quote')" id="t-quote">⚡ Quotes</button>
         <button class="tab-btn" onclick="switchTab('crm')" id="t-crm">📋 Jobs <span class="tab-count" id="crmCount">0</span></button>
-        <button class="tab-btn role-admin role-admin_staff" onclick="switchTab('declined')" id="t-declined" style="color:var(--red);">✕ Declined <span class="tab-count" id="declinedTabCount" style="display:none;background:rgba(239,68,68,.2);color:var(--red);">0</span></button>
+
         <button class="tab-btn" onclick="switchTab('diary')" id="t-diary">📅 Diary</button>
         <button class="tab-btn role-admin role-admin_staff" onclick="switchTab('settings')" id="t-settings">⚙️ Settings</button>
-        <button class="tab-btn role-admin role-admin_staff" onclick="switchTab('declined')" id="t-declined">🚫 Declined <span class="tab-count" id="declinedTabCount" style="display:none;">0</span></button>
+
       </div>
     </div>
     <div class="hdr-r">
@@ -694,17 +694,7 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
     </div>
   </div>
 
-  <!-- DECLINED PAGE -->
-  <!-- DECLINED PAGE -->
-  <div class="page" id="declinedPage">
-    <div class="crm-wrap">
-      <div class="crm-top">
-        <h2 style="color:var(--red);">✕ Declined Jobs</h2>
-      </div>
-      <p style="color:var(--grey3);font-size:13px;margin-bottom:16px;">Jobs declined by Shaun. Chloe needs to contact the customer and mark as notified.</p>
-      <div id="declinedPageList"><div class="empty"><div class="empty-icon">✕</div><p>No declined jobs</p></div></div>
-    </div>
-  </div>
+
 
   <!-- SETTINGS PAGE -->
   <div class="page" id="settingsPage">
@@ -1063,8 +1053,6 @@ function switchTab(t){
   }
   if(t==='diary'){buildDiaryTechFilter();renderDiary();}
   if(t==='tech') renderTechPortal();
-  if(t==='declined'){ loadDeclinedJobs(); }
-  if(t==='declined'){ loadDeclinedJobs().then(()=>renderDeclinedPage()); }
 }
 
 // PILLS
@@ -3073,14 +3061,7 @@ async function loadDeclinedJobs(){
   }catch(e){ console.warn('Declined jobs load failed',e); }
 }
 
-function updateDeclinedTabBadge(){
-  const needContact = declinedJobs.filter(j=>!j.customer_contacted).length;
-  const badge = document.getElementById('declinedTabCount');
-  if(badge){
-    badge.textContent = needContact;
-    badge.style.display = needContact > 0 ? '' : 'none';
-  }
-}
+function updateDeclinedTabBadge(){ /* no-op — tab removed */ }
 
 function toggleDeclinedSection(){ renderDeclinedList(); }
 
