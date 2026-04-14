@@ -2026,10 +2026,10 @@ function buildTechJobBody(j){
     // Payment method
     html+='<div class="tech-section-title">2. Payment received</div>';
     html+='<div class="tech-pay-row">';
-    html+='<div class="tech-pay-btn" id="tpay-'+j.id+'-card" onclick="techSetPay('+j.id+',\"card\",this)">💳 Card</div>';
-    html+='<div class="tech-pay-btn" id="tpay-'+j.id+'-cash" onclick="techSetPay('+j.id+',\"cash\",this)">💵 Cash</div>';
-    html+='<div class="tech-pay-btn" id="tpay-'+j.id+'-paid" onclick="techSetPay('+j.id+',\"paid\",this)">🏦 BACS</div>';
-    html+='<div class="tech-pay-btn" id="tpay-'+j.id+'-nopay" onclick="techSetPay('+j.id+',\"nopay\",this)">📋 Invoice Later</div>';
+    html+='<button type="button" class="tech-pay-btn" id="tpay-'+j.id+'-card" onclick="techSetPay('+j.id+',\'card\',this)">💳 Card</button>';
+    html+='<button type="button" class="tech-pay-btn" id="tpay-'+j.id+'-cash" onclick="techSetPay('+j.id+',\'cash\',this)">💵 Cash</button>';
+    html+='<button type="button" class="tech-pay-btn" id="tpay-'+j.id+'-paid" onclick="techSetPay('+j.id+',\'paid\',this)">🏦 BACS</button>';
+    html+='<button type="button" class="tech-pay-btn" id="tpay-'+j.id+'-nopay" onclick="techSetPay('+j.id+',\'nopay\',this)">📋 Invoice Later</button>';
     html+='</div>';
     html+='<div style="font-size:10px;color:var(--grey3);text-align:center;margin-bottom:4px;font-family:Montserrat,sans-serif;letter-spacing:.5px;">Add a photo and select payment to complete</div>';
     html+='<button class="tech-complete-btn" id="tech-done-btn-'+j.id+'" onclick="techCompleteJob('+j.id+')" disabled>Mark as Complete</button>';
@@ -2081,10 +2081,10 @@ async function techSaveDetails(jobId){
     const j = allJobs.find(x=>x.id===jobId);
     if(j) Object.assign(j, updates);
     showToast('💾 Job updated');
-    // Re-render so info grid reflects new values
-    renderTechPortal();
-    // Re-open the card
-    setTimeout(()=>{ const el=document.getElementById('tjb-'+jobId); if(el) el.classList.add('open'); }, 50);
+    // Update visible info values in-place WITHOUT re-rendering (would wipe photo state)
+    // Update panels display if visible
+    const panelsEls = document.querySelectorAll('.tech-info-val');
+    // Just leave in place — the data is saved to Supabase, full refresh happens on complete
   }catch(e){ alert('Failed to save: '+e.message); }
 }
 
