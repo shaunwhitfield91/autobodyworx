@@ -682,13 +682,14 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
         <button class="fpill" onclick="setFilter('completed',this)">Completed</button>
       </div>
       <div class="jobs-col" id="jobsCol"><div class="empty"><div class="empty-icon">🚗</div><p>Loading jobs...</p></div></div>
-      <!-- DECLINED JOBS SECTION -->
-      <div id="declinedSection" style="display:none;margin-top:24px;padding-bottom:24px;">
-        <div style="font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:12px;display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 0;border-top:1px solid var(--border2);" onclick="toggleDeclinedSection()">
-          <span>✕ Declined / Non-Booked</span><span id="declinedCount" style="background:rgba(239,68,68,.15);color:var(--red);border-radius:10px;padding:1px 8px;font-size:9px;">0</span>
-          <span id="declinedChevron" style="margin-left:auto;font-size:12px;">▼</span>
+      <!-- DECLINED JOBS SECTION — always on jobs page, separate from live jobs -->
+      <div id="declinedSection" style="display:none;margin-top:32px;padding-bottom:24px;">
+        <div style="border-top:2px solid rgba(239,68,68,.3);padding-top:16px;margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+          <span style="font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--red);">✕ Declined Jobs</span>
+          <span id="declinedCount" style="background:rgba(239,68,68,.15);color:var(--red);border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700;">0</span>
+          <span style="font-size:11px;color:var(--grey3);margin-left:4px;">— Chloe to contact customer</span>
         </div>
-        <div id="declinedList" style="display:none;"></div>
+        <div id="declinedList"></div>
       </div>
     </div>
   </div>
@@ -2430,16 +2431,10 @@ async function declineJob(jobId){
     // Remove from main job list immediately
     const declinedJob = allJobs.find(j=>j.id===jobId);
     allJobs = allJobs.filter(j=>j.id!==jobId);
-    // Add to declined list
-    if(declinedJob){ declinedJobs.unshift({...declinedJob, status:'declined'}); }
     showToast('✕ Quote declined');
     renderCRM();
-    // Show declined section open
-    declinedSectionOpen = true;
-    const panel = document.getElementById('declinedSection');
-    if(panel) panel.style.display='block';
-    renderDeclinedList();
-    loadDeclinedJobs();
+    // Reload declined section fresh from DB
+    await loadDeclinedJobs();
   }catch(e){ alert('Failed: '+e.message); }
 }
 
@@ -3059,7 +3054,6 @@ function openDiaryJob(jobId){
 function closeDiaryPopup(){ document.getElementById('diaryPopup').style.display='none'; }
 
 let declinedJobs = [];
-let declinedSectionOpen = false;
 
 async function loadDeclinedJobs(){
   try{
@@ -3067,23 +3061,13 @@ async function loadDeclinedJobs(){
     declinedJobs = data||[];
     const section = document.getElementById('declinedSection');
     const countEl = document.getElementById('declinedCount');
-    if(section){
-      if(declinedJobs.length > 0){
-        section.style.display='block';
-        if(countEl) countEl.textContent = declinedJobs.length;
-        // Auto-open if any need customer contact
-        const needsContact = declinedJobs.some(j=>!j.customer_contacted);
-        if(needsContact && !declinedSectionOpen){
-          declinedSectionOpen = true;
-          const list = document.getElementById('declinedList');
-          const chevron = document.getElementById('declinedChevron');
-          if(list) list.style.display='block';
-          if(chevron) chevron.textContent='▲';
-        }
-      } else {
-        section.style.display='none';
-      }
-      if(declinedSectionOpen) renderDeclinedList();
+    if(!section) return;
+    if(declinedJobs.length > 0){
+      section.style.display = 'block';
+      if(countEl) countEl.textContent = declinedJobs.length;
+      renderDeclinedList();
+    } else {
+      section.style.display = 'none';
     }
     updateDeclinedTabBadge();
   }catch(e){ console.warn('Declined jobs load failed',e); }
@@ -3098,14 +3082,7 @@ function updateDeclinedTabBadge(){
   }
 }
 
-function toggleDeclinedSection(){
-  declinedSectionOpen = !declinedSectionOpen;
-  const list = document.getElementById('declinedList');
-  const chevron = document.getElementById('declinedChevron');
-  if(list) list.style.display = declinedSectionOpen ? 'block' : 'none';
-  if(chevron) chevron.textContent = declinedSectionOpen ? '▲' : '▼';
-  if(declinedSectionOpen) renderDeclinedList();
-}
+function toggleDeclinedSection(){ renderDeclinedList(); }
 
 function renderDeclinedPage(){
   const container = document.getElementById('declinedPageList');
