@@ -1391,6 +1391,13 @@ function jHTML(j){
       </div>
     </div>
 
+    <div style="margin-top:10px;" id="parts-inv-row-${j.id}">
+      <button class="btn-primary" style="width:100%;font-size:11px;padding:9px;background:rgba(96,165,250,.15);border:1px solid rgba(96,165,250,.3);color:var(--blue);"
+        onclick="sendPartsDepositInvoice(${j.id})" id="parts-inv-btn-${j.id}">
+        🧾 Send Parts Deposit Invoice to Xero
+      </button>
+      ${j.deposit_invoice_sent?'<div style="font-size:10px;color:var(--accent);margin-top:4px;text-align:center;">✅ Deposit invoice sent to Xero</div>':''}
+    </div>
     <div class="sec-div"></div>
     <div class="sec-ttl">📦 Parts</div>
     <label class="chk-lbl" style="margin-bottom:10px;"><input type="checkbox" ${j.parts_required?'checked':''} onchange="updJob(${j.id},'parts_required',this.checked);document.getElementById('partsrow-${j.id}').style.display=this.checked?'block':'none'"> Parts required for this job</label>
@@ -1643,12 +1650,85 @@ async function sendToXero(job, payMethod){
   if(localStorage.getItem('pp_xero_connected')!=='1') return;
   if(payMethod==='cash') return; // cash — do nothing
   try{
+    // If deposit was taken, subtract it from the invoice amount
+    let invoiceJob = {...job};
+    if(job.deposit_taken && job.deposit_amount){
+      const total   = parseFloat((job.quote_price||'0').replace(/[^0-9.]/g,''))||0;
+      const deposit = parseFloat((job.deposit_amount||'0').replace(/[^0-9.]/g,''))||0;
+      const balance = Math.max(0, total - deposit);
+      invoiceJob.quote_price    = '£'+balance.toFixed(2);
+      invoiceJob.invoice_amount = '£'+balance.toFixed(2);
+      invoiceJob._is_balance    = true; // flag for description
+    }
     await fetch('/.netlify/functions/xero-invoice',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({job, payMethod})
+      body:JSON.stringify({job: invoiceJob, payMethod})
     });
   }catch(e){ console.warn('Xero invoice failed silently:',e.message); }
+}
+
+async function sendPartsDepositInvoice(jobId){
+  if(localStorage.getItem('pp_xero_connected')!=='1'){
+    showToast('⚠️ Connect Xero in Settings first');
+    return;
+  }
+  const job = allJobs.find(j=>j.id===jobId);
+  if(!job) return;
+
+  // Calculate parts total from job_parts
+  const parts = job.job_parts||[];
+  if(!parts.length){
+    showToast('⚠️ No parts added to this job yet');
+    return;
+  }
+
+  const partsTotal = parts.reduce((sum,p)=>{
+    return sum + (parseFloat((p.price||'0').replace(/[^0-9.]/g,''))||0);
+  }, 0);
+
+  if(partsTotal <= 0){
+    showToast('⚠️ Parts have no prices set');
+    return;
+  }
+
+  const partNames = parts.map(p=>p.name).filter(Boolean).join(', ');
+  const depositJob = {
+    ...job,
+    quote_price:    '£'+partsTotal.toFixed(2),
+    invoice_amount: '£'+partsTotal.toFixed(2),
+    panels:         partNames,
+    _is_deposit:    true
+  };
+
+  const btn = document.getElementById('parts-inv-btn-'+jobId);
+  if(btn){ btn.disabled=true; btn.textContent='Sending to Xero...'; }
+
+  try{
+    const res = await fetch('/.netlify/functions/xero-invoice',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({job: depositJob, payMethod:'nopay'})
+    });
+    const data = await res.json();
+    if(data.success||data.invoiceId){
+      // Mark deposit invoice sent + save amount in Supabase
+      await sbRaw('PATCH','jobs',{
+        deposit_taken:         true,
+        deposit_amount:        '£'+partsTotal.toFixed(2),
+        deposit_invoice_sent:  true
+      },`?id=eq.${jobId}`);
+      const j = allJobs.find(x=>x.id===jobId);
+      if(j){ j.deposit_taken=true; j.deposit_amount='£'+partsTotal.toFixed(2); j.deposit_invoice_sent=true; }
+      showToast('🧾 Parts deposit invoice sent to Xero!');
+      renderCRM();
+    } else {
+      throw new Error(data.error||'Unknown error');
+    }
+  }catch(e){
+    showToast('❌ Failed: '+e.message);
+    if(btn){ btn.disabled=false; btn.textContent='🧾 Send Parts Deposit Invoice to Xero'; }
+  }
 }
 
 // SETMORE
