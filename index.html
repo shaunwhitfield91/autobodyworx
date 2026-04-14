@@ -636,10 +636,10 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
       </div>
       <!-- JOB COUNTERS — always visible -->
       <div class="stats-grid" style="margin-bottom:0;">
-        <div class="stat"><div class="stat-lbl">Pending</div><div class="stat-val sv-y" id="sP">0</div></div>
-        <div class="stat"><div class="stat-lbl">Quoted</div><div class="stat-val sv-y" id="sQ">0</div></div>
-        <div class="stat"><div class="stat-lbl">Booked</div><div class="stat-val sv-b" id="sB">0</div></div>
-        <div class="stat"><div class="stat-lbl">Done</div><div class="stat-val sv-g" id="sC">0</div></div>
+        <div class="stat" onclick="filterByStat('pending')" style="cursor:pointer;" title="Click to filter"><div class="stat-lbl">Pending</div><div class="stat-val sv-y" id="sP">0</div></div>
+        <div class="stat" onclick="filterByStat('quoted')" style="cursor:pointer;" title="Click to filter"><div class="stat-lbl">Quoted</div><div class="stat-val sv-y" id="sQ">0</div></div>
+        <div class="stat" onclick="filterByStat('booked')" style="cursor:pointer;" title="Click to filter"><div class="stat-lbl">Booked</div><div class="stat-val sv-b" id="sB">0</div></div>
+        <div class="stat" onclick="filterByStat('completed')" style="cursor:pointer;" title="Click to filter"><div class="stat-lbl">Completed</div><div class="stat-val sv-g" id="sC">0</div></div>
       </div>
 
       <!-- REVENUE — collapsible, collapsed by default -->
@@ -667,7 +667,6 @@ textarea.jd-inp{resize:vertical;min-height:58px;}
         <span style="font-family:'Montserrat',sans-serif;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--grey3);margin-right:2px;">Date:</span>
         <button class="rfp on" id="dfp-all" onclick="setDateFilter('all',this)">All</button>
         <button class="rfp" id="dfp-today" onclick="setDateFilter('today',this)">Today</button>
-        <button class="rfp" id="dfp-upcoming" onclick="setDateFilter('upcoming',this)">Upcoming Week</button>
         <button class="rfp" id="dfp-week" onclick="setDateFilter('week',this)">This Week</button>
         <button class="rfp" id="dfp-next" onclick="setDateFilter('next',this)">Next Week</button>
       </div>
@@ -1039,9 +1038,9 @@ function switchTab(t){
       const mineBtn = Array.from(document.querySelectorAll('.fpill')).find(b=>b.textContent.includes('My Jobs'));
       if(mineBtn) mineBtn.classList.add('on');
       // Set Upcoming Week date filter (today → +7 days)
-      dateFilter = 'upcoming';
+      dateFilter = 'all';
       document.querySelectorAll('[id^="dfp-"]').forEach(b=>b.classList.remove('on'));
-      document.getElementById('dfp-upcoming')?.classList.add('on');
+      document.getElementById('dfp-all')?.classList.add('on');
     }
     renderCRM();
   }
@@ -1173,7 +1172,22 @@ async function approveQuote(){
 function revise(){if(document.getElementById('q_custEmail'))document.getElementById('q_custEmail').value='';document.getElementById('resultWrap').style.display='none';const tr=document.getElementById('q_training_result');if(tr)tr.value='';window.scrollTo({top:0,behavior:'smooth'});}
 
 // CRM
-function setFilter(f,btn){crmFilter=f;document.querySelectorAll('.fpill').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderCRM();}
+function setFilter(f,btn){crmFilter=f;document.querySelectorAll('.fpill').forEach(b=>b.classList.remove('on'));if(btn)btn.classList.add('on');renderCRM();}
+
+function filterByStat(status){
+  crmFilter = status;
+  // Update filter pills to match
+  document.querySelectorAll('.fpill').forEach(b=>b.classList.remove('on'));
+  const match = Array.from(document.querySelectorAll('.fpill')).find(b=>b.textContent.toLowerCase().includes(status==='completed'?'complet':status));
+  if(match) match.classList.add('on');
+  // Reset date filter to All so all dates show
+  dateFilter = 'all';
+  document.querySelectorAll('[id^="dfp-"]').forEach(b=>b.classList.remove('on'));
+  document.getElementById('dfp-all')?.classList.add('on');
+  // Scroll to jobs list
+  document.getElementById('jobsCol')?.scrollIntoView({behavior:'smooth',block:'start'});
+  renderCRM();
+}
 
 function renderCRM(){
   const q=(document.getElementById('crmSearch')?.value||'').toLowerCase();
@@ -1223,7 +1237,10 @@ function renderCRM(){
   if(email === 'shaun@auto-bodyworx.com'){
     crmBadgeCount = allJobs.filter(j=>j.status==='pending').length;
   } else if(email === 'admin@auto-bodyworx.com'){
-    crmBadgeCount = allJobs.filter(j=>j.status==='quoted').length;
+    // Chloe sees quoted jobs + declined jobs needing customer contact
+    const quotedCount  = allJobs.filter(j=>j.status==='quoted').length;
+    const declinedNeedContact = declinedJobs.filter(j=>!j.customer_contacted).length;
+    crmBadgeCount = quotedCount + declinedNeedContact;
   } else {
     crmBadgeCount = allJobs.filter(j=>j.status==='pending').length; // default admins see pending
   }
@@ -1287,6 +1304,14 @@ function jHTML(j){
       <div class="jd-field"><div class="jd-lbl">Customer Name</div><input class="jd-inp" value="${ea(j.customer_name)}" ${isTech?'readonly':''} onchange="updJob(${j.id},'customer_name',this.value)"></div>
       <div class="jd-field"><div class="jd-lbl">Phone</div><input class="jd-inp" value="${ea(j.customer_phone||'')}" ${isTech?'readonly':''} onchange="updJob(${j.id},'customer_phone',this.value)"></div>
       <div class="jd-field"><div class="jd-lbl">Email</div><input class="jd-inp" type="email" value="${ea(j.customer_email||'')}" ${isTech?'readonly':''} onchange="updJob(${j.id},'customer_email',this.value)"></div>
+      <div class="jd-field"><div class="jd-lbl">Enquiry Source</div><select class="jd-inp" ${isTech?'disabled':''} onchange="updJob(${j.id},'source',this.value)">
+        <option value="whatsapp" ${j.source==='whatsapp'?'selected':''}>💬 WhatsApp</option>
+        <option value="hubspot" ${j.source==='hubspot'?'selected':''}>🌐 HubSpot</option>
+        <option value="phone" ${j.source==='phone'?'selected':''}>📞 Phone Call</option>
+        <option value="email" ${j.source==='email'?'selected':''}>📧 Email</option>
+        <option value="walkin" ${j.source==='walkin'?'selected':''}>🚶 Walk-in</option>
+        <option value="other" ${j.source==='other'?'selected':''}>Other</option>
+      </select></div>
       <div class="jd-field full"><div class="jd-lbl">Home Address</div><input class="jd-inp" value="${ea(j.customer_address||'')}" ${isTech?'readonly':''} onchange="updJob(${j.id},'customer_address',this.value)"></div>
       <div class="jd-field full">
         <div class="jd-lbl">Job Location</div>
@@ -1427,7 +1452,7 @@ function jHTML(j){
     <div class="photos-grid">${photoGrid('completion')}</div>
 
     <div class="sec-div"></div>
-    <div class="signoff-box" id="signoff-${j.id}">
+    <div class="signoff-box" id="signoff-${j.id}" style="${(j.status==='booked'||j.status==='completed'||['card','cash','paid'].includes(j.paid))?'':'display:none;'}">
       ${j.signed_off_at
         ? `<div class="signoff-done">✅ Signed off by ${esc(j.signed_off_by||'unknown')} — ${j.payment_method||''}</div>
            <div style="display:flex;gap:8px;margin-top:8px;">
@@ -1449,14 +1474,13 @@ function jHTML(j){
     </div>
     <div class="jactions">
       <button class="btn-save" onclick="saveJob(${j.id})">Save Changes</button>
-      ${j.status==='pending' && isAdmin ? `
+      ${j.status==='pending' ? `
       <div class="approval-bar">
-        <h4>⏳ Pending Your Approval</h4>
-        <div class="pending-banner">💡 Edit any fields above (price, duration, panels etc), add notes for Chloe below, then Approve or Decline.</div>
-        <textarea class="approval-notes" id="apnotes-${j.id}" placeholder="Notes for Chloe (optional — e.g. watch for hidden damage, agreed £X verbally)...">${esc(j.notes||'')}</textarea>
+        <h4>⏳ Pending Approval</h4>
+        <div class="pending-banner">💡 Edit any fields above then Approve or Decline.</div>
         <div class="approval-actions">
-          <button class="btn-approve" onclick="approveJob(${j.id})">✅ Approve Quote</button>
-<button class="btn-decline" onclick="declineJob(${j.id})">✕ Decline</button>
+          ${isAdmin?`<button class="btn-approve" onclick="approveJob(${j.id})">✅ Approve Quote</button>`:''}
+          <button class="btn-decline" onclick="declineJob(${j.id})">${isAdmin?'✕ Decline':'✕ Decline & Notify'}</button>
         </div>
       </div>` : ''}
       <button class="btn-setmore ${j.booking_date?'booked':''}" onclick="bookJob(${j.id})">${j.booking_date?'✓ Booked — '+fmtDate(j.booking_date):'📅 Book'}</button>
@@ -1932,7 +1956,9 @@ async function bookJob(jobId){
     await sbRaw('PATCH','jobs',updates,`?id=eq.${jobId}`);
     delete pending[jobId];
     Object.assign(j, updates);
-    showToast('Booked ✓');
+    // Update allJobs in memory so renderCRM shows correct status immediately
+    allJobs = allJobs.map(x=>x.id===jobId?{...x,...updates}:x);
+    showToast('📅 Booked ✓');
     renderCRM();
     buildDiaryTechFilter();
     renderDiary();
@@ -2372,12 +2398,13 @@ async function approveJob(jobId){
 
 
 async function declineJob(jobId){
-  if(!confirm('Decline this quote? The job will be stored in Declined Jobs and removed from the active list.')) return;
+  if(!confirm('Decline this quote? It will appear in the Declined Jobs section below so Chloe can follow up.')) return;
   try{
     await sbRaw('PATCH','jobs',{archived:false, status:'declined'},`?id=eq.${jobId}`);
     allJobs = allJobs.map(j=>j.id===jobId?{...j,status:'declined'}:j);
     showToast('✕ Quote declined');
     renderCRM();
+    loadDeclinedJobs();
   }catch(e){ alert('Failed: '+e.message); }
 }
 
@@ -3029,24 +3056,40 @@ function renderDeclinedList(){
   const container = document.getElementById('declinedList');
   if(!container) return;
   if(declinedJobs.length === 0){ container.innerHTML='<p style="color:var(--grey3);font-size:12px;padding:8px 0;">No declined jobs</p>'; return; }
+  const isChloe = currentUser?.email?.toLowerCase()==='admin@auto-bodyworx.com';
   container.innerHTML = declinedJobs.map(j=>`
-    <div class="jcard" style="border-left:3px solid var(--red);opacity:0.8;">
+    <div class="jcard" style="border-left:3px solid var(--red);${j.customer_contacted?'opacity:0.5;':''}">
       <div class="jcard-top">
         <div>
-          <div class="jcard-name">${j.customer_name||'Unknown'}</div>
+          <div class="jcard-name">${j.customer_name||'Unknown'}
+            ${j.customer_contacted?'<span style="font-size:10px;color:var(--accent);margin-left:6px;">✓ Customer notified</span>':'<span style="font-size:10px;color:var(--red);margin-left:6px;">⚠️ Needs contact</span>'}
+          </div>
           <div class="jcard-sub">${j.vehicle||'—'} · ${j.panels||'—'}</div>
+          ${j.customer_phone?`<div class="jcard-sub" style="margin-top:4px;"><a href="tel:${j.customer_phone}" style="color:var(--accent);">📞 ${j.customer_phone}</a></div>`:''}
         </div>
         <div style="text-align:right;">
           <div class="jcard-price">${j.quote_price||'—'}</div>
           <div class="jcard-sub">${fmtDate(j.created_at?.split('T')[0])}</div>
         </div>
       </div>
-      <div style="display:flex;gap:8px;margin-top:10px;">
-        <button class="btn-primary" style="flex:1;font-size:10px;padding:7px;" onclick="restoreDeclinedJob(${j.id})">↩️ Restore to Quoted</button>
-        <button class="btn-decline" style="flex:1;font-size:10px;padding:7px;" onclick="permanentlyDeleteJob(${j.id})">🗑️ Delete</button>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+        ${!j.customer_contacted?`<button class="btn-primary" style="flex:1;min-width:120px;font-size:10px;padding:7px;background:rgba(74,222,128,.15);border:1px solid rgba(74,222,128,.3);color:var(--accent);" onclick="markCustomerContacted(${j.id})">✅ Customer Notified</button>`:''}
+        <button class="btn-primary" style="flex:1;min-width:100px;font-size:10px;padding:7px;background:var(--card2);border:1px solid var(--border2);" onclick="restoreDeclinedJob(${j.id})">↩️ Restore</button>
+        <button class="btn-decline" style="flex:1;min-width:80px;font-size:10px;padding:7px;" onclick="permanentlyDeleteJob(${j.id})">🗑️ Delete</button>
       </div>
     </div>
   `).join('');
+}
+
+async function markCustomerContacted(jobId){
+  try{
+    await sbRaw('PATCH','jobs',{customer_contacted:true},`?id=eq.${jobId}`);
+    declinedJobs = declinedJobs.map(j=>j.id===jobId?{...j,customer_contacted:true}:j);
+    showToast('✅ Marked as customer notified');
+    renderDeclinedList();
+    // Refresh badge count
+    renderCRM();
+  }catch(e){ alert('Failed: '+e.message); }
 }
 
 async function restoreDeclinedJob(jobId){
