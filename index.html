@@ -1429,7 +1429,14 @@ function jHTML(j){
     <div class="sec-div"></div>
     <div class="signoff-box" id="signoff-${j.id}">
       ${j.signed_off_at
-        ? `<div class="signoff-done">✅ Signed off by ${esc(j.signed_off_by||'unknown')} — ${j.payment_method||''}</div>`
+        ? `<div class="signoff-done">✅ Signed off by ${esc(j.signed_off_by||'unknown')} — ${j.payment_method||''}</div>
+           <div style="display:flex;gap:8px;margin-top:8px;">
+             ${j.payment_method!=='Cash' ? `<button type="button"
+               style="flex:1;padding:9px;border-radius:6px;border:1px solid rgba(16,155,120,.4);background:rgba(16,155,120,.12);color:#0eb27a;font-family:Montserrat,sans-serif;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;"
+               onclick="crmSendXero(${j.id},'${(j.payment_method||'').toLowerCase()}',this)">
+               🧾 ${j.payment_method==='Card'?'Send Receipt':'Send Invoice'} to Xero
+             </button>` : ''}
+           </div>`
         : `<h4>✅ Sign Off Job</h4>
            <div style="font-size:12px;color:var(--grey2);margin-bottom:10px;">Requires a completion photo. Select payment method to complete.</div>
            <div class="pay-pills">
@@ -1666,6 +1673,56 @@ async function sendToXero(job, payMethod){
       body:JSON.stringify({job: invoiceJob, payMethod})
     });
   }catch(e){ console.warn('Xero invoice failed silently:',e.message); }
+}
+
+async function crmSendXero(jobId, payMethod, btn){
+  if(localStorage.getItem('pp_xero_connected')!=='1'){
+    showToast('⚠️ Connect Xero in Settings first');
+    return;
+  }
+  const job = allJobs.find(j=>j.id===jobId);
+  if(!job){ showToast('❌ Job not found'); return; }
+
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+
+  // Map CRM payment method to Xero payMethod codes
+  const methodMap = { 'card':'card', 'cash':'cash', 'bacs':'paid', 'invoice later':'nopay', 'paid':'paid' };
+  const xeroMethod = methodMap[payMethod.toLowerCase()] || 'nopay';
+
+  try{
+    // Subtract deposit if applicable
+    let invoiceJob = {...job};
+    if(job.deposit_taken && job.deposit_amount){
+      const total   = parseFloat((job.quote_price||'0').replace(/[^0-9.]/g,''))||0;
+      const deposit = parseFloat((job.deposit_amount||'0').replace(/[^0-9.]/g,''))||0;
+      const balance = Math.max(0, total - deposit);
+      invoiceJob.quote_price = '£'+balance.toFixed(2);
+      invoiceJob._is_balance = true;
+    }
+
+    const res = await fetch('/.netlify/functions/xero-invoice',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({job: invoiceJob, payMethod: xeroMethod})
+    });
+    const data = await res.json();
+
+    if(data.success || data.invoiceId || data.skipped){
+      btn.textContent = '✅ Sent!';
+      btn.style.background = 'rgba(74,222,128,.2)';
+      btn.style.borderColor = 'rgba(74,222,128,.5)';
+      btn.style.color = 'var(--accent)';
+      showToast('🧾 '+(xeroMethod==='card'?'Receipt':'Invoice')+' sent to Xero!');
+    } else {
+      throw new Error(data.error||'Unknown error');
+    }
+  }catch(e){
+    btn.disabled = false;
+    btn.textContent = originalText;
+    showToast('❌ Xero error: '+e.message);
+  }
 }
 
 async function sendPartsDepositInvoice(jobId){
