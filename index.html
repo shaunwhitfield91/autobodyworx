@@ -965,8 +965,8 @@ function applyRoleUI(){
     if(techBtn){ techBtn.style.display=''; techBtn.classList.remove('role-hidden'); }
     switchTab('tech');
   } else {
-    // Admin: hide My Jobs tab
-    if(techBtn) techBtn.style.display='none';
+    // Admin/Admin_staff: show My Jobs tab too
+    if(techBtn){ techBtn.style.display=''; techBtn.classList.remove('role-hidden'); }
     switchTab('crm');
   }
 }
@@ -987,7 +987,7 @@ async function loadJobs(){
   allJobs=data||[];
   renderCRM();
   buildDiaryTechFilter();
-  if(currentProfile?.role==='tech') renderTechPortal();
+  if(currentProfile?.role==='tech' || ['admin','admin_staff'].includes(currentProfile?.role)) renderTechPortal();
 }
 
 // TABS
@@ -1775,12 +1775,19 @@ function renderTechPortal(){
   if(!portal) return;
   const techName = currentProfile?.full_name || '';
 
-  // Get THIS tech's booked jobs only (not completed)
+  // Get THIS person's booked jobs
+  const isAdmin = ['admin','admin_staff'].includes(currentProfile?.role);
   const myJobs = allJobs.filter(j=>{
     if(!j.booking_date) return false;
     const effDone = j.status==='completed'||['card','cash','paid'].includes(j.paid);
-    // Show their jobs — assigned to them or 'Both', booked or recently completed
-    const isMine = !j.assigned_tech || j.assigned_tech===techName || j.assigned_tech==='Both';
+    let isMine;
+    if(isAdmin){
+      // Admins see jobs assigned to them by name, or assigned to 'Both', or unassigned
+      isMine = !j.assigned_tech || j.assigned_tech===techName || j.assigned_tech==='Both';
+    } else {
+      // Tech sees jobs assigned to them or 'Both'
+      isMine = !j.assigned_tech || j.assigned_tech===techName || j.assigned_tech==='Both';
+    }
     return isMine && (j.status==='booked' || effDone);
   });
 
