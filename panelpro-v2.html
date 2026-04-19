@@ -775,6 +775,126 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 
+
+<!-- BOOK JOB MODAL -->
+<div class="modal-overlay" id="bookModal" onclick="if(event.target===this)closeBookModal()">
+  <div class="modal-box">
+    <div class="modal-hd">Book job</div>
+    <div id="bookModalInfo" style="background:var(--blue-bg);border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;font-size:13px;color:var(--blue-txt);font-weight:500"></div>
+    <div class="modal-grid2">
+      <div><span class="qlbl">Date</span><input class="minp" type="date" id="bk_date"></div>
+      <div><span class="qlbl">Time</span><input class="minp" type="time" id="bk_time" value="09:00"></div>
+    </div>
+    <span class="qlbl">Duration</span>
+    <select class="msel" id="bk_dur">
+      <option value="1 hour">1 hour</option>
+      <option value="2 hours">2 hours</option>
+      <option value="3 hours" selected>3 hours</option>
+      <option value="4 hours">4 hours</option>
+      <option value="5 hours">5 hours</option>
+      <option value="Full day">Full day</option>
+    </select>
+    <span class="qlbl">Assigned tech</span>
+    <select class="msel" id="bk_tech">
+      <option value="Shaun">Shaun</option>
+      <option value="Charles">Charles</option>
+      <option value="Both">Both</option>
+    </select>
+    <span class="qlbl">Location</span>
+    <select class="msel" id="bk_loc">
+      <option value="mobile">Mobile — customer site</option>
+      <option value="workshop">Workshop</option>
+    </select>
+    <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+      <input type="checkbox" id="bk_cd" style="width:16px;height:16px;cursor:pointer">
+      <label for="bk_cd" style="font-size:13px;color:var(--txt);cursor:pointer">Collection &amp; Delivery required</label>
+    </div>
+    <span class="qlbl" style="margin-top:12px">Customer address (if mobile / C&amp;D)</span>
+    <input class="minp" id="bk_addr" placeholder="Full address">
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn-primary" onclick="saveBooking()" style="flex:1;padding:10px">Confirm booking</button>
+      <button class="btn-secondary" onclick="closeBookModal()" style="flex:1;padding:10px">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT JOB MODAL -->
+<div class="modal-overlay" id="editModal" onclick="if(event.target===this)closeEditModal()">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-hd">Edit job</div>
+    <input type="hidden" id="edit_jobId">
+    <div class="modal-grid2">
+      <div><span class="qlbl">Customer name</span><input class="minp" id="edit_name" placeholder="Full name"></div>
+      <div><span class="qlbl">Phone</span><input class="minp" id="edit_phone" placeholder="07700..."></div>
+    </div>
+    <div class="modal-grid2">
+      <div><span class="qlbl">Email</span><input class="minp" id="edit_email" placeholder="email@..."></div>
+      <div><span class="qlbl">Vehicle</span><input class="minp" id="edit_vehicle" placeholder="Make, model, year"></div>
+    </div>
+    <div class="modal-grid2">
+      <div><span class="qlbl">Colour</span><input class="minp" id="edit_colour" placeholder="Colour"></div>
+      <div><span class="qlbl">Quote price (inc VAT)</span><input class="minp" id="edit_price" placeholder="£ inc VAT"></div>
+    </div>
+    <span class="qlbl">Panels / damage description</span>
+    <input class="minp" id="edit_panels" placeholder="Damage description">
+    <span class="qlbl">Internal notes</span>
+    <textarea class="minp" id="edit_notes" rows="2" placeholder="Notes visible to all staff..." style="resize:vertical"></textarea>
+    <div class="modal-grid2">
+      <div>
+        <span class="qlbl">Status</span>
+        <select class="msel" id="edit_status">
+          <option value="pending">Pending approval</option>
+          <option value="quoted">Quoted — awaiting booking</option>
+          <option value="booked">Booked</option>
+          <option value="completed">Completed</option>
+        </select>
+      </div>
+      <div>
+        <span class="qlbl">Assigned tech</span>
+        <select class="msel" id="edit_tech">
+          <option value="Shaun">Shaun</option>
+          <option value="Charles">Charles</option>
+          <option value="Both">Both</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-grid2">
+      <div>
+        <span class="qlbl">Location</span>
+        <select class="msel" id="edit_loc">
+          <option value="mobile">Mobile</option>
+          <option value="workshop">Workshop</option>
+        </select>
+      </div>
+      <div>
+        <span class="qlbl">Source</span>
+        <select class="msel" id="edit_source">
+          <option value="whatsapp">WhatsApp</option>
+          <option value="hubspot">HubSpot</option>
+          <option value="phone">Phone</option>
+          <option value="email">Email</option>
+          <option value="walkin">Walk-in</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+      <input type="checkbox" id="edit_cd" style="width:16px;height:16px;cursor:pointer">
+      <label for="edit_cd" style="font-size:13px;color:var(--txt);cursor:pointer">Collection &amp; Delivery required</label>
+    </div>
+    <span class="qlbl">Add photos</span>
+    <div class="upzone" onclick="document.getElementById('editPhotoInput').click()" style="padding:14px;margin-bottom:10px">
+      <div style="font-size:12px;color:var(--muted);font-weight:600" id="editUpLbl">Tap to add photos</div>
+      <div style="font-size:10px;color:var(--hint);margin-top:2px">Camera or gallery · added to job permanently</div>
+    </div>
+    <input type="file" id="editPhotoInput" accept="image/*" multiple style="display:none" onchange="handleEditPhotos(this)">
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn-primary" onclick="saveEditJob()" style="flex:1;padding:10px">Save changes</button>
+      <button class="btn-secondary" onclick="closeEditModal()" style="flex:1;padding:10px">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div id="toast"></div>
 
@@ -1222,7 +1342,7 @@ function renderJobs() {
 function buildJobCard(j) {
   const statusMap = { pending:'pend', quoted:'quot', booked:'book', completed:'done', declined:'decl' };
   const s = statusMap[j.status] || 'pend';
-  const statusLabel = { pending:'Pending approval', quoted:'Quoted', booked:'Booked', completed:'Completed', declined:'Declined' }[j.status] || j.status;
+  const statusLabel = { pending:'Pending approval', quoted:'Approved — awaiting booking', booked:'Booked', completed:'Completed', declined:'Declined' }[j.status] || j.status;
   const photos = j.job_photos || [];
   const parts = j.job_parts || [];
   const prog = statusToProgress(j.status, j);
@@ -1230,15 +1350,17 @@ function buildJobCard(j) {
   let actions = '';
   if (j.status === 'pending') {
     actions = `<button class="btn-approve" onclick="event.stopPropagation();approveJob(${j.id})">Approve quote</button>
+               <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit</button>
                <button class="btn-danger" onclick="event.stopPropagation();declineJob(${j.id})">Decline</button>`;
   } else if (j.status === 'quoted') {
-    actions = `<button class="btn-book" onclick="event.stopPropagation()">Book in</button>
+    actions = `<button class="btn-book" onclick="event.stopPropagation();openBookModal(${j.id})">Book in</button>
                <button class="btn-danger" onclick="event.stopPropagation();declineJob(${j.id})">Decline</button>`;
   } else if (j.status === 'booked' && currentProfile?.role !== 'tech') {
     actions = `<button class="btn-primary" onclick="event.stopPropagation();sendXeroInvoice(${j.id},'deposit')" style="font-size:11px">Parts deposit invoice</button>
-               <button class="btn-secondary" onclick="event.stopPropagation()" style="font-size:11px">Edit</button>`;
+               <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>`;
   } else if (j.status === 'completed' && !j.paid) {
-    actions = `<button class="btn-primary" onclick="event.stopPropagation();openInvoiceFlow(${j.id})" style="font-size:11px">Send invoice / receipt</button>`;
+    actions = `<button class="btn-primary" onclick="event.stopPropagation();openInvoiceFlow(${j.id})" style="font-size:11px">Send invoice / receipt</button>
+               <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>`;
   }
 
   // Parts summary
@@ -1337,6 +1459,13 @@ function statusToProgress(status, j) {
   if (status === 'completed' && !j?.paid) return 4;
   if (status === 'completed' && j?.paid) return 5;
   return 1;
+}
+
+// Progress bar labels — clearer for Chloe/Shaun
+function statusProgLabel(step, curStep) {
+  const labels = ['','Received','Approved','Booked','In repair','Invoiced'];
+  const lc = step < curStep ? 'var(--teal)' : step === curStep ? 'var(--blue)' : 'var(--hint)';
+  return `<div class="prog-lbl" style="color:${lc}">${labels[step]}</div>`;
 }
 
 function buildProgBar(p) {
@@ -2331,6 +2460,146 @@ function showToast(msg) {
   el.classList.add('show');
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// BOOK JOB MODAL
+// ═══════════════════════════════════════════════════════════
+let _bookJobId = null;
+function openBookModal(jobId) {
+  _bookJobId = jobId;
+  const j = allJobs.find(x => x.id === jobId);
+  if (!j) return;
+  const info = document.getElementById('bookModalInfo');
+  info.textContent = j.customer_name + ' — ' + (j.vehicle||'') + ' — ' + (j.quote_price||'');
+  // Pre-fill existing booking if any
+  document.getElementById('bk_date').value = j.booking_date || '';
+  document.getElementById('bk_time').value = j.booking_time || '09:00';
+  document.getElementById('bk_dur').value = j.duration || '3 hours';
+  document.getElementById('bk_tech').value = j.assigned_tech || 'Shaun';
+  document.getElementById('bk_loc').value = j.job_location || 'workshop';
+  document.getElementById('bk_cd').checked = !!j.cd_required;
+  document.getElementById('bk_addr').value = j.customer_address || '';
+  document.getElementById('bookModal').classList.add('show');
+}
+
+function closeBookModal() {
+  document.getElementById('bookModal').classList.remove('show');
+  _bookJobId = null;
+}
+
+async function saveBooking() {
+  if (!_bookJobId) return;
+  const date = document.getElementById('bk_date').value;
+  if (!date) { showToast('Please select a date'); return; }
+  const updates = {
+    status: 'booked',
+    booking_date: date,
+    booking_time: document.getElementById('bk_time').value,
+    duration: document.getElementById('bk_dur').value,
+    assigned_tech: document.getElementById('bk_tech').value,
+    job_location: document.getElementById('bk_loc').value,
+    cd_required: document.getElementById('bk_cd').checked,
+    customer_address: document.getElementById('bk_addr').value.trim() || null
+  };
+  try {
+    await sbRaw('PATCH', 'jobs', updates, '?id=eq.' + _bookJobId);
+    showToast('✓ Job booked — ' + fmtDate(date));
+    closeBookModal();
+    await loadJobs();
+    // Re-open the card
+    openJobId = _bookJobId;
+    setTimeout(() => {
+      const el = document.getElementById('jc-' + openJobId);
+      if (el) { el.classList.add('open'); el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+    }, 150);
+  } catch(e) { alert('Failed: ' + e.message); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// EDIT JOB MODAL
+// ═══════════════════════════════════════════════════════════
+let _editJobId = null;
+let _editPhotos = [];
+
+function openEditModal(jobId) {
+  _editJobId = jobId;
+  _editPhotos = [];
+  const j = allJobs.find(x => x.id === jobId) || declinedJobs.find(x => x.id === jobId);
+  if (!j) return;
+  document.getElementById('edit_jobId').value = jobId;
+  document.getElementById('edit_name').value = j.customer_name || '';
+  document.getElementById('edit_phone').value = j.customer_phone || '';
+  document.getElementById('edit_email').value = j.customer_email || '';
+  document.getElementById('edit_vehicle').value = j.vehicle || '';
+  document.getElementById('edit_colour').value = j.colour || '';
+  document.getElementById('edit_price').value = j.quote_price || '';
+  document.getElementById('edit_panels').value = j.panels || '';
+  document.getElementById('edit_notes').value = j.notes || '';
+  document.getElementById('edit_status').value = j.status === 'completed' ? 'completed' : j.status;
+  document.getElementById('edit_tech').value = j.assigned_tech || 'Shaun';
+  document.getElementById('edit_loc').value = j.job_location || 'workshop';
+  document.getElementById('edit_source').value = j.source || 'other';
+  document.getElementById('edit_cd').checked = !!j.cd_required;
+  document.getElementById('editUpLbl').textContent = 'Tap to add photos';
+  document.getElementById('editModal').classList.add('show');
+}
+
+function closeEditModal() {
+  document.getElementById('editModal').classList.remove('show');
+  _editJobId = null;
+  _editPhotos = [];
+}
+
+function handleEditPhotos(input) {
+  const files = Array.from(input.files);
+  _editPhotos = _editPhotos.concat(files);
+  document.getElementById('editUpLbl').textContent = _editPhotos.length + ' photo' + (_editPhotos.length !== 1 ? 's' : '') + ' ready to upload';
+}
+
+async function saveEditJob() {
+  if (!_editJobId) return;
+  const updates = {
+    customer_name: document.getElementById('edit_name').value.trim(),
+    customer_phone: document.getElementById('edit_phone').value.trim(),
+    customer_email: document.getElementById('edit_email').value.trim(),
+    vehicle: document.getElementById('edit_vehicle').value.trim(),
+    colour: document.getElementById('edit_colour').value.trim(),
+    quote_price: document.getElementById('edit_price').value.trim(),
+    panels: document.getElementById('edit_panels').value.trim(),
+    notes: document.getElementById('edit_notes').value.trim(),
+    status: document.getElementById('edit_status').value,
+    assigned_tech: document.getElementById('edit_tech').value,
+    job_location: document.getElementById('edit_loc').value,
+    source: document.getElementById('edit_source').value,
+    cd_required: document.getElementById('edit_cd').checked
+  };
+  try {
+    await sbRaw('PATCH', 'jobs', updates, '?id=eq.' + _editJobId);
+    // Upload any new photos
+    if (_editPhotos.length) {
+      for (const f of _editPhotos) {
+        const path = _editJobId + '/edit-' + Date.now() + '.' + (f.name.split('.').pop() || 'jpg');
+        await fetch(SUPABASE_URL + '/storage/v1/object/job-photos/' + path, {
+          method: 'POST',
+          headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + (currentUser?.access_token || SUPABASE_ANON), 'Content-Type': f.type },
+          body: f
+        });
+        const photoUrl = SUPABASE_URL + '/storage/v1/object/public/job-photos/' + path;
+        await sbRaw('POST', 'job_photos', { job_id: _editJobId, photo_url: photoUrl, photo_type: 'damage' });
+      }
+    }
+    showToast('✓ Job updated');
+    closeEditModal();
+    const prevOpen = _editJobId;
+    await loadJobs();
+    openJobId = prevOpen;
+    setTimeout(() => {
+      const el = document.getElementById('jc-' + prevOpen);
+      if (el) { el.classList.add('open'); el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+    }, 150);
+  } catch(e) { alert('Failed: ' + e.message); }
 }
 
 // ═══════════════════════════════════════════════════════════
