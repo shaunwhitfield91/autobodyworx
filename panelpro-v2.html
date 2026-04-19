@@ -131,6 +131,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .js-quot{background:var(--blue-bg);color:var(--blue-txt)}
 .js-book{background:var(--teal-bg);color:var(--teal-txt)}
 .js-done{background:#ede9fe;color:#4c1d95}
+.js-await{background:#e0f2fe;color:#0369a1}
 .js-decl{background:var(--red-bg);color:var(--red)}
 
 /* ── Badges ── */
@@ -210,6 +211,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .diary-title{font-size:16px;font-weight:700;color:var(--txt)}
 .diary-controls{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .diary-legend{display:flex;gap:14px;margin-bottom:12px;flex-wrap:wrap;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 14px}
+.diary-tech-btn{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--border2);background:var(--surface);cursor:pointer;color:var(--muted);font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:4px}
+.diary-tech-btn:hover{border-color:var(--muted)}
+.diary-tech-btn.on{background:var(--txt);color:#fff;border-color:var(--txt)}
+#dtb-shaun.on{background:var(--blue)!important;color:#fff!important;border-color:var(--blue)!important}
+#dtb-charles.on{background:var(--amber)!important;color:#fff!important;border-color:var(--amber)!important}
 .leg-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-weight:500}
 .leg-dot{width:13px;height:13px;border-radius:3px;flex-shrink:0}
 .leg-dot-s{background:var(--blue)}.leg-dot-c{background:var(--amber)}.leg-dot-b{background:var(--teal)}
@@ -428,6 +434,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .flex{display:flex}.gap-6{gap:6px}.gap-8{gap:8px}.flex-1{flex:1}.items-center{align-items:center}
 .text-muted{color:var(--muted)}.text-sm{font-size:12px}.font-bold{font-weight:700}
 .empty-state{text-align:center;padding:48px 24px;color:var(--muted);font-size:13px}
+.awaiting-bar{background:#f0f9ff;border:1px solid #bae6fd;border-radius:var(--radius);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;margin-top:8px;flex-wrap:wrap;gap:6px}
+.awaiting-dot{width:8px;height:8px;border-radius:50%;background:#0ea5e9;animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
+.awaiting-txt{font-size:12px;color:#0369a1;font-weight:600;display:flex;align-items:center;gap:6px}
+.awaiting-age{font-size:11px;color:#7dd3fc}
+.followup-warn{background:#fff7ed;border:1px solid #fed7aa;border-radius:var(--radius);padding:7px 12px;font-size:11px;color:#9a3412;font-weight:600;margin-top:6px;display:flex;align-items:center;gap:6px}
 .empty-icon{font-size:40px;margin-bottom:12px}
 
 @media(max-width:480px){
@@ -576,11 +588,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         </div>
       </div>
       <div class="diary-legend">
-        <div class="leg-item"><div class="leg-dot leg-dot-s"></div><strong style="color:var(--blue)">Shaun</strong></div>
-        <div class="leg-item"><div class="leg-dot leg-dot-c"></div><strong style="color:var(--amber)">Charles</strong></div>
-        <div class="leg-item"><div class="leg-dot leg-dot-b"></div><strong style="color:var(--teal)">Both</strong></div>
-        <div class="leg-item" style="margin-left:8px"><span class="fl-wm">W+M</span> Workshop + mobile same day</div>
-        <div class="leg-item"><span class="fl-cd">C&amp;D</span> Collection &amp; delivery</div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;flex:1">
+          <button class="diary-tech-btn on" id="dtb-all" onclick="setDiaryTech('all',this)">All techs</button>
+          <button class="diary-tech-btn" id="dtb-shaun" onclick="setDiaryTech('shaun',this)" style="border-color:var(--blue-bdr);color:var(--blue-txt)">
+            <div class="leg-dot leg-dot-s" style="display:inline-block;vertical-align:middle;margin-right:4px"></div>Shaun only
+          </button>
+          <button class="diary-tech-btn" id="dtb-charles" onclick="setDiaryTech('charles',this)" style="border-color:var(--amber-bdr);color:var(--amber-txt)">
+            <div class="leg-dot leg-dot-c" style="display:inline-block;vertical-align:middle;margin-right:4px"></div>Charles only
+          </button>
+          <div style="height:20px;width:1px;background:var(--border);margin:0 4px"></div>
+          <div class="leg-item"><div class="leg-dot leg-dot-b"></div><span style="color:var(--teal-txt);font-weight:600">Both</span></div>
+          <div class="leg-item"><span class="fl-wm">W+M</span> Mixed day</div>
+          <div class="leg-item"><span class="fl-cd">C&amp;D</span> Collection &amp; delivery</div>
+        </div>
       </div>
       <div id="diaryView"></div>
       <!-- Day detail popup-in-page -->
@@ -592,8 +612,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="det-warn" id="detWarn">&#9888; Workshop and mobile on same day — Shaun will be split. Heads up only.</div>
         <div class="det-cols-hd">
           <div class="dchd" style="text-align:left;font-size:10px;color:var(--muted);border-right:1px solid var(--border)">Time</div>
-          <div class="dchd" style="color:var(--blue);border-right:1px solid var(--border)">&#9632; Shaun</div>
-          <div class="dchd" style="color:var(--amber)">&#9632; Charles</div>
+          <div class="dchd" id="dchd-shaun" style="color:var(--blue);border-right:1px solid var(--border)">&#9632; Shaun</div>
+          <div class="dchd" id="dchd-charles" style="color:var(--amber)">&#9632; Charles</div>
         </div>
         <div id="detBody"></div>
       </div>
@@ -642,7 +662,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <input type="file" id="photoInput" accept="image/*" multiple style="display:none" onchange="handlePhotos(this)">
           <div class="q-section-hd">Engineer notes (optional)</div>
           <textarea class="qinp" id="q_notes" placeholder="Any observations, conditions, caveats..." rows="3" style="resize:vertical"></textarea>
-          <button class="btn-primary" id="genBtn" onclick="generateQuote()" style="width:100%;padding:11px;font-size:14px;margin-top:4px">Generate quote with AI</button>
+          <button class="btn-primary" id="sendApprovalBtn" onclick="sendForApproval()" style="width:100%;padding:12px;font-size:14px;margin-top:4px">Send to Shaun for approval</button>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn-secondary" id="genBtn" onclick="generateQuote()" style="flex:1;padding:9px;font-size:12px">Generate AI price suggestion</button>
+            <button class="btn-secondary" onclick="manualQuote()" style="flex:1;padding:9px;font-size:12px">Enter price myself</button>
+          </div>
+          <div style="font-size:10px;color:var(--hint);text-align:center;margin-top:6px">AI suggestion is optional — Shaun reviews and sets the final price</div>
         </div>
         <!-- Right: result -->
         <div class="quote-result-card">
@@ -657,13 +682,44 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
             <div class="qr-reasoning" id="rReasoning"></div>
             <div class="qr-flags" id="rFlags"></div>
             <div class="qr-actions">
-              <button class="btn-primary" id="approveBtn" onclick="approveQuote()" style="flex:1;padding:10px">Send for approval</button>
+              <button class="btn-primary" id="approveBtn" onclick="approveQuote()" style="flex:1;padding:10px">Save AI quote for Shaun to review</button>
               <button class="btn-secondary" onclick="revise()" style="flex:1;padding:10px">Revise</button>
             </div>
           </div>
           <div class="qr-placeholder" id="quotePlaceholder">
             <div style="font-size:40px">⚡</div>
-            <div>Fill in the form and hit<br><strong>Generate quote</strong></div>
+            <div>Fill in the form and hit<br><strong>Generate quote</strong><br><span style="font-size:11px;color:var(--hint);margin-top:4px;display:block">or enter price manually</span></div>
+          </div>
+          <!-- Manual entry panel -->
+          <div id="manualWrap" style="display:none">
+            <div style="font-size:13px;font-weight:600;color:var(--txt);margin-bottom:14px">Manual quote</div>
+            <span class="qlbl">Price (inc VAT)</span>
+            <input class="qinp" id="m_price_manual" placeholder="e.g. £320" style="font-size:22px;font-weight:700;text-align:center;color:var(--teal)">
+            <span class="qlbl" style="margin-top:8px">Rung / complexity</span>
+            <select class="qinp" id="m_rung_manual" style="margin-bottom:10px">
+              <option value="1">Rung 1 — minor touch up</option>
+              <option value="2" selected>Rung 2 — SMART 1 panel</option>
+              <option value="3">Rung 3 — moderate 1–2 panels</option>
+              <option value="4">Rung 4 — full respray 1 panel</option>
+              <option value="5">Rung 5 — 2+ panels full respray</option>
+              <option value="6">Rung 6 — major/complex</option>
+            </select>
+            <span class="qlbl">Duration</span>
+            <select class="qinp" id="m_dur_manual" style="margin-bottom:10px">
+              <option value="1 hour">1 hour</option>
+              <option value="2 hours">2 hours</option>
+              <option value="3 hours" selected>3 hours</option>
+              <option value="4 hours">4 hours</option>
+              <option value="5 hours">5 hours</option>
+              <option value="Full day">Full day</option>
+              <option value="2 days">2 days</option>
+            </select>
+            <span class="qlbl">Notes for customer (optional)</span>
+            <textarea class="qinp" id="m_note_manual" placeholder="Any notes to attach to this quote..." rows="2"></textarea>
+            <div style="display:flex;gap:8px;margin-top:4px">
+              <button class="btn-primary" onclick="saveManualQuote()" style="flex:1;padding:10px">Save quote</button>
+              <button class="btn-secondary" onclick="cancelManual()" style="flex:1;padding:10px">Cancel</button>
+            </div>
           </div>
           <div class="quote-approved-msg" id="approvedMsg"></div>
         </div>
@@ -919,6 +975,7 @@ let currentDateFilter = 'all';
 let currentRevFilter = 'all';
 let revPanelOpen = false;
 let diaryView = 'month';
+let diaryTechFilter = 'all'; // 'all' | 'shaun' | 'charles' | custom tech name
 let diaryYear = new Date().getFullYear();
 let diaryMonth = new Date().getMonth();
 let diaryWeekOffset = 0;
@@ -1198,6 +1255,19 @@ function renderHomeAttention() {
       <span class="badge" style="background:var(--amber-bg);color:var(--amber-txt)">Pending</span>
     </div>`);
 
+  // Jobs awaiting customer response for 3+ days
+  const overdueFollowup = allJobs.filter(j => {
+    if (j.status !== 'quoted' || !j.quote_sent_to_customer || !j.quote_sent_at) return false;
+    const days = Math.floor((Date.now() - new Date(j.quote_sent_at).getTime()) / 86400000);
+    return days >= 3;
+  });
+  if (overdueFollowup.length) items.push(`
+    <div style="background:var(--surface);border:1px solid #fed7aa;border-radius:var(--radius-lg);padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:8px" onclick="switchTab('jobs');setFilter('quoted')">
+      <div style="width:28px;height:28px;background:#fff7ed;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">📞</div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--txt)">${overdueFollowup.length} quote${overdueFollowup.length>1?'s':''} need a follow-up call</div><div style="font-size:11px;color:var(--muted)">${overdueFollowup.map(j=>j.customer_name||'Unknown').slice(0,3).join(' · ')} — no reply in 3+ days</div></div>
+      <span class="badge" style="background:#fff7ed;color:#9a3412">Follow up</span>
+    </div>`);
+
   const needsInvoice = allJobs.filter(j => j.status === 'completed' && !j.paid);
   if (needsInvoice.length) items.push(`
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;display:flex;align-items:center;gap:10px;margin-bottom:8px">
@@ -1342,7 +1412,9 @@ function renderJobs() {
 function buildJobCard(j) {
   const statusMap = { pending:'pend', quoted:'quot', booked:'book', completed:'done', declined:'decl' };
   const s = statusMap[j.status] || 'pend';
-  const statusLabel = { pending:'Pending approval', quoted:'Approved — awaiting booking', booked:'Booked', completed:'Completed', declined:'Declined' }[j.status] || j.status;
+  const quotedLabel = j.quote_sent_to_customer ? 'Awaiting customer' : 'Approved — send quote';
+  const statusLabel = { pending:'Pending approval', quoted:quotedLabel, booked:'Booked', completed:'Completed', declined:'Declined' }[j.status] || j.status;
+  const statusExtra = j.status === 'quoted' && j.quote_sent_to_customer ? ' js-await' : '';
   const photos = j.job_photos || [];
   const parts = j.job_parts || [];
   const prog = statusToProgress(j.status, j);
@@ -1353,8 +1425,33 @@ function buildJobCard(j) {
                <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit</button>
                <button class="btn-danger" onclick="event.stopPropagation();declineJob(${j.id})">Decline</button>`;
   } else if (j.status === 'quoted') {
-    actions = `<button class="btn-book" onclick="event.stopPropagation();openBookModal(${j.id})">Book in</button>
-               <button class="btn-danger" onclick="event.stopPropagation();declineJob(${j.id})">Decline</button>`;
+    if (!j.quote_sent_to_customer) {
+      actions = `
+        <button class="btn-primary" onclick="event.stopPropagation();markQuoteSent(${j.id})" style="background:#0ea5e9;font-size:11px;padding:7px 12px">&#10003; Quote sent to customer</button>
+        <button class="btn-book" onclick="event.stopPropagation();openBookModal(${j.id})" style="font-size:11px">Book in</button>
+        <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit</button>
+        <button class="btn-danger" onclick="event.stopPropagation();declineJob(${j.id})" style="font-size:11px">Decline</button>`;
+    } else {
+      const sentDate = j.quote_sent_at ? new Date(j.quote_sent_at) : null;
+      const ageDays = sentDate ? Math.floor((Date.now() - sentDate.getTime()) / 86400000) : 0;
+      const ageStr = ageDays === 0 ? 'sent today' : ageDays === 1 ? 'sent yesterday' : 'sent ' + ageDays + ' days ago';
+      const needsFollowUp = ageDays >= 3;
+      actions = `
+        <div style="width:100%">
+          <div class="awaiting-bar">
+            <div class="awaiting-txt"><div class="awaiting-dot"></div>Awaiting customer response &nbsp;<span class="awaiting-age">${ageStr}</span></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="btn-book" onclick="event.stopPropagation();openBookModal(${j.id})" style="font-size:11px">They said yes — book in</button>
+              <button class="btn-danger" onclick="event.stopPropagation();declineJob(${j.id})" style="font-size:11px">They said no</button>
+            </div>
+          </div>
+          ${needsFollowUp ? `<div class="followup-warn">&#9888; ${ageDays} days with no reply — consider following up with ${esc(j.customer_name||'customer')}</div>` : ''}
+          <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+            <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>
+            <button class="btn-secondary" onclick="event.stopPropagation();unmarkQuoteSent(${j.id})" style="font-size:11px;color:var(--muted)">Undo — not sent yet</button>
+          </div>
+        </div>`;
+    }
   } else if (j.status === 'booked' && currentProfile?.role !== 'tech') {
     actions = `<button class="btn-primary" onclick="event.stopPropagation();sendXeroInvoice(${j.id},'deposit')" style="font-size:11px">Parts deposit invoice</button>
                <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>`;
@@ -1404,7 +1501,7 @@ function buildJobCard(j) {
       <div class="jcard-right">
         <div class="jcard-price">${esc(j.quote_price||j.invoice_amount||'—')}</div>
         <div class="jcard-date">${j.booking_date ? fmtDate(j.booking_date) : fmtDate(j.created_at?.split('T')[0])}</div>
-        <span class="jcard-status js-${s}">${statusLabel}</span>
+        <span class="jcard-status js-${s}${statusExtra||''}">${statusLabel}</span>
       </div>
     </div>
     <div class="jcard-body">
@@ -1423,7 +1520,7 @@ function buildJobCard(j) {
         ${j.rung?`<div><div class="jbf">Rung</div><div class="jbv">Rung ${j.rung}</div></div>`:''}
         <div style="grid-column:1/-1"><div class="jbf">Panels / damage</div><div class="jbv">${esc(j.panels||'—')}</div></div>
         ${j.notes?`<div style="grid-column:1/-1"><div class="jbf">Notes</div><div class="jbv">${esc(j.notes)}</div></div>`:''}
-        ${j.internal_breakdown?`<div style="grid-column:1/-1"><div class="jbf">Breakdown</div><div class="jbv" style="font-size:11px;line-height:1.5">${esc(j.internal_breakdown)}</div></div>`:''}
+        ${j.internal_breakdown&&currentProfile?.role==='admin'?`<div style="grid-column:1/-1"><div class="jbf" style="color:var(--muted)">Internal breakdown (admin only)</div><div class="jbv" style="font-size:11px;line-height:1.5;color:var(--muted)">${esc(j.internal_breakdown)}</div></div>`:''}
       </div>
       <!-- Parts -->
       ${partsHtml}
@@ -1578,6 +1675,39 @@ async function permanentDelete(id) {
 }
 
 // ═══════════════════════════════════════════════════════════
+// QUOTE SENT TRACKING
+// ═══════════════════════════════════════════════════════════
+async function markQuoteSent(jobId) {
+  try {
+    const now = new Date().toISOString();
+    await sbRaw('PATCH', 'jobs', { quote_sent_to_customer: true, quote_sent_at: now }, '?id=eq.' + jobId);
+    const j = allJobs.find(x => x.id === jobId);
+    if (j) { j.quote_sent_to_customer = true; j.quote_sent_at = now; }
+    showToast('✓ Marked as sent — awaiting customer response');
+    renderJobs();
+    // Keep card open
+    setTimeout(() => {
+      const el = document.getElementById('jc-' + jobId);
+      if (el) el.classList.add('open');
+    }, 50);
+  } catch(e) { alert('Failed: ' + e.message); }
+}
+
+async function unmarkQuoteSent(jobId) {
+  try {
+    await sbRaw('PATCH', 'jobs', { quote_sent_to_customer: false, quote_sent_at: null }, '?id=eq.' + jobId);
+    const j = allJobs.find(x => x.id === jobId);
+    if (j) { j.quote_sent_to_customer = false; j.quote_sent_at = null; }
+    showToast('Undone — marked as not yet sent');
+    renderJobs();
+    setTimeout(() => {
+      const el = document.getElementById('jc-' + jobId);
+      if (el) el.classList.add('open');
+    }, 50);
+  } catch(e) { alert('Failed: ' + e.message); }
+}
+
+// ═══════════════════════════════════════════════════════════
 // PARTS
 // ═══════════════════════════════════════════════════════════
 async function addPart(jobId) {
@@ -1713,6 +1843,13 @@ function diaryToday() {
   renderDiary();
 }
 
+function setDiaryTech(tech, btn) {
+  diaryTechFilter = tech;
+  document.querySelectorAll('.diary-tech-btn').forEach(b => b.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  renderDiary();
+}
+
 function renderDiary() {
   if (diaryView === 'month') renderMonthView();
   else renderWeekView();
@@ -1757,7 +1894,7 @@ function renderMonthView() {
       const isToday = cell.cur && ds === todStr;
       let cls = 'cal-day' + (cell.cur ? '' : ' other-month') + (isToday ? ' is-today' : '');
 
-      // Check for W+M conflict (Shaun has both ws and mob)
+      // Check for W+M conflict (Shaun has both ws and mob) — use all evts regardless of filter
       const shaunJobs = evts.filter(j => techClass(j.assigned_tech) !== 'C');
       const hasMix = shaunJobs.some(j=>j.job_location==='mobile') && shaunJobs.some(j=>j.job_location==='workshop');
       const hasCd = evts.some(j => j.cd_required);
@@ -1766,14 +1903,22 @@ function renderMonthView() {
       html += `<div class="${cls}" ${onclick}>`;
       html += `<div class="cal-dn">${cell.d}</div>`;
 
+      // Apply tech filter
+      const filteredEvts = evts.filter(e => {
+        if (diaryTechFilter === 'all') return true;
+        const tc = techClass(e.assigned_tech);
+        if (diaryTechFilter === 'shaun') return tc === 'S' || tc === 'B';
+        if (diaryTechFilter === 'charles') return tc === 'C' || tc === 'B';
+        return true;
+      });
       let shown = 0;
-      evts.forEach(e => {
+      filteredEvts.forEach(e => {
         if (shown >= 3) return;
         const tc = techClass(e.assigned_tech);
         html += `<div class="cal-evt cal-evt-${tc}"><div class="cal-dot dot-${tc}"></div>${esc((e.customer_name||'').split(' ')[0])}</div>`;
         shown++;
       });
-      if (evts.length > 3) html += `<div class="cal-more">+${evts.length-3} more</div>`;
+      if (filteredEvts.length > 3) html += `<div class="cal-more">+${filteredEvts.length-3} more</div>`;
       if (cell.cur && (hasMix || hasCd)) {
         html += '<div class="cal-flags">';
         if (hasMix) html += '<span class="fl-wm">W+M</span>';
@@ -1814,7 +1959,13 @@ function renderWeekView() {
   html += '<div class="week-body-row"><div class="week-time">All day</div>';
   days.forEach(d => {
     const ds = fmtDateKey(d);
-    const evts = allWeekJobs[ds];
+    const evts = allWeekJobs[ds].filter(e => {
+      if (diaryTechFilter === 'all') return true;
+      const tc = techClass(e.assigned_tech);
+      if (diaryTechFilter === 'shaun') return tc === 'S' || tc === 'B';
+      if (diaryTechFilter === 'charles') return tc === 'C' || tc === 'B';
+      return true;
+    });
     html += '<div class="week-cell">';
     if (!evts.length) html += '<div style="font-size:11px;color:var(--hint);padding:4px">Free</div>';
     evts.forEach(e => {
@@ -1841,15 +1992,23 @@ function selectDiaryDay(ds, label) {
   const warn = document.getElementById('detWarn');
   panel.style.display = 'block';
   document.getElementById('detTitle').textContent = label;
+  // Dim the column of the filtered-out tech
+  const sDim = diaryTechFilter === 'charles' ? 'opacity:.25' : '';
+  const cDim = diaryTechFilter === 'shaun' ? 'opacity:.25' : '';
+  const sHd = document.getElementById('dchd-shaun'); if (sHd) sHd.style.opacity = diaryTechFilter === 'charles' ? '0.3' : '1';
+  const cHd = document.getElementById('dchd-charles'); if (cHd) cHd.style.opacity = diaryTechFilter === 'shaun' ? '0.3' : '1';
 
   // Check W+M conflict for Shaun
   const sJobs = evts.filter(j => techClass(j.assigned_tech) !== 'C');
   const hasMix = sJobs.some(j=>j.job_location==='mobile') && sJobs.some(j=>j.job_location==='workshop');
   warn.className = 'det-warn' + (hasMix ? ' show' : '');
 
-  // Build Shaun and Charles rows
+  // Build Shaun and Charles rows — respect tech filter in detail view too
   const shaunJobs = evts.filter(j => { const t = techClass(j.assigned_tech); return t==='S'||t==='B'; });
   const charlesJobs = evts.filter(j => { const t = techClass(j.assigned_tech); return t==='C'||t==='B'; });
+  // If filtered to one tech, dim the other column header
+  const shaunDim = diaryTechFilter === 'charles' ? 'opacity:.3' : '';
+  const charlesDim = diaryTechFilter === 'shaun' ? 'opacity:.3' : '';
   const maxRows = Math.max(shaunJobs.length, charlesJobs.length, 1);
 
   let body = '';
@@ -2056,9 +2215,11 @@ ${custName ? 'Customer: ' + custName : ''}`;
   try {
     const res = await fetch(CLAUDE_PROXY, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey
+      },
       body: JSON.stringify({
-        apiKey,
         model: 'claude-sonnet-4-6',
         max_tokens: 1024,
         system: systemPrompt,
@@ -2153,6 +2314,154 @@ function revise() {
   quoteResult = null;
   document.getElementById('resultWrap').style.display = 'none';
   document.getElementById('quotePlaceholder').style.display = 'flex';
+  document.getElementById('manualWrap').style.display = 'none';
+}
+
+async function sendForApproval() {
+  // Chloe fills in details and sends straight to Shaun — no price needed
+  const custName = document.getElementById('q_custName').value.trim();
+  const custPhone = document.getElementById('q_custPhone').value.trim();
+  const custEmail = document.getElementById('q_custEmail').value.trim();
+  const vehicle = [document.getElementById('q_make').value.trim(), document.getElementById('q_model').value.trim(), document.getElementById('q_year').value.trim()].filter(Boolean).join(' ');
+  const colour = document.getElementById('q_colour').value.trim();
+  const panels = document.getElementById('q_panels').value.trim();
+  const notes = document.getElementById('q_notes').value.trim();
+
+  if (!custName) { showToast('Enter customer name first'); return; }
+  if (!panels) { showToast('Enter the damage description first'); return; }
+  if (!selectedQuotePhotos.length) {
+    if (!confirm('No photos uploaded — send anyway?')) return;
+  }
+
+  const btn = document.getElementById('sendApprovalBtn');
+  btn.textContent = 'Saving...'; btn.disabled = true;
+
+  const body = {
+    customer_name: custName,
+    customer_phone: custPhone,
+    customer_email: custEmail,
+    vehicle: vehicle + (colour ? ' · ' + colour : ''),
+    colour,
+    panels,
+    notes,
+    job_location: quoteLocVal,
+    status: 'pending',
+    source: 'Enquiry',
+    archived: false
+  };
+
+  try {
+    const result = await sbRaw('POST', 'jobs', body);
+    const newJob = Array.isArray(result) ? result[0] : result;
+    // Upload photos
+    if (selectedQuotePhotos.length && newJob?.id) {
+      for (const p of selectedQuotePhotos) {
+        const ext = p.file.name.split('.').pop() || 'jpg';
+        const path = newJob.id + '/' + Date.now() + '-' + Math.random().toString(36).slice(2) + '.' + ext;
+        await fetch(SUPABASE_URL + '/storage/v1/object/job-photos/' + path, {
+          method: 'POST',
+          headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + (currentUser?.access_token || SUPABASE_ANON), 'Content-Type': p.file.type },
+          body: p.file
+        });
+        const photoUrl = SUPABASE_URL + '/storage/v1/object/public/job-photos/' + path;
+        await sbRaw('POST', 'job_photos', { job_id: newJob.id, photo_url: photoUrl, photo_type: 'damage' });
+      }
+    }
+    // Show confirmation
+    const msg = document.getElementById('approvedMsg');
+    msg.textContent = '✓ Sent to Shaun for approval — ' + custName + ' · ' + (vehicle||'vehicle') + ' · ' + panels;
+    msg.classList.add('show');
+    // Reset form
+    ['q_custName','q_custPhone','q_custEmail','q_make','q_model','q_year','q_colour','q_panels','q_notes'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
+    selectedQuotePhotos = [];
+    document.getElementById('upPrev').innerHTML = '';
+    document.getElementById('upLbl').textContent = 'Tap to upload damage photos';
+    document.getElementById('resultWrap').style.display = 'none';
+    document.getElementById('quotePlaceholder').style.display = 'flex';
+    document.getElementById('manualWrap').style.display = 'none';
+    await loadJobs();
+    showToast('Sent to Shaun ✓');
+  } catch(e) {
+    alert('Failed: ' + e.message);
+  } finally {
+    btn.textContent = 'Send to Shaun for approval';
+    btn.disabled = false;
+  }
+}
+
+function manualQuote() {
+  document.getElementById('quotePlaceholder').style.display = 'none';
+  document.getElementById('resultWrap').style.display = 'none';
+  document.getElementById('loadingDiv').classList.remove('show');
+  document.getElementById('approvedMsg').classList.remove('show');
+  document.getElementById('manualWrap').style.display = 'block';
+}
+
+function cancelManual() {
+  document.getElementById('manualWrap').style.display = 'none';
+  document.getElementById('quotePlaceholder').style.display = 'flex';
+}
+
+async function saveManualQuote() {
+  const price = document.getElementById('m_price_manual').value.trim();
+  const custName = document.getElementById('q_custName').value.trim() || 'Unknown';
+  const custPhone = document.getElementById('q_custPhone').value.trim();
+  const custEmail = document.getElementById('q_custEmail').value.trim();
+  const vehicle = [document.getElementById('q_make').value.trim(), document.getElementById('q_model').value.trim(), document.getElementById('q_year').value.trim()].filter(Boolean).join(' ');
+  const colour = document.getElementById('q_colour').value.trim();
+  const panels = document.getElementById('q_panels').value.trim();
+  const rung = document.getElementById('m_rung_manual').value;
+  const dur = document.getElementById('m_dur_manual').value;
+  const notes = document.getElementById('m_note_manual').value.trim();
+
+  if (!price) { showToast('Enter a price first'); return; }
+
+  const body = {
+    customer_name: custName,
+    customer_phone: custPhone,
+    customer_email: custEmail,
+    vehicle: vehicle + (colour ? ' · ' + colour : ''),
+    colour,
+    panels,
+    quote_price: price,
+    rung: parseInt(rung),
+    duration: dur,
+    job_location: quoteLocVal,
+    notes,
+    status: currentProfile?.role === 'admin' ? 'quoted' : 'pending',
+    source: 'PanelPro',
+    archived: false
+  };
+
+  try {
+    const result = await sbRaw('POST', 'jobs', body);
+    const newJob = Array.isArray(result) ? result[0] : result;
+    // Upload photos if any
+    if (selectedQuotePhotos.length && newJob?.id) {
+      for (const p of selectedQuotePhotos) {
+        const ext = p.file.name.split('.').pop() || 'jpg';
+        const path = newJob.id + '/' + Date.now() + '.' + ext;
+        await fetch(SUPABASE_URL + '/storage/v1/object/job-photos/' + path, {
+          method: 'POST',
+          headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + (currentUser?.access_token || SUPABASE_ANON), 'Content-Type': p.file.type },
+          body: p.file
+        });
+        const photoUrl = SUPABASE_URL + '/storage/v1/object/public/job-photos/' + path;
+        await sbRaw('POST', 'job_photos', { job_id: newJob.id, photo_url: photoUrl, photo_type: 'damage' });
+      }
+    }
+    document.getElementById('manualWrap').style.display = 'none';
+    const msg = document.getElementById('approvedMsg');
+    msg.textContent = '✓ Quote saved — ' + price + ' for ' + custName;
+    msg.classList.add('show');
+    selectedQuotePhotos = [];
+    document.getElementById('upPrev').innerHTML = '';
+    document.getElementById('upLbl').textContent = 'Tap to upload damage photos';
+    await loadJobs();
+    showToast('Quote saved ✓');
+  } catch(e) { alert('Failed: ' + e.message); }
 }
 
 // ═══════════════════════════════════════════════════════════
