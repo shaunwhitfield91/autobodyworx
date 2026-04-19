@@ -1579,7 +1579,10 @@ function buildJobCard(j) {
         <div class="jcard-meta">
           <span style="font-size:12px;color:var(--txt2)">${esc(j.vehicle||'—')}</span>
           ${j.job_location==='mobile'?'<span class="badge bdg-mob">Mobile</span>':'<span class="badge bdg-ws">Workshop</span>'}
-          ${j.duration?`<span class="badge bdg-dur">${esc(j.duration)}</span>`:''}
+          ${j.duration_days > 1
+            ? `<span class="badge bdg-dur">${j.duration_days}-day job</span>`
+            : j.duration?`<span class="badge bdg-dur">${esc(j.duration)}</span>`:''
+          }
           ${techBadge(j.assigned_tech)}
           ${j.cd_required?'<span class="badge bdg-cd">C&amp;D</span>':''}
           ${j.source?`<span class="badge bdg-src">${esc(j.source)}</span>`:''}
@@ -1945,7 +1948,18 @@ function renderDiary() {
 }
 
 function getJobsForDate(dateStr) {
-  return allJobs.filter(j => j.booking_date && j.booking_date.startsWith(dateStr));
+  return allJobs.filter(j => {
+    if (!j.booking_date) return false;
+    const start = new Date(j.booking_date);
+    const days = j.duration_days || 1;
+    if (days <= 1) return j.booking_date.startsWith(dateStr);
+    // Multi-day: check if dateStr falls within the job's date range
+    const check = new Date(dateStr);
+    const end = new Date(start);
+    end.setDate(start.getDate() + days - 1);
+    start.setHours(0,0,0,0); end.setHours(23,59,59,999); check.setHours(12,0,0,0);
+    return check >= start && check <= end;
+  });
 }
 
 function techClass(tech) {
@@ -2006,7 +2020,8 @@ function renderMonthView() {
         const tc = techClass(e.assigned_tech);
         const firstName = esc((e.customer_name||'Unknown').split(' ')[0]);
         const lastName = esc((e.customer_name||'').split(' ')[1] || '');
-        const durShort = e.duration ? ' · ' + esc(e.duration) : '';
+        const days = e.duration_days || 1;
+        const durShort = days > 1 ? ` · ${days}d` : (e.duration ? ' · ' + esc(e.duration) : '');
         const locLabel = e.job_location === 'mobile' ? 'Mobile' : 'Workshop';
         const techLabel = e.assigned_tech || '';
         // Build tooltip data as escaped attributes for JS handler
@@ -2015,7 +2030,8 @@ function renderMonthView() {
         const tipAddr = (e.customer_address||'').replace(/'/g,"\'");
         const tipPrice = (e.quote_price||e.invoice_amount||'—').replace(/'/g,"\'");
         const tipLoc = e.job_location==='mobile'?'Mobile':'Workshop';
-        const tipDur = e.duration||'—';
+        const tipDays = e.duration_days || 1;
+        const tipDur = tipDays > 1 ? `${tipDays}-day job` : (e.duration||'—');
         const tipCd = e.cd_required?' + C&D':'';
         const tipTech = e.assigned_tech||'';
         html += `<div class="cal-evt cal-evt-${tc}"
@@ -2600,8 +2616,11 @@ function renderTechPortal() {
     if (j.status !== 'booked' && j.status !== 'completed') return false;
     // Include unscheduled jobs too
     if (!j.booking_date) return true;
-    const d = new Date(j.booking_date); d.setHours(0,0,0,0);
-    return d >= yesterday && d <= ahead;
+    const dStart = new Date(j.booking_date); dStart.setHours(0,0,0,0);
+    const numDays = j.duration_days || 1;
+    const dEnd = new Date(dStart); dEnd.setDate(dStart.getDate() + numDays - 1);
+    // Show if job starts in window OR is still running during window
+    return dEnd >= yesterday && dStart <= ahead;
   });
 
   if (!myJobs.length) {
@@ -2689,7 +2708,10 @@ function buildTechCard(j) {
         <div class="tech-job-sub">
           <span>${esc(j.vehicle||'—')}</span>
           ${j.job_location==='mobile'?'<span class="badge bdg-mob">Mobile</span>':'<span class="badge bdg-ws">Workshop</span>'}
-          ${j.duration?`<span class="badge bdg-dur">${esc(j.duration)}</span>`:''}
+          ${j.duration_days > 1
+            ? `<span class="badge bdg-dur">${j.duration_days}-day job</span>`
+            : j.duration?`<span class="badge bdg-dur">${esc(j.duration)}</span>`:''
+          }
           ${j.cd_required?'<span class="badge bdg-cd">C&D</span>':''}
         </div>
       </div>
