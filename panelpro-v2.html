@@ -646,14 +646,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           </div>
           <span class="qlbl">Colour</span><input class="qinp" id="q_colour" placeholder="Pearl White">
           <div class="q-section-hd">Damage</div>
+          <div class="qgrid2">
+            <div><span class="qlbl">Address line 1</span><input class="qinp" id="q_addr1" placeholder="House number & street"></div>
+            <div><span class="qlbl">Town / City</span><input class="qinp" id="q_addr2" placeholder="Town"></div>
+          </div>
+          <div class="qgrid2">
+            <div><span class="qlbl">Postcode</span><input class="qinp" id="q_postcode" placeholder="RG17..."></div>
+            <div><span class="qlbl">Location</span>
+              <div style="display:flex;gap:6px;margin-bottom:10px">
+                <button class="loc-pill on" id="loc-mobile" onclick="setLocPill('mobile',this)" type="button">Mobile — their address</button>
+                <button class="loc-pill" id="loc-workshop" onclick="setLocPill('workshop',this)" type="button">Workshop</button>
+              </div>
+            </div>
+          </div>
           <span class="qlbl">Panels / damage description</span>
           <input class="qinp" id="q_panels" placeholder="e.g. NSF bumper corner scuff, light crease">
-          <span class="qlbl">Location</span>
-          <div class="loc-pills" id="locPills">
-            <button class="loc-pill on" data-v="mobile">Mobile</button>
-            <button class="loc-pill" data-v="workshop">Workshop</button>
-          </div>
-          <span class="qlbl">Travel</span>
+          <span class="qlbl">Travel distance</span>
           <div class="loc-pills" id="trvPills">
             <button class="loc-pill on" data-v="local">Local (&lt;30 min)</button>
             <button class="loc-pill" data-v="distant">Distant (30+ min)</button>
@@ -1931,8 +1939,7 @@ function renderMonthView() {
           <span>${locLabel}${e.duration?' · '+esc(e.duration):''}${e.cd_required?' · C&D':''}</span>
           <span>${techLabel}</span>
         </div>`;
-        html += `<div class="cal-evt cal-evt-${tc}" onclick="selectDiaryDay('${ds}','${cell.d} ${months[curM]}')">`
-          + `<div class="cal-dot dot-${tc}"></div>${firstName}${durShort}${tooltip}</div>`;
+        html += `<div class="cal-evt cal-evt-${tc}"><div class="cal-dot dot-${tc}"></div>${firstName}${durShort}${tooltip}</div>`;
         shown++;
       });
       if (filteredEvts.length > 3) html += `<div class="cal-more">+${filteredEvts.length-3} more</div>`;
@@ -2118,14 +2125,12 @@ async function deleteDiaryAppointment() {
 // ═══════════════════════════════════════════════════════════
 // QUOTE GENERATOR
 // ═══════════════════════════════════════════════════════════
-// Loc pills
-document.getElementById('locPills').addEventListener('click', e => {
-  const btn = e.target.closest('.loc-pill');
-  if (!btn) return;
-  document.querySelectorAll('#locPills .loc-pill').forEach(b => b.classList.remove('on'));
+// Location pill toggle
+function setLocPill(val, btn) {
+  quoteLocVal = val;
+  document.querySelectorAll('#loc-mobile,#loc-workshop').forEach(b => b.classList.remove('on'));
   btn.classList.add('on');
-  quoteLocVal = btn.dataset.v;
-});
+}
 document.getElementById('trvPills').addEventListener('click', e => {
   const btn = e.target.closest('.loc-pill');
   if (!btn) return;
@@ -2355,10 +2360,15 @@ async function sendForApproval() {
   const btn = document.getElementById('sendApprovalBtn');
   btn.textContent = 'Saving...'; btn.disabled = true;
 
+  const addr1 = document.getElementById('q_addr1')?.value?.trim() || '';
+  const addr2 = document.getElementById('q_addr2')?.value?.trim() || '';
+  const postcode = document.getElementById('q_postcode')?.value?.trim() || '';
+  const fullAddress = [addr1, addr2, postcode].filter(Boolean).join(', ');
   const body = {
     customer_name: custName,
     customer_phone: custPhone,
     customer_email: custEmail,
+    customer_address: fullAddress || null,
     vehicle: vehicle + (colour ? ' · ' + colour : ''),
     colour,
     panels,
@@ -2390,7 +2400,7 @@ async function sendForApproval() {
     msg.textContent = '✓ Sent to Shaun for approval — ' + custName + ' · ' + (vehicle||'vehicle') + ' · ' + panels;
     msg.classList.add('show');
     // Reset form
-    ['q_custName','q_custPhone','q_custEmail','q_make','q_model','q_year','q_colour','q_panels','q_notes'].forEach(id => {
+    ['q_custName','q_custPhone','q_custEmail','q_make','q_model','q_year','q_colour','q_panels','q_notes','q_addr1','q_addr2','q_postcode'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = '';
     });
     selectedQuotePhotos = [];
@@ -2436,10 +2446,16 @@ async function saveManualQuote() {
 
   if (!price) { showToast('Enter a price first'); return; }
 
+  const mAddr = [
+    document.getElementById('q_addr1')?.value?.trim(),
+    document.getElementById('q_addr2')?.value?.trim(),
+    document.getElementById('q_postcode')?.value?.trim()
+  ].filter(Boolean).join(', ');
   const body = {
     customer_name: custName,
     customer_phone: custPhone,
     customer_email: custEmail,
+    customer_address: mAddr || null,
     vehicle: vehicle + (colour ? ' · ' + colour : ''),
     colour,
     panels,
@@ -2804,6 +2820,10 @@ function openBookModal(jobId) {
   document.getElementById('bk_dur').value = j.duration || '3 hours';
   document.getElementById('bk_tech').value = j.assigned_tech || 'Shaun';
   document.getElementById('bk_loc').value = j.job_location || 'workshop';
+  // Pre-fill address from customer address if mobile job
+  if (j.job_location === 'mobile' && j.customer_address) {
+    document.getElementById('bk_addr').value = j.customer_address;
+  }
   document.getElementById('bk_cd').checked = !!j.cd_required;
   document.getElementById('bk_addr').value = j.customer_address || '';
   document.getElementById('bookModal').classList.add('show');
