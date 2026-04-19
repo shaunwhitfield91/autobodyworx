@@ -208,6 +208,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
    DIARY
 ═══════════════════════════ */
 .diary-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.rev-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.rev-bar-left{display:flex;flex-direction:column;gap:3px}
+.rev-bar-month{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.rev-bar-amount{font-size:26px;font-weight:800;color:#059669;line-height:1}
+.rev-bar-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.rev-bar-right{display:flex;gap:6px;align-items:center}
+.rev-nav-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--border2);background:var(--surface);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:all .15s;font-family:inherit}
+.rev-nav-btn:hover{border-color:var(--muted);color:var(--txt)}
+.rev-breakdown{font-size:11px;color:var(--muted);text-align:right;line-height:1.6}
 .diary-title{font-size:16px;font-weight:700;color:var(--txt)}
 .diary-controls{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .diary-legend{display:flex;gap:14px;margin-bottom:12px;flex-wrap:wrap;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 14px}
@@ -586,6 +595,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <button class="btn-secondary on" id="dv-month" onclick="setDiaryView('month',this)">Month</button>
           <button class="btn-secondary" id="dv-week" onclick="setDiaryView('week',this)">Week</button>
           <button class="btn-primary role-admin role-admin_staff">+ Book job</button>
+        </div>
+      </div>
+      <!-- Revenue bar -->
+      <div class="rev-bar" id="revBar">
+        <div class="rev-bar-left">
+          <div class="rev-bar-month" id="revBarMonth">April 2026</div>
+          <div class="rev-bar-amount" id="revBarAmount">£0</div>
+          <div class="rev-bar-sub" id="revBarSub">0 jobs booked</div>
+        </div>
+        <div class="rev-bar-right">
+          <button class="rev-nav-btn" onclick="revBarPrev()" title="Previous month">&#8592;</button>
+          <div class="rev-breakdown" id="revBarBreakdown"></div>
+          <button class="rev-nav-btn" onclick="revBarNext()" title="Next month">&#8594;</button>
         </div>
       </div>
       <div class="diary-legend">
@@ -987,6 +1009,8 @@ let currentDateFilter = 'all';
 let currentRevFilter = 'all';
 let revPanelOpen = false;
 let diaryView = 'month';
+let revBarYear = new Date().getFullYear();
+let revBarMonth = new Date().getMonth();
 let diaryTechFilter = 'all'; // 'all' | 'shaun' | 'charles' | custom tech name
 let diaryYear = new Date().getFullYear();
 let diaryMonth = new Date().getMonth();
@@ -1239,7 +1263,7 @@ function switchTab(t) {
 
   if (t === 'jobs') { renderJobs(); renderDeclined(); }
   if (t === 'home') { updateHomeStats(); renderHome(); }
-  if (t === 'diary') { renderDiary(); }
+  if (t === 'diary') { renderDiary(); renderRevBar(); }
   if (t === 'tech') { renderTechPortal(); }
   if (t === 'settings') { checkApiKey(); checkXeroStatus(); }
 }
@@ -1259,6 +1283,8 @@ async function loadJobs() {
   renderDeclined();
   updatePendingBadge();
   if (currentProfile?.role === 'tech') renderTechPortal();
+  // Update revenue bar if diary is visible
+  if (document.getElementById('pg-diary')?.classList.contains('on')) renderRevBar();
 }
 
 async function loadDeclinedJobs() {
@@ -1920,19 +1946,23 @@ function diaryPrev() {
   if (diaryView === 'month') { diaryMonth--; if (diaryMonth < 0) { diaryMonth = 11; diaryYear--; } }
   else { diaryWeekOffset--; }
   document.getElementById('detPanel').style.display = 'none';
-  renderDiary();
+  // Sync revenue bar to diary month
+  revBarMonth = diaryMonth; revBarYear = diaryYear;
+  renderDiary(); renderRevBar();
 }
 function diaryNext() {
   if (diaryView === 'month') { diaryMonth++; if (diaryMonth > 11) { diaryMonth = 0; diaryYear++; } }
   else { diaryWeekOffset++; }
   document.getElementById('detPanel').style.display = 'none';
-  renderDiary();
+  revBarMonth = diaryMonth; revBarYear = diaryYear;
+  renderDiary(); renderRevBar();
 }
 function diaryToday() {
   const now = new Date();
   diaryYear = now.getFullYear(); diaryMonth = now.getMonth(); diaryWeekOffset = 0;
+  revBarYear = diaryYear; revBarMonth = diaryMonth;
   document.getElementById('detPanel').style.display = 'none';
-  renderDiary();
+  renderDiary(); renderRevBar();
 }
 
 function setDiaryTech(tech, btn) {
@@ -1940,6 +1970,85 @@ function setDiaryTech(tech, btn) {
   document.querySelectorAll('.diary-tech-btn').forEach(b => b.classList.remove('on'));
   if (btn) btn.classList.add('on');
   renderDiary();
+}
+
+function revBarPrev() {
+  revBarMonth--;
+  if (revBarMonth < 0) { revBarMonth = 11; revBarYear--; }
+  renderRevBar();
+}
+
+function revBarNext() {
+  revBarMonth++;
+  if (revBarMonth > 11) { revBarMonth = 0; revBarYear++; }
+  renderRevBar();
+}
+
+function renderRevBar() {
+  const months = ['January','February','March','April','May','June',
+                  'July','August','September','October','November','December'];
+  const monthName = months[revBarMonth] + ' ' + revBarYear;
+
+  // Get jobs for this month — includes booked (projected) and completed (actual)
+  const monthJobs = allJobs.filter(j => {
+    if (!j.booking_date) return false;
+    const d = new Date(j.booking_date);
+    return d.getFullYear() === revBarYear && d.getMonth() === revBarMonth
+      && j.status !== 'declined';
+  });
+
+  // Also count completed jobs for actual vs projected split
+  const completedJobs = monthJobs.filter(j => j.status === 'completed');
+  const bookedJobs = monthJobs.filter(j => j.status === 'booked' || j.status === 'quoted');
+
+  // Revenue: for completed use invoice_amount or quote_price; for booked use quote_price
+  function getPrice(j) {
+    const p = (j.invoice_amount || j.quote_price || '').toString().replace(/[^0-9.]/g,'');
+    return parseFloat(p) || 0;
+  }
+
+  // For multi-day jobs, only count revenue once (on the start date)
+  const counted = new Set();
+  let totalRev = 0;
+  let completedRev = 0;
+  let bookedRev = 0;
+
+  monthJobs.forEach(j => {
+    if (counted.has(j.id)) return;
+    // For multi-day jobs, only count if booking_date is in this month
+    counted.add(j.id);
+    const p = getPrice(j);
+    totalRev += p;
+    if (j.status === 'completed') completedRev += p;
+    else bookedRev += p;
+  });
+
+  const fmt = n => '£' + Math.round(n).toLocaleString('en-GB');
+  const now = new Date();
+  const isPast = revBarYear < now.getFullYear() || (revBarYear === now.getFullYear() && revBarMonth < now.getMonth());
+  const isCurrent = revBarYear === now.getFullYear() && revBarMonth === now.getMonth();
+  const isFuture = revBarYear > now.getFullYear() || (revBarYear === now.getFullYear() && revBarMonth > now.getMonth());
+
+  document.getElementById('revBarMonth').textContent = (isPast ? '' : isCurrent ? 'Projected · ' : 'Forecast · ') + monthName;
+  document.getElementById('revBarAmount').textContent = fmt(totalRev);
+  document.getElementById('revBarAmount').style.color = isPast ? '#059669' : isCurrent ? '#1e40af' : '#b45309';
+
+  const jobCount = monthJobs.length;
+  const uniqueCount = counted.size;
+  document.getElementById('revBarSub').textContent =
+    uniqueCount + ' job' + (uniqueCount !== 1 ? 's' : '') +
+    (isPast ? ' · completed month' : isCurrent ? ' · this month' : ' · upcoming month');
+
+  // Breakdown
+  let breakdown = '';
+  if (isCurrent || isPast) {
+    breakdown = (completedRev > 0 ? fmt(completedRev) + ' received' : 'Nothing received yet');
+    if (bookedRev > 0) breakdown += '<br>' + fmt(bookedRev) + ' still booked';
+  } else {
+    breakdown = uniqueCount + ' job' + (uniqueCount !== 1 ? 's' : '') + ' in diary';
+  }
+  const el = document.getElementById('revBarBreakdown');
+  if (el) el.innerHTML = breakdown;
 }
 
 function renderDiary() {
