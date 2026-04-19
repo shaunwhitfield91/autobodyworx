@@ -1005,17 +1005,34 @@ let openJobId = null;
 // ═══════════════════════════════════════════════════════════
 async function sbRaw(method, table, body, query = '') {
   const url = `${SUPABASE_URL}/rest/v1/${table}${query}`;
-  const opts = {
+  const makeOpts = () => ({
     method,
     headers: {
       'apikey': SUPABASE_ANON,
       'Authorization': `Bearer ${currentUser?.access_token || SUPABASE_ANON}`,
       'Content-Type': 'application/json',
       'Prefer': method === 'POST' ? 'return=representation' : 'return=minimal'
+    },
+    ...(body ? { body: JSON.stringify(body) } : {})
+  });
+  let res = await fetch(url, makeOpts());
+  // If JWT expired, try refreshing once then retry
+  if (res.status === 401 || res.status === 403) {
+    const errBody = await res.json().catch(() => ({}));
+    if ((errBody.message||'').toLowerCase().includes('jwt') ||
+        (errBody.message||'').toLowerCase().includes('expired') ||
+        (errBody.code||'').includes('PGRST301')) {
+      const refreshed = await refreshSession();
+      if (refreshed) {
+        res = await fetch(url, makeOpts());
+      } else {
+        // Session dead — force re-login
+        showToast('Session expired — please sign in again');
+        setTimeout(() => doLogout(), 1500);
+        throw new Error('Session expired — please sign in again');
+      }
     }
-  };
-  if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(url, opts);
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.message || `HTTP ${res.status}`);
@@ -1032,6 +1049,31 @@ async function sbAuth(email, password) {
   });
   if (!res.ok) throw new Error('Invalid email or password');
   return res.json();
+}
+
+async function refreshSession() {
+  const saved = localStorage.getItem('pp_session');
+  if (!saved) return false;
+  try {
+    const s = JSON.parse(saved);
+    if (!s.refresh_token) return false;
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: s.refresh_token })
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (!data.access_token) return false;
+    currentUser = { ...s, ...data };
+    localStorage.setItem('pp_session', JSON.stringify({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token || s.refresh_token,
+      email: s.email,
+      user: data.user || s.user
+    }));
+    return true;
+  } catch(e) { return false; }
 }
 
 async function sbSignOut() {
@@ -1083,6 +1125,10 @@ async function tryRestoreSession() {
   try {
     const s = JSON.parse(saved);
     currentUser = s;
+    // Try to refresh token proactively on load
+    if (s.refresh_token) {
+      await refreshSession().catch(() => {});
+    }
     await initApp();
     return true;
   } catch(e) {
@@ -3005,6 +3051,17 @@ document.addEventListener('mousemove', function(evt) {
   const restored = await tryRestoreSession();
   if (!restored) {
     document.getElementById('loginScreen').style.display = 'flex';
+  } else {
+    // Auto-refresh token every 50 minutes to stay ahead of expiry
+    setInterval(async () => {
+      if (currentUser) {
+        const ok = await refreshSession();
+        if (!ok) {
+          showToast('Session expired — please sign in again');
+          setTimeout(() => doLogout(), 2000);
+        }
+      }
+    }, 50 * 60 * 1000);
   }
 })();
 </script>
