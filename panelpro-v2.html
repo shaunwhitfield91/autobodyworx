@@ -237,11 +237,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .cal-dn{font-size:11px;font-weight:700;color:var(--txt);width:21px;height:21px;display:flex;align-items:center;justify-content:center;margin-bottom:3px}
 .other-month .cal-dn{color:var(--hint)}
 .cal-evt{border-radius:3px;padding:1px 5px;font-size:10px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:3px;font-weight:600;line-height:1.6;position:relative;cursor:pointer}
-.cal-evt:hover .cal-tooltip{display:block}
-.cal-tooltip{display:none;position:absolute;top:100%;left:0;z-index:999;background:var(--txt);color:#fff;border-radius:var(--radius);padding:6px 10px;font-size:11px;font-weight:400;white-space:nowrap;min-width:160px;line-height:1.6;margin-top:2px;pointer-events:none}
-.cal-tooltip::before{content:'';position:absolute;top:-5px;left:8px;border:5px solid transparent;border-bottom-color:var(--txt);border-top:none}
-.cal-tooltip strong{font-weight:700;display:block;margin-bottom:2px}
-.cal-tooltip span{opacity:.8;font-size:10px}
+.cal-evt{position:relative;cursor:pointer}
 .cal-evt-S{background:var(--blue-bg);color:var(--blue-txt)}
 .cal-evt-C{background:var(--amber-bg);color:var(--amber-txt)}
 .cal-evt-B{background:var(--teal-bg);color:var(--teal-txt)}
@@ -964,6 +960,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 
+<!-- DIARY HOVER TOOLTIP -->
+<div id="diaryHoverTip" style="display:none;position:fixed;z-index:9000;background:#111827;color:#fff;border-radius:8px;padding:8px 12px;font-size:12px;line-height:1.6;min-width:180px;max-width:260px;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.3)"></div>
+
 <!-- TOAST -->
 <div id="toast"></div>
 
@@ -1306,6 +1305,7 @@ function renderHomeToday() {
     return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;border-left:4px solid ${techCol};margin-bottom:8px;cursor:pointer" onclick="switchTab('jobs')">
       <div style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:3px">${esc(j.customer_name||'Unknown')}</div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:5px">${esc(j.vehicle||'')} · ${esc(j.panels||'')}</div>
+      ${j.customer_address?`<div style="font-size:10px;color:var(--muted);margin-bottom:4px">${esc(j.customer_address)}</div>`:''}
       <div style="display:flex;gap:5px;flex-wrap:wrap">
         ${j.job_location==='mobile'?'<span class="badge bdg-mob">Mobile</span>':'<span class="badge bdg-ws">Workshop</span>'}
         ${j.duration?`<span class="badge bdg-dur">${esc(j.duration)}</span>`:''}
@@ -1528,6 +1528,7 @@ function buildJobCard(j) {
         <div><div class="jbf">Source</div><div class="jbv">${esc(j.source||'—')}</div></div>
         <div><div class="jbf">Location</div><div class="jbv">${j.job_location==='mobile'?'Mobile — customer site':'Workshop'}${j.cd_required?' + C&D required':''}</div></div>
         <div><div class="jbf">Assigned to</div><div class="jbv">${esc(j.assigned_tech||'—')}</div></div>
+        ${j.customer_address?`<div style="grid-column:1/-1"><div class="jbf">Customer address</div><div class="jbv" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${esc(j.customer_address)}<a href="https://maps.google.com/?q=${encodeURIComponent(j.customer_address)}" target="_blank" style="font-size:10px;background:var(--blue-bg);color:var(--blue-txt);padding:2px 7px;border-radius:4px;text-decoration:none;font-weight:600;flex-shrink:0">Map</a></div></div>`:''}
         ${j.booking_date?`<div><div class="jbf">Date</div><div class="jbv">${fmtDate(j.booking_date)}${j.booking_time?' at '+j.booking_time:''}</div></div>`:''}
         ${j.duration?`<div><div class="jbf">Duration</div><div class="jbv">${esc(j.duration)}</div></div>`:''}
         ${j.rung?`<div><div class="jbf">Rung</div><div class="jbv">Rung ${j.rung}</div></div>`:''}
@@ -1648,6 +1649,7 @@ function renderDeclined() {
             <span style="font-size:12px;color:var(--txt2)">${esc(j.vehicle||'—')}</span>
             <span style="font-size:11px;color:${j.customer_contacted?'var(--teal)':'var(--red)'}">${j.customer_contacted?'✓ Customer notified':'⚠ Needs contact'}</span>
           </div>
+          ${j.customer_address?`<div style="font-size:11px;color:var(--muted);margin-top:3px">${esc(j.customer_address)}</div>`:''}
           ${j.notes?`<div style="font-size:11px;color:var(--amber-txt);margin-top:4px;background:var(--amber-bg);padding:4px 8px;border-radius:4px">📝 ${esc(j.notes)}</div>`:''}
         </div>
         <div class="jcard-right">
@@ -1933,13 +1935,19 @@ function renderMonthView() {
         const durShort = e.duration ? ' · ' + esc(e.duration) : '';
         const locLabel = e.job_location === 'mobile' ? 'Mobile' : 'Workshop';
         const techLabel = e.assigned_tech || '';
-        const tooltip = `<div class="cal-tooltip">
-          <strong>${esc(e.customer_name||'Unknown')}</strong>
-          <span>${esc(e.vehicle||'—')}</span>
-          <span>${locLabel}${e.duration?' · '+esc(e.duration):''}${e.cd_required?' · C&D':''}</span>
-          <span>${techLabel}</span>
-        </div>`;
-        html += `<div class="cal-evt cal-evt-${tc}"><div class="cal-dot dot-${tc}"></div>${firstName}${durShort}${tooltip}</div>`;
+        // Build tooltip data as escaped attributes for JS handler
+        const tipName = (e.customer_name||'Unknown').replace(/'/g,"\'");
+        const tipVeh = (e.vehicle||'—').replace(/'/g,"\'");
+        const tipAddr = (e.customer_address||'').replace(/'/g,"\'");
+        const tipPrice = (e.quote_price||e.invoice_amount||'—').replace(/'/g,"\'");
+        const tipLoc = e.job_location==='mobile'?'Mobile':'Workshop';
+        const tipDur = e.duration||'—';
+        const tipCd = e.cd_required?' + C&D':'';
+        const tipTech = e.assigned_tech||'';
+        html += `<div class="cal-evt cal-evt-${tc}"
+          onmouseenter="showDiaryTip(event,'${tipName}','${tipVeh}','${tipAddr}','${tipPrice}','${tipLoc}','${tipDur}','${tipCd}','${tipTech}')"
+          onmouseleave="hideDiaryTip()"
+        ><div class="cal-dot dot-${tc}"></div>${firstName}${durShort}</div>`;
         shown++;
       });
       if (filteredEvts.length > 3) html += `<div class="cal-more">+${filteredEvts.length-3} more</div>`;
@@ -2945,6 +2953,50 @@ async function saveEditJob() {
     }, 150);
   } catch(e) { alert('Failed: ' + e.message); }
 }
+
+// ═══════════════════════════════════════════════════════════
+// DIARY HOVER TOOLTIP
+// ═══════════════════════════════════════════════════════════
+function showDiaryTip(evt, name, vehicle, address, price, loc, dur, cd, tech) {
+  const tip = document.getElementById('diaryHoverTip');
+  if (!tip) return;
+  tip.innerHTML =
+    '<div style="font-weight:700;font-size:13px;margin-bottom:4px">' + name + '</div>' +
+    '<div style="opacity:.8;margin-bottom:2px">' + vehicle + '</div>' +
+    (address ? '<div style="opacity:.7;font-size:11px;margin-bottom:2px">📍 ' + address + '</div>' : '') +
+    '<div style="margin-top:4px;display:flex;gap:8px;flex-wrap:wrap">' +
+    '<span style="background:rgba(255,255,255,.15);padding:1px 6px;border-radius:4px;font-size:11px">' + loc + cd + '</span>' +
+    '<span style="background:rgba(255,255,255,.15);padding:1px 6px;border-radius:4px;font-size:11px">' + dur + '</span>' +
+    (price !== '—' ? '<span style="background:rgba(255,255,255,.15);padding:1px 6px;border-radius:4px;font-size:11px">' + price + '</span>' : '') +
+    (tech ? '<span style="background:rgba(255,255,255,.15);padding:1px 6px;border-radius:4px;font-size:11px">' + tech + '</span>' : '') +
+    '</div>';
+  tip.style.display = 'block';
+  positionDiaryTip(evt);
+}
+
+function positionDiaryTip(evt) {
+  const tip = document.getElementById('diaryHoverTip');
+  if (!tip) return;
+  const x = evt.clientX + 12;
+  const y = evt.clientY + 12;
+  const tw = tip.offsetWidth || 220;
+  const th = tip.offsetHeight || 100;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  tip.style.left = (x + tw > vw ? x - tw - 24 : x) + 'px';
+  tip.style.top = (y + th > vh ? y - th - 24 : y) + 'px';
+}
+
+function hideDiaryTip() {
+  const tip = document.getElementById('diaryHoverTip');
+  if (tip) tip.style.display = 'none';
+}
+
+// Update tooltip position as mouse moves over events
+document.addEventListener('mousemove', function(evt) {
+  const tip = document.getElementById('diaryHoverTip');
+  if (tip && tip.style.display !== 'none') positionDiaryTip(evt);
+});
 
 // ═══════════════════════════════════════════════════════════
 // BOOT
