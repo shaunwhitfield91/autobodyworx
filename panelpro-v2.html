@@ -236,7 +236,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .cal-day.is-sel{background:#eff6ff}
 .cal-dn{font-size:11px;font-weight:700;color:var(--txt);width:21px;height:21px;display:flex;align-items:center;justify-content:center;margin-bottom:3px}
 .other-month .cal-dn{color:var(--hint)}
-.cal-evt{border-radius:3px;padding:1px 5px;font-size:10px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:3px;font-weight:600;line-height:1.6}
+.cal-evt{border-radius:3px;padding:1px 5px;font-size:10px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:3px;font-weight:600;line-height:1.6;position:relative;cursor:pointer}
+.cal-evt:hover .cal-tooltip{display:block}
+.cal-tooltip{display:none;position:absolute;top:100%;left:0;z-index:999;background:var(--txt);color:#fff;border-radius:var(--radius);padding:6px 10px;font-size:11px;font-weight:400;white-space:nowrap;min-width:160px;line-height:1.6;margin-top:2px;pointer-events:none}
+.cal-tooltip::before{content:'';position:absolute;top:-5px;left:8px;border:5px solid transparent;border-bottom-color:var(--txt);border-top:none}
+.cal-tooltip strong{font-weight:700;display:block;margin-bottom:2px}
+.cal-tooltip span{opacity:.8;font-size:10px}
 .cal-evt-S{background:var(--blue-bg);color:var(--blue-txt)}
 .cal-evt-C{background:var(--amber-bg);color:var(--amber-txt)}
 .cal-evt-B{background:var(--teal-bg);color:var(--teal-txt)}
@@ -1480,7 +1485,7 @@ function buildJobCard(j) {
   // Photos
   let photosHtml = `<div class="jbf" style="margin-bottom:6px">Photos</div>
     <div class="photos-row">
-      ${photos.map(p=>`<img src="${p.photo_url}" class="photo-thumb" alt="damage" onclick="event.stopPropagation()">`).join('')}
+      ${photos.map(p=>`<img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="photo-thumb" alt="damage" onclick="event.stopPropagation();window.open(this.src,'_blank')">`).join('')}
       <div class="photo-add" onclick="event.stopPropagation()" title="Add photo">+</div>
     </div>`;
 
@@ -1915,7 +1920,19 @@ function renderMonthView() {
       filteredEvts.forEach(e => {
         if (shown >= 3) return;
         const tc = techClass(e.assigned_tech);
-        html += `<div class="cal-evt cal-evt-${tc}"><div class="cal-dot dot-${tc}"></div>${esc((e.customer_name||'').split(' ')[0])}</div>`;
+        const firstName = esc((e.customer_name||'Unknown').split(' ')[0]);
+        const lastName = esc((e.customer_name||'').split(' ')[1] || '');
+        const durShort = e.duration ? ' · ' + esc(e.duration) : '';
+        const locLabel = e.job_location === 'mobile' ? 'Mobile' : 'Workshop';
+        const techLabel = e.assigned_tech || '';
+        const tooltip = `<div class="cal-tooltip">
+          <strong>${esc(e.customer_name||'Unknown')}</strong>
+          <span>${esc(e.vehicle||'—')}</span>
+          <span>${locLabel}${e.duration?' · '+esc(e.duration):''}${e.cd_required?' · C&D':''}</span>
+          <span>${techLabel}</span>
+        </div>`;
+        html += `<div class="cal-evt cal-evt-${tc}" onclick="selectDiaryDay('${ds}','${cell.d} ${months[curM]}')">`
+          + `<div class="cal-dot dot-${tc}"></div>${firstName}${durShort}${tooltip}</div>`;
         shown++;
       });
       if (filteredEvts.length > 3) html += `<div class="cal-more">+${filteredEvts.length-3} more</div>`;
@@ -1970,8 +1987,10 @@ function renderWeekView() {
     if (!evts.length) html += '<div style="font-size:11px;color:var(--hint);padding:4px">Free</div>';
     evts.forEach(e => {
       const tc = techClass(e.assigned_tech);
+      const nameParts = (e.customer_name||'Unknown').split(' ');
+      const shortName = esc(nameParts[0] + (nameParts[1] ? ' ' + nameParts[1] : ''));
       html += `<div class="week-job wj-${tc}" onclick="selectDiaryJob(${e.id})">
-        <div class="wj-name">${esc((e.customer_name||'').split(' ')[0]+' '+(e.customer_name||'').split(' ')[1]||'')}</div>
+        <div class="wj-name">${shortName}</div>
         <div class="wj-sub">${esc(e.vehicle||'')}</div>
         <div class="wj-tags">
           ${e.job_location==='mobile'?'<span class="wtag wtag-mob">Mobile</span>':'<span class="wtag wtag-ws">Workshop</span>'}
@@ -2287,13 +2306,13 @@ async function approveQuote() {
         const ext = p.file.name.split('.').pop() || 'jpg';
         const path = `${newJob.id}/${Date.now()}.${ext}`;
         // Upload to Supabase storage
-        await fetch(`${SUPABASE_URL}/storage/v1/object/job-photos/${path}`, {
+        const storagePath = `job-${newJob.id}/${Date.now()}.${p.file.name.split('.').pop()||'jpg'}`;
+        await fetch(`${SUPABASE_URL}/storage/v1/object/job-photos/${storagePath}`, {
           method: 'POST',
           headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${currentUser?.access_token||SUPABASE_ANON}`, 'Content-Type': p.file.type },
           body: p.file
         });
-        const photoUrl = `${SUPABASE_URL}/storage/v1/object/public/job-photos/${path}`;
-        await sbRaw('POST', 'job_photos', { job_id: newJob.id, photo_url: photoUrl, photo_type: 'damage' });
+        await sbRaw('POST', 'job_photos', { job_id: newJob.id, storage_path: storagePath, photo_type: 'damage' });
       }
     }
     const msg = document.getElementById('approvedMsg');
@@ -2357,14 +2376,13 @@ async function sendForApproval() {
     if (selectedQuotePhotos.length && newJob?.id) {
       for (const p of selectedQuotePhotos) {
         const ext = p.file.name.split('.').pop() || 'jpg';
-        const path = newJob.id + '/' + Date.now() + '-' + Math.random().toString(36).slice(2) + '.' + ext;
-        await fetch(SUPABASE_URL + '/storage/v1/object/job-photos/' + path, {
+        const storagePath = 'job-' + newJob.id + '/' + Date.now() + '-' + Math.random().toString(36).slice(2) + '.' + ext;
+        await fetch(SUPABASE_URL + '/storage/v1/object/job-photos/' + storagePath, {
           method: 'POST',
           headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + (currentUser?.access_token || SUPABASE_ANON), 'Content-Type': p.file.type },
           body: p.file
         });
-        const photoUrl = SUPABASE_URL + '/storage/v1/object/public/job-photos/' + path;
-        await sbRaw('POST', 'job_photos', { job_id: newJob.id, photo_url: photoUrl, photo_type: 'damage' });
+        await sbRaw('POST', 'job_photos', { job_id: newJob.id, storage_path: storagePath, photo_type: 'damage' });
       }
     }
     // Show confirmation
@@ -2442,14 +2460,13 @@ async function saveManualQuote() {
     if (selectedQuotePhotos.length && newJob?.id) {
       for (const p of selectedQuotePhotos) {
         const ext = p.file.name.split('.').pop() || 'jpg';
-        const path = newJob.id + '/' + Date.now() + '.' + ext;
-        await fetch(SUPABASE_URL + '/storage/v1/object/job-photos/' + path, {
+        const storagePath = 'job-' + newJob.id + '/' + Date.now() + '.' + ext;
+        await fetch(SUPABASE_URL + '/storage/v1/object/job-photos/' + storagePath, {
           method: 'POST',
           headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + (currentUser?.access_token || SUPABASE_ANON), 'Content-Type': p.file.type },
           body: p.file
         });
-        const photoUrl = SUPABASE_URL + '/storage/v1/object/public/job-photos/' + path;
-        await sbRaw('POST', 'job_photos', { job_id: newJob.id, photo_url: photoUrl, photo_type: 'damage' });
+        await sbRaw('POST', 'job_photos', { job_id: newJob.id, storage_path: storagePath, photo_type: 'damage' });
       }
     }
     document.getElementById('manualWrap').style.display = 'none';
@@ -2508,8 +2525,8 @@ function renderTechPortal() {
 function buildTechCard(j) {
   const done = j.status === 'completed';
   const photos = j.job_photos || [];
-  const bmq = photos.filter(p => p.photo_type === 'before' || p.photo_type === 'damage');
-  const amq = photos.filter(p => p.photo_type === 'after' || p.photo_type === 'completion');
+  const bmq = photos.filter(p => p.photo_type === 'damage');
+  const amq = photos.filter(p => p.photo_type === 'completion');
 
   const completeBox = done
     ? `<div class="tech-done-banner">✓ Completed · ${esc(j.payment_method||'')} · ${j.signed_off_by||''}</div>`
@@ -2521,7 +2538,7 @@ function buildTechCard(j) {
           <p>Tap to add after photos</p>
         </div>
         <div class="tech-after-thumbs" id="taf-${j.id}">
-          ${amq.map(p=>`<img src="${p.photo_url}" class="tech-after-thumb" alt="after">`).join('')}
+          ${amq.map(p=>`<img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="tech-after-thumb" alt="after" onclick="window.open(this.src,'_blank')">`).join('')}
         </div>
         <div class="tech-section-lbl">Panel condition notes</div>
         <textarea class="tech-edit-inp" id="tpn-${j.id}" placeholder="Any notes on panel condition, issues found..." rows="2">${esc(j.notes||'')}</textarea>
@@ -2568,7 +2585,7 @@ function buildTechCard(j) {
         <div class="tech-info-item full"><div class="tech-info-lbl">Panels / damage</div><div class="tech-info-val">${esc(j.panels||'—')}</div></div>
         ${j.notes?`<div class="tech-info-item full"><div class="tech-info-lbl">Notes</div><div class="tech-info-val">${esc(j.notes)}</div></div>`:''}
       </div>
-      ${bmq.length?`<div class="tech-photos-row">${bmq.map(p=>`<img src="${p.photo_url}" class="tech-photo-thumb" alt="before">`).join('')}</div>`:''}
+      ${bmq.length?`<div class="tech-photos-row">${bmq.map(p=>`<img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="tech-photo-thumb" alt="damage" onclick="window.open(this.src,'_blank')">`).join('')}</div>`:''}
       ${editBox}
       ${completeBox}
     </div>
@@ -2607,14 +2624,13 @@ async function techAddPhoto(jobId) {
   inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
   inp.onchange = async () => {
     for (const f of Array.from(inp.files)) {
-      const path = `${jobId}/after-${Date.now()}.${f.name.split('.').pop()||'jpg'}`;
-      await fetch(`${SUPABASE_URL}/storage/v1/object/job-photos/${path}`, {
+      const storagePath = `job-${jobId}/after-${Date.now()}.${f.name.split('.').pop()||'jpg'}`;
+      await fetch(`${SUPABASE_URL}/storage/v1/object/job-photos/${storagePath}`, {
         method: 'POST',
         headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${currentUser?.access_token||SUPABASE_ANON}`, 'Content-Type': f.type },
         body: f
       });
-      const photoUrl = `${SUPABASE_URL}/storage/v1/object/public/job-photos/${path}`;
-      await sbRaw('POST', 'job_photos', { job_id: jobId, photo_url: photoUrl, photo_type: 'after' });
+      await sbRaw('POST', 'job_photos', { job_id: jobId, storage_path: storagePath, photo_type: 'completion' });
     }
     showToast('Photos uploaded');
     await loadJobs();
@@ -2889,14 +2905,13 @@ async function saveEditJob() {
     // Upload any new photos
     if (_editPhotos.length) {
       for (const f of _editPhotos) {
-        const path = _editJobId + '/edit-' + Date.now() + '.' + (f.name.split('.').pop() || 'jpg');
-        await fetch(SUPABASE_URL + '/storage/v1/object/job-photos/' + path, {
+        const storagePath = 'job-' + _editJobId + '/edit-' + Date.now() + '.' + (f.name.split('.').pop() || 'jpg');
+        await fetch(SUPABASE_URL + '/storage/v1/object/job-photos/' + storagePath, {
           method: 'POST',
           headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + (currentUser?.access_token || SUPABASE_ANON), 'Content-Type': f.type },
           body: f
         });
-        const photoUrl = SUPABASE_URL + '/storage/v1/object/public/job-photos/' + path;
-        await sbRaw('POST', 'job_photos', { job_id: _editJobId, photo_url: photoUrl, photo_type: 'damage' });
+        await sbRaw('POST', 'job_photos', { job_id: _editJobId, storage_path: storagePath, photo_type: 'damage' });
       }
     }
     showToast('✓ Job updated');
