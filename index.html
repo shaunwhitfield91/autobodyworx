@@ -3470,8 +3470,15 @@ async function handleTechPhotos(jobId, input) {
       showToast('Upload error: ' + e.message);
     }
   }
-  if (uploaded > 0) showToast('✓ ' + uploaded + ' photo' + (uploaded > 1 ? 's' : '') + ' uploaded');
-  checkTechCanComplete(jobId);
+  if (uploaded > 0) {
+    showToast('✓ ' + uploaded + ' photo' + (uploaded > 1 ? 's' : '') + ' uploaded');
+    // Reload jobs so photos appear from DB and complete button enables properly
+    await loadJobs();
+    // Re-open the tech card
+    const body = document.getElementById('tjb-' + jobId);
+    if (body) { body.classList.add('open'); }
+    checkTechCanComplete(jobId);
+  }
 }
 
 // Keep old name as alias in case any references remain
@@ -3481,9 +3488,11 @@ async function techAddPhoto(jobId) {
 
 async function completeTechJob(jobId) {
   const notes = document.getElementById('tpn-' + jobId)?.value?.trim();
+  // paid column uses text values matching the DB check constraint
+  const paidVal = payMethodSelected === 'none' ? null : payMethodSelected;
   const updates = {
     status: 'completed',
-    paid: payMethodSelected === 'card',
+    paid: paidVal,
     payment_method: payMethodSelected,
     signed_off_at: new Date().toISOString(),
     signed_off_by: currentProfile?.full_name || 'Tech'
