@@ -485,6 +485,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   .ttab{padding:0 10px;font-size:11px}
   .page-wrap{padding:14px 10px}
 }
+
+.panel-picker{border:1px solid var(--border2);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:10px;background:var(--surface)}
+.panel-cat{border-bottom:1px solid var(--border);padding:6px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);background:var(--bg)}
+.panel-cat:last-of-type{border-bottom:none}
+.panel-items{display:flex;flex-wrap:wrap;gap:0;padding:4px 8px 6px}
+.panel-cb{display:flex;align-items:center;gap:5px;padding:3px 6px;cursor:pointer;border-radius:4px;transition:background .1s;font-size:12px;color:var(--txt);white-space:nowrap}
+.panel-cb:hover{background:var(--blue-bg)}
+.panel-cb input{width:13px;height:13px;cursor:pointer;accent-color:var(--blue);flex-shrink:0}
+.panel-notes{width:100%;border:1px solid var(--border2);border-radius:var(--radius);padding:7px 10px;font-size:12px;font-family:inherit;color:var(--txt);background:var(--surface);resize:vertical;margin-top:4px;min-height:38px}
+.panel-notes:focus{outline:none;border-color:var(--blue)}
 </style>
 </head>
 <body>
@@ -697,14 +707,71 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <div class="qgrid2">
             <div><span class="qlbl">Postcode</span><input class="qinp" id="q_postcode" placeholder="RG17..."></div>
             <div><span class="qlbl">Location</span>
-              <div style="display:flex;gap:6px;margin-bottom:10px">
+              <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
                 <button class="loc-pill on" id="loc-mobile" onclick="setLocPill('mobile',this)" type="button">Mobile — their address</button>
                 <button class="loc-pill" id="loc-workshop" onclick="setLocPill('workshop',this)" type="button">Workshop</button>
+                <button class="loc-pill" id="loc-tbc" onclick="setLocPill('tbc',this)" type="button">Not sure yet</button>
               </div>
             </div>
           </div>
-          <span class="qlbl">Panels / damage description</span>
-          <input class="qinp" id="q_panels" placeholder="e.g. NSF bumper corner scuff, light crease">
+          <span class="qlbl">Panels / damage</span>
+          <input type="hidden" id="q_panels">
+<div class="panel-picker" id="q_picker">
+  <div class="panel-cat">Bumpers & corners</div>
+  <div class="panel-items">
+    <label class="panel-cb"><input type="checkbox" id="q_front_bumper" onchange="updatePanelText('q')"> Front bumper</label>
+    <label class="panel-cb"><input type="checkbox" id="q_rear_bumper" onchange="updatePanelText('q')"> Rear bumper</label>
+    <label class="panel-cb"><input type="checkbox" id="q_nsf_corner" onchange="updatePanelText('q')"> NSF bumper corner</label>
+    <label class="panel-cb"><input type="checkbox" id="q_osf_corner" onchange="updatePanelText('q')"> OSF bumper corner</label>
+    <label class="panel-cb"><input type="checkbox" id="q_nsr_corner" onchange="updatePanelText('q')"> NSR bumper corner</label>
+    <label class="panel-cb"><input type="checkbox" id="q_osr_corner" onchange="updatePanelText('q')"> OSR bumper corner</label>
+  </div>
+  <div class="panel-cat">Doors & pillars</div>
+  <div class="panel-items">
+    <label class="panel-cb"><input type="checkbox" id="q_nsf_door" onchange="updatePanelText('q')"> NSF door</label>
+    <label class="panel-cb"><input type="checkbox" id="q_osf_door" onchange="updatePanelText('q')"> OSF door</label>
+    <label class="panel-cb"><input type="checkbox" id="q_nsr_door" onchange="updatePanelText('q')"> NSR door</label>
+    <label class="panel-cb"><input type="checkbox" id="q_osr_door" onchange="updatePanelText('q')"> OSR door</label>
+    <label class="panel-cb"><input type="checkbox" id="q_a_pillar" onchange="updatePanelText('q')"> A-pillar</label>
+    <label class="panel-cb"><input type="checkbox" id="q_b_pillar" onchange="updatePanelText('q')"> B-pillar</label>
+    <label class="panel-cb"><input type="checkbox" id="q_c_pillar" onchange="updatePanelText('q')"> C-pillar</label>
+  </div>
+  <div class="panel-cat">Wings, sills & body</div>
+  <div class="panel-items">
+    <label class="panel-cb"><input type="checkbox" id="q_ns_wing" onchange="updatePanelText('q')"> NS front wing</label>
+    <label class="panel-cb"><input type="checkbox" id="q_os_wing" onchange="updatePanelText('q')"> OS front wing</label>
+    <label class="panel-cb"><input type="checkbox" id="q_ns_sill" onchange="updatePanelText('q')"> NS sill</label>
+    <label class="panel-cb"><input type="checkbox" id="q_os_sill" onchange="updatePanelText('q')"> OS sill</label>
+    <label class="panel-cb"><input type="checkbox" id="q_ns_quarter" onchange="updatePanelText('q')"> NS quarter panel</label>
+    <label class="panel-cb"><input type="checkbox" id="q_os_quarter" onchange="updatePanelText('q')"> OS quarter panel</label>
+    <label class="panel-cb"><input type="checkbox" id="q_bonnet" onchange="updatePanelText('q')"> Bonnet</label>
+    <label class="panel-cb"><input type="checkbox" id="q_boot" onchange="updatePanelText('q')"> Boot / tailgate</label>
+    <label class="panel-cb"><input type="checkbox" id="q_roof" onchange="updatePanelText('q')"> Roof</label>
+  </div>
+  <div class="panel-cat">Trims & arch liners</div>
+  <div class="panel-items">
+    <label class="panel-cb"><input type="checkbox" id="q_ns_arch_trim" onchange="updatePanelText('q')"> NS wheel arch trim</label>
+    <label class="panel-cb"><input type="checkbox" id="q_os_arch_trim" onchange="updatePanelText('q')"> OS wheel arch trim</label>
+    <label class="panel-cb"><input type="checkbox" id="q_nsf_bumper_trim" onchange="updatePanelText('q')"> NSF bumper trim</label>
+    <label class="panel-cb"><input type="checkbox" id="q_osf_bumper_trim" onchange="updatePanelText('q')"> OSF bumper trim</label>
+    <label class="panel-cb"><input type="checkbox" id="q_nsr_bumper_trim" onchange="updatePanelText('q')"> NSR bumper trim</label>
+    <label class="panel-cb"><input type="checkbox" id="q_osr_bumper_trim" onchange="updatePanelText('q')"> OSR bumper trim</label>
+    <label class="panel-cb"><input type="checkbox" id="q_ns_door_trim" onchange="updatePanelText('q')"> NS door trim</label>
+    <label class="panel-cb"><input type="checkbox" id="q_os_door_trim" onchange="updatePanelText('q')"> OS door trim</label>
+  </div>
+  <div class="panel-cat">Glass & lights</div>
+  <div class="panel-items">
+    <label class="panel-cb"><input type="checkbox" id="q_windscreen" onchange="updatePanelText('q')"> Windscreen</label>
+    <label class="panel-cb"><input type="checkbox" id="q_rear_screen" onchange="updatePanelText('q')"> Rear screen</label>
+    <label class="panel-cb"><input type="checkbox" id="q_ns_front_light" onchange="updatePanelText('q')"> NS front light</label>
+    <label class="panel-cb"><input type="checkbox" id="q_os_front_light" onchange="updatePanelText('q')"> OS front light</label>
+    <label class="panel-cb"><input type="checkbox" id="q_ns_rear_light" onchange="updatePanelText('q')"> NS rear light</label>
+    <label class="panel-cb"><input type="checkbox" id="q_os_rear_light" onchange="updatePanelText('q')"> OS rear light</label>
+    <label class="panel-cb"><input type="checkbox" id="q_ns_mirror" onchange="updatePanelText('q')"> NS wing mirror</label>
+    <label class="panel-cb"><input type="checkbox" id="q_os_mirror" onchange="updatePanelText('q')"> OS wing mirror</label>
+  </div>
+  <div style="padding:6px 10px 8px"><input class="panel-notes" id="q_notes" placeholder="Additional notes, e.g. stress cracks, paint code, customer comments..." onkeyup="updatePanelText('q')" type="text"></div>
+</div>
           <span class="qlbl">Travel distance</span>
           <div class="loc-pills" id="trvPills">
             <button class="loc-pill on" data-v="local">Local (&lt;30 min)</button>
@@ -876,7 +943,64 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <span class="qlbl">Vehicle</span><input class="minp" id="m_vehicle" placeholder="Make, model, year">
     <span class="qlbl">Colour</span><input class="minp" id="m_colour" placeholder="Colour">
-    <span class="qlbl">Panels / damage</span><input class="minp" id="m_panels" placeholder="Damage description">
+    <span class="qlbl">Panels / damage</span>
+    <input type="hidden" id="m_panels">
+<div class="panel-picker" id="m_picker">
+  <div class="panel-cat">Bumpers & corners</div>
+  <div class="panel-items">
+    <label class="panel-cb"><input type="checkbox" id="m_front_bumper" onchange="updatePanelText('m')"> Front bumper</label>
+    <label class="panel-cb"><input type="checkbox" id="m_rear_bumper" onchange="updatePanelText('m')"> Rear bumper</label>
+    <label class="panel-cb"><input type="checkbox" id="m_nsf_corner" onchange="updatePanelText('m')"> NSF bumper corner</label>
+    <label class="panel-cb"><input type="checkbox" id="m_osf_corner" onchange="updatePanelText('m')"> OSF bumper corner</label>
+    <label class="panel-cb"><input type="checkbox" id="m_nsr_corner" onchange="updatePanelText('m')"> NSR bumper corner</label>
+    <label class="panel-cb"><input type="checkbox" id="m_osr_corner" onchange="updatePanelText('m')"> OSR bumper corner</label>
+  </div>
+  <div class="panel-cat">Doors & pillars</div>
+  <div class="panel-items">
+    <label class="panel-cb"><input type="checkbox" id="m_nsf_door" onchange="updatePanelText('m')"> NSF door</label>
+    <label class="panel-cb"><input type="checkbox" id="m_osf_door" onchange="updatePanelText('m')"> OSF door</label>
+    <label class="panel-cb"><input type="checkbox" id="m_nsr_door" onchange="updatePanelText('m')"> NSR door</label>
+    <label class="panel-cb"><input type="checkbox" id="m_osr_door" onchange="updatePanelText('m')"> OSR door</label>
+    <label class="panel-cb"><input type="checkbox" id="m_a_pillar" onchange="updatePanelText('m')"> A-pillar</label>
+    <label class="panel-cb"><input type="checkbox" id="m_b_pillar" onchange="updatePanelText('m')"> B-pillar</label>
+    <label class="panel-cb"><input type="checkbox" id="m_c_pillar" onchange="updatePanelText('m')"> C-pillar</label>
+  </div>
+  <div class="panel-cat">Wings, sills & body</div>
+  <div class="panel-items">
+    <label class="panel-cb"><input type="checkbox" id="m_ns_wing" onchange="updatePanelText('m')"> NS front wing</label>
+    <label class="panel-cb"><input type="checkbox" id="m_os_wing" onchange="updatePanelText('m')"> OS front wing</label>
+    <label class="panel-cb"><input type="checkbox" id="m_ns_sill" onchange="updatePanelText('m')"> NS sill</label>
+    <label class="panel-cb"><input type="checkbox" id="m_os_sill" onchange="updatePanelText('m')"> OS sill</label>
+    <label class="panel-cb"><input type="checkbox" id="m_ns_quarter" onchange="updatePanelText('m')"> NS quarter panel</label>
+    <label class="panel-cb"><input type="checkbox" id="m_os_quarter" onchange="updatePanelText('m')"> OS quarter panel</label>
+    <label class="panel-cb"><input type="checkbox" id="m_bonnet" onchange="updatePanelText('m')"> Bonnet</label>
+    <label class="panel-cb"><input type="checkbox" id="m_boot" onchange="updatePanelText('m')"> Boot / tailgate</label>
+    <label class="panel-cb"><input type="checkbox" id="m_roof" onchange="updatePanelText('m')"> Roof</label>
+  </div>
+  <div class="panel-cat">Trims & arch liners</div>
+  <div class="panel-items">
+    <label class="panel-cb"><input type="checkbox" id="m_ns_arch_trim" onchange="updatePanelText('m')"> NS wheel arch trim</label>
+    <label class="panel-cb"><input type="checkbox" id="m_os_arch_trim" onchange="updatePanelText('m')"> OS wheel arch trim</label>
+    <label class="panel-cb"><input type="checkbox" id="m_nsf_bumper_trim" onchange="updatePanelText('m')"> NSF bumper trim</label>
+    <label class="panel-cb"><input type="checkbox" id="m_osf_bumper_trim" onchange="updatePanelText('m')"> OSF bumper trim</label>
+    <label class="panel-cb"><input type="checkbox" id="m_nsr_bumper_trim" onchange="updatePanelText('m')"> NSR bumper trim</label>
+    <label class="panel-cb"><input type="checkbox" id="m_osr_bumper_trim" onchange="updatePanelText('m')"> OSR bumper trim</label>
+    <label class="panel-cb"><input type="checkbox" id="m_ns_door_trim" onchange="updatePanelText('m')"> NS door trim</label>
+    <label class="panel-cb"><input type="checkbox" id="m_os_door_trim" onchange="updatePanelText('m')"> OS door trim</label>
+  </div>
+  <div class="panel-cat">Glass & lights</div>
+  <div class="panel-items">
+    <label class="panel-cb"><input type="checkbox" id="m_windscreen" onchange="updatePanelText('m')"> Windscreen</label>
+    <label class="panel-cb"><input type="checkbox" id="m_rear_screen" onchange="updatePanelText('m')"> Rear screen</label>
+    <label class="panel-cb"><input type="checkbox" id="m_ns_front_light" onchange="updatePanelText('m')"> NS front light</label>
+    <label class="panel-cb"><input type="checkbox" id="m_os_front_light" onchange="updatePanelText('m')"> OS front light</label>
+    <label class="panel-cb"><input type="checkbox" id="m_ns_rear_light" onchange="updatePanelText('m')"> NS rear light</label>
+    <label class="panel-cb"><input type="checkbox" id="m_os_rear_light" onchange="updatePanelText('m')"> OS rear light</label>
+    <label class="panel-cb"><input type="checkbox" id="m_ns_mirror" onchange="updatePanelText('m')"> NS wing mirror</label>
+    <label class="panel-cb"><input type="checkbox" id="m_os_mirror" onchange="updatePanelText('m')"> OS wing mirror</label>
+  </div>
+  <div style="padding:6px 10px 8px"><input class="panel-notes" id="m_notes" placeholder="Additional notes, e.g. stress cracks, paint code, customer comments..." onkeyup="updatePanelText('m')" type="text"></div>
+</div>
     <span class="qlbl">Customer address</span><input class="minp" id="m_addr" placeholder="House, street, postcode">
     <div class="modal-grid2">
       <div><span class="qlbl">Price (inc VAT)</span><input class="minp" id="m_price" placeholder="£ inc VAT"></div>
@@ -1028,8 +1152,64 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div><span class="qlbl">Colour</span><input class="minp" id="edit_colour" placeholder="Colour"></div>
       <div><span class="qlbl">Quote price (inc VAT)</span><input class="minp" id="edit_price" placeholder="£ inc VAT"></div>
     </div>
-    <span class="qlbl">Panels / damage description</span>
-    <input class="minp" id="edit_panels" placeholder="Damage description">
+    <span class="qlbl">Panels / damage</span>
+    <input type="hidden" id="edit_panels">
+<div class="panel-picker" id="edit_picker">
+  <div class="panel-cat">Bumpers & corners</div>
+  <div class="panel-items">
+    <label class="panel-cb"><input type="checkbox" id="edit_front_bumper" onchange="updatePanelText('edit')"> Front bumper</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_rear_bumper" onchange="updatePanelText('edit')"> Rear bumper</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_nsf_corner" onchange="updatePanelText('edit')"> NSF bumper corner</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_osf_corner" onchange="updatePanelText('edit')"> OSF bumper corner</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_nsr_corner" onchange="updatePanelText('edit')"> NSR bumper corner</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_osr_corner" onchange="updatePanelText('edit')"> OSR bumper corner</label>
+  </div>
+  <div class="panel-cat">Doors & pillars</div>
+  <div class="panel-items">
+    <label class="panel-cb"><input type="checkbox" id="edit_nsf_door" onchange="updatePanelText('edit')"> NSF door</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_osf_door" onchange="updatePanelText('edit')"> OSF door</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_nsr_door" onchange="updatePanelText('edit')"> NSR door</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_osr_door" onchange="updatePanelText('edit')"> OSR door</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_a_pillar" onchange="updatePanelText('edit')"> A-pillar</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_b_pillar" onchange="updatePanelText('edit')"> B-pillar</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_c_pillar" onchange="updatePanelText('edit')"> C-pillar</label>
+  </div>
+  <div class="panel-cat">Wings, sills & body</div>
+  <div class="panel-items">
+    <label class="panel-cb"><input type="checkbox" id="edit_ns_wing" onchange="updatePanelText('edit')"> NS front wing</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_os_wing" onchange="updatePanelText('edit')"> OS front wing</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_ns_sill" onchange="updatePanelText('edit')"> NS sill</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_os_sill" onchange="updatePanelText('edit')"> OS sill</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_ns_quarter" onchange="updatePanelText('edit')"> NS quarter panel</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_os_quarter" onchange="updatePanelText('edit')"> OS quarter panel</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_bonnet" onchange="updatePanelText('edit')"> Bonnet</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_boot" onchange="updatePanelText('edit')"> Boot / tailgate</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_roof" onchange="updatePanelText('edit')"> Roof</label>
+  </div>
+  <div class="panel-cat">Trims & arch liners</div>
+  <div class="panel-items">
+    <label class="panel-cb"><input type="checkbox" id="edit_ns_arch_trim" onchange="updatePanelText('edit')"> NS wheel arch trim</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_os_arch_trim" onchange="updatePanelText('edit')"> OS wheel arch trim</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_nsf_bumper_trim" onchange="updatePanelText('edit')"> NSF bumper trim</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_osf_bumper_trim" onchange="updatePanelText('edit')"> OSF bumper trim</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_nsr_bumper_trim" onchange="updatePanelText('edit')"> NSR bumper trim</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_osr_bumper_trim" onchange="updatePanelText('edit')"> OSR bumper trim</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_ns_door_trim" onchange="updatePanelText('edit')"> NS door trim</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_os_door_trim" onchange="updatePanelText('edit')"> OS door trim</label>
+  </div>
+  <div class="panel-cat">Glass & lights</div>
+  <div class="panel-items">
+    <label class="panel-cb"><input type="checkbox" id="edit_windscreen" onchange="updatePanelText('edit')"> Windscreen</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_rear_screen" onchange="updatePanelText('edit')"> Rear screen</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_ns_front_light" onchange="updatePanelText('edit')"> NS front light</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_os_front_light" onchange="updatePanelText('edit')"> OS front light</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_ns_rear_light" onchange="updatePanelText('edit')"> NS rear light</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_os_rear_light" onchange="updatePanelText('edit')"> OS rear light</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_ns_mirror" onchange="updatePanelText('edit')"> NS wing mirror</label>
+    <label class="panel-cb"><input type="checkbox" id="edit_os_mirror" onchange="updatePanelText('edit')"> OS wing mirror</label>
+  </div>
+  <div style="padding:6px 10px 8px"><input class="panel-notes" id="edit_notes" placeholder="Additional notes, e.g. stress cracks, paint code, customer comments..." onkeyup="updatePanelText('edit')" type="text"></div>
+</div>
     <span class="qlbl">Internal notes</span>
     <textarea class="minp" id="edit_notes" rows="2" placeholder="Notes visible to all staff..." style="resize:vertical"></textarea>
     <div class="modal-grid2">
@@ -1991,7 +2171,10 @@ async function deletePart(partId, jobId) {
 // ADD JOB MODAL
 // ═══════════════════════════════════════════════════════════
 function openAddModal() { document.getElementById('addModal').classList.add('show'); }
-function closeAddModal() { document.getElementById('addModal').classList.remove('show'); }
+function closeAddModal() {
+  document.getElementById('addModal').classList.remove('show');
+  resetPanelPicker('m');
+}
 
 async function saveNewJob() {
   const name = document.getElementById('m_name').value.trim();
@@ -2477,7 +2660,7 @@ async function deleteDiaryAppointment() {
 // Location pill toggle
 function setLocPill(val, btn) {
   quoteLocVal = val;
-  document.querySelectorAll('#loc-mobile,#loc-workshop').forEach(b => b.classList.remove('on'));
+  document.querySelectorAll('#loc-mobile,#loc-workshop,#loc-tbc').forEach(b => b.classList.remove('on'));
   btn.classList.add('on');
 }
 document.getElementById('trvPills').addEventListener('click', e => {
@@ -2758,6 +2941,7 @@ async function sendForApproval() {
     document.getElementById('resultWrap').style.display = 'none';
     document.getElementById('quotePlaceholder').style.display = 'flex';
     document.getElementById('manualWrap').style.display = 'none';
+    resetPanelPicker('q');
     await loadJobs();
     showToast('Sent to Shaun ✓');
   } catch(e) {
@@ -3446,6 +3630,7 @@ function openEditModal(jobId) {
   document.getElementById('edit_colour').value = j.colour || '';
   document.getElementById('edit_price').value = j.quote_price || '';
   document.getElementById('edit_panels').value = j.panels || '';
+  setPanelPickerFromText('edit', j.panels || '');
   document.getElementById('edit_notes').value = j.notes || '';
   document.getElementById('edit_date').value = j.booking_date || '';
   document.getElementById('edit_time').value = j.booking_time || '09:00';
@@ -3563,6 +3748,48 @@ document.addEventListener('mousemove', function(evt) {
   const tip = document.getElementById('diaryHoverTip');
   if (tip && tip.style.display !== 'none') positionDiaryTip(evt);
 });
+
+
+// ═══════════════════════════════════════════════════════════
+// PANEL PICKER
+// ═══════════════════════════════════════════════════════════
+function updatePanelText(prefix) {
+  const picker = document.getElementById(prefix + '_picker');
+  if (!picker) return;
+  const checked = Array.from(picker.querySelectorAll('input[type=checkbox]:checked'))
+    .map(cb => cb.parentElement.textContent.trim());
+  const notes = (document.getElementById(prefix + '_notes')?.value || '').trim();
+  const parts = [...checked];
+  if (notes) parts.push(notes);
+  const hidden = document.getElementById(prefix + '_panels');
+  if (hidden) hidden.value = parts.join(', ');
+}
+
+function setPanelPickerFromText(prefix, text) {
+  // When editing an existing job, try to tick matching checkboxes from saved text
+  if (!text) return;
+  const picker = document.getElementById(prefix + '_picker');
+  if (!picker) return;
+  const boxes = picker.querySelectorAll('input[type=checkbox]');
+  boxes.forEach(cb => {
+    const label = cb.parentElement.textContent.trim().toLowerCase();
+    cb.checked = text.toLowerCase().includes(label);
+  });
+  // Put remaining text in notes
+  const notesEl = document.getElementById(prefix + '_notes');
+  if (notesEl) notesEl.value = text;
+  updatePanelText(prefix);
+}
+
+function resetPanelPicker(prefix) {
+  const picker = document.getElementById(prefix + '_picker');
+  if (!picker) return;
+  picker.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
+  const notesEl = document.getElementById(prefix + '_notes');
+  if (notesEl) notesEl.value = '';
+  const hidden = document.getElementById(prefix + '_panels');
+  if (hidden) hidden.value = '';
+}
 
 // ═══════════════════════════════════════════════════════════
 // BOOT
