@@ -403,7 +403,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tech-complete-hd{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--teal-txt);margin-bottom:12px}
 .tech-section-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--teal);margin-bottom:7px;margin-top:12px}
 .tech-section-lbl:first-of-type{margin-top:0}
-.tech-upload-area{display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px dashed var(--teal-bdr);border-radius:var(--radius);padding:16px;cursor:pointer;background:rgba(255,255,255,.5);margin-bottom:8px;text-decoration:none}
+.tech-upload-area{display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px dashed var(--teal-bdr);border-radius:var(--radius);padding:16px;cursor:pointer;background:rgba(255,255,255,.5);margin-bottom:8px;text-decoration:none;position:relative}
 .tech-upload-area p{font-size:11px;color:var(--teal-txt);margin-top:3px}
 .tech-after-thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .tech-after-thumb{width:52px;height:52px;border-radius:var(--radius);object-fit:cover;border:1px solid var(--teal-bdr)}
@@ -3312,10 +3312,13 @@ function buildTechCard(j) {
     : `<div class="tech-complete-box">
         <div class="tech-complete-hd">Complete this job</div>
         <div class="tech-section-lbl">Completion photos (required)</div>
-        <div class="tech-upload-area" onclick="techAddPhoto(${j.id})">
+        <label class="tech-upload-area" for="tph-${j.id}" style="cursor:pointer">
           <div style="font-size:24px;color:var(--teal)">📷</div>
           <p>Tap to add after photos</p>
-        </div>
+          <input type="file" id="tph-${j.id}" accept="image/*" multiple
+            style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"
+            onchange="handleTechPhotos(${j.id},this)">
+        </label>
         <div class="tech-after-thumbs" id="taf-${j.id}">
           ${amq.map(p=>`<img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="tech-after-thumb" alt="after" onclick="window.open(this.src,'_blank')">`).join('')}
         </div>
@@ -3422,27 +3425,58 @@ function checkTechCanComplete(jobId) {
   }
 }
 
-async function techAddPhoto(jobId) {
-  // Create temp file input
-  const inp = document.createElement('input');
-  inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true;
-  inp.onchange = async () => {
-    for (const f of Array.from(inp.files)) {
-      const storagePath = `job-${jobId}/after-${Date.now()}.${f.name.split('.').pop()||'jpg'}`;
-      await fetch(`${SUPABASE_URL}/storage/v1/object/job-photos/${storagePath}`, {
+async function handleTechPhotos(jobId, input) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+  // Show thumbs immediately from local data while uploading
+  const thumbs = document.getElementById('taf-' + jobId);
+  files.forEach(f => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      if (thumbs) {
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.className = 'tech-after-thumb';
+        img.style.cssText = 'width:70px;height:70px;object-fit:cover;border-radius:var(--radius);border:1px solid var(--border)';
+        thumbs.appendChild(img);
+      }
+    };
+    reader.readAsDataURL(f);
+  });
+  let uploaded = 0;
+  for (const f of files) {
+    try {
+      const ext = f.name.split('.').pop() || 'jpg';
+      const storagePath = `job-${jobId}/after-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const res = await fetch(`${SUPABASE_URL}/storage/v1/object/job-photos/${storagePath}`, {
         method: 'POST',
-        headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${currentUser?.access_token||SUPABASE_ANON}`, 'Content-Type': f.type },
+        headers: {
+          'apikey': SUPABASE_ANON,
+          'Authorization': `Bearer ${currentUser?.access_token || SUPABASE_ANON}`,
+          'Content-Type': f.type || 'image/jpeg'
+        },
         body: f
       });
+      if (!res.ok) {
+        const err = await res.text();
+        console.error('Upload failed:', err);
+        showToast('Upload failed — ' + res.status);
+        continue;
+      }
       await sbRaw('POST', 'job_photos', { job_id: jobId, storage_path: storagePath, photo_type: 'completion' });
+      uploaded++;
+    } catch(e) {
+      console.error('Upload error:', e);
+      showToast('Upload error: ' + e.message);
     }
-    showToast('Photos uploaded');
-    await loadJobs();
-    const body = document.getElementById('tjb-' + jobId);
-    if (body) body.classList.add('open');
-    checkTechCanComplete(jobId);
-  };
-  inp.click();
+  }
+  if (uploaded > 0) showToast('✓ ' + uploaded + ' photo' + (uploaded > 1 ? 's' : '') + ' uploaded');
+  checkTechCanComplete(jobId);
+}
+
+// Keep old name as alias in case any references remain
+async function techAddPhoto(jobId) {
+  document.getElementById('tph-' + jobId)?.click();
 }
 
 async function completeTechJob(jobId) {
