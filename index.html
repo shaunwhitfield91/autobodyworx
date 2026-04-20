@@ -354,6 +354,32 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 ═══════════════════════════ */
 .tech-wrap{max-width:600px;margin:0 auto;padding:20px 16px}
 .tech-greeting{font-size:16px;font-weight:700;color:var(--txt);margin-bottom:16px}
+.tclock-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:12px;overflow:hidden}
+.tclock-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;user-select:none}
+.tclock-hd:hover,.tchrs-hd:hover{background:var(--bg)}
+.tclock-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:3px}
+.tclock-summary{font-size:13px;font-weight:600;color:var(--txt)}
+.tclock-chev{font-size:11px;color:var(--muted);transition:transform .2s}
+.tclock-body{border-top:1px solid var(--border)}
+.tclock-status{padding:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.cp-in-tc{background:#d1fae5}.cp-out{background:#fef3c7}
+.tcp-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+.cp-in-tc .tcp-lbl{color:#065f46}.cp-out .tcp-lbl{color:#92400e}
+.tcp-time{font-size:28px;font-weight:700;letter-spacing:-1px;line-height:1}
+.cp-in-tc .tcp-time{color:#064e3b}.cp-out .tcp-time{color:#92400e}
+.tcp-sub{font-size:12px;margin-top:4px}
+.cp-in-tc .tcp-sub{color:#065f46}.cp-out .tcp-sub{color:#92400e}
+.tclock-btn{padding:10px 18px;border-radius:var(--radius);border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit}
+.tc-in{background:#1e40af;color:#fff}.tc-out{background:#065f46;color:#fff}
+.tchrs-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;border-top:1px solid var(--border);user-select:none}
+.tchrs-stat{background:var(--bg);border-radius:var(--radius);padding:10px 12px}
+.tchrs-sl{font-size:11px;color:var(--muted);margin-bottom:4px}
+.tchrs-sn{font-size:20px;font-weight:700;color:var(--txt);line-height:1}
+.tchrs-row{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-bottom:1px solid var(--border);font-size:13px}
+.tchrs-row:last-child{border-bottom:none}
+.tchrs-date{color:var(--txt);font-weight:600;min-width:90px}
+.tchrs-times{color:var(--muted);font-size:12px;flex:1;padding:0 10px}
+.tchrs-total{font-weight:600;color:var(--txt);min-width:60px;text-align:right}
 .tech-day-hd{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;display:flex;align-items:center;gap:8px}
 .tech-day-hd.is-today{color:var(--blue)}
 .tech-today-badge{background:var(--blue);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:.3px}
@@ -762,6 +788,49 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="page" id="pg-tech">
     <div class="tech-wrap">
       <div class="tech-greeting" id="techGreeting">Your jobs</div>
+      <!-- TIME CLOCK CARD -->
+      <div class="tclock-card" id="tclockCard">
+        <div class="tclock-hd" onclick="toggleTclockBody()">
+          <div>
+            <div class="tclock-lbl">Time clock</div>
+            <div class="tclock-summary" id="tclockSummary" style="color:#92400e">Not clocked in</div>
+          </div>
+          <span class="tclock-chev" id="tclockChev">&#9650;</span>
+        </div>
+        <div class="tclock-body" id="tclockBody">
+          <div class="tclock-status cp-out" id="tclockStatus">
+            <div>
+              <div class="tcp-lbl" id="tclockLbl">Not clocked in</div>
+              <div class="tcp-time" id="tclockTime">--:--</div>
+              <div class="tcp-sub" id="tclockSub">Tap to start your day</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+              <button class="tclock-btn tc-in" id="tclockBtn" onclick="doClockAction()">Clock in</button>
+              <div style="display:flex;align-items:center;gap:6px;font-size:12px">
+                <span style="color:var(--muted)">Edit time:</span>
+                <input type="time" id="tclockTimeEdit" style="border:1px solid var(--border2);border-radius:var(--radius);padding:4px 8px;font-size:12px;color:var(--txt);background:var(--surface);font-family:inherit;width:80px">
+                <button onclick="saveTclockTime()" style="padding:4px 8px;font-size:11px;border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;background:transparent;font-family:inherit;color:var(--txt2)">Save</button>
+              </div>
+            </div>
+          </div>
+          <!-- HOURS SUMMARY -->
+          <div class="tchrs-hd" onclick="toggleTchrsBody()">
+            <div>
+              <div class="tclock-lbl">Hours summary</div>
+              <div class="tclock-summary" id="tchrs-summary-line">0h 00m today · 0h 00m this month · 0h 00m last month</div>
+            </div>
+            <span class="tclock-chev" id="tchrsChev">&#9650;</span>
+          </div>
+          <div id="tchrsBody">
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:10px 14px;border-top:1px solid var(--border)">
+              <div class="tchrs-stat"><div class="tchrs-sl">Today</div><div class="tchrs-sn" id="thrs-today">0h 00m</div></div>
+              <div class="tchrs-stat"><div class="tchrs-sl">This month</div><div class="tchrs-sn" id="thrs-month">0h 00m</div></div>
+              <div class="tchrs-stat"><div class="tchrs-sl">Last month</div><div class="tchrs-sn" id="thrs-last">0h 00m</div></div>
+            </div>
+            <div style="border-top:1px solid var(--border)" id="tchrs-recent"></div>
+          </div>
+        </div>
+      </div>
       <div id="techPortal"></div>
     </div>
   </div>
@@ -808,15 +877,52 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <span class="qlbl">Vehicle</span><input class="minp" id="m_vehicle" placeholder="Make, model, year">
     <span class="qlbl">Colour</span><input class="minp" id="m_colour" placeholder="Colour">
     <span class="qlbl">Panels / damage</span><input class="minp" id="m_panels" placeholder="Damage description">
-    <span class="qlbl">Price</span><input class="minp" id="m_price" placeholder="£ inc VAT">
+    <span class="qlbl">Customer address</span><input class="minp" id="m_addr" placeholder="House, street, postcode">
     <div class="modal-grid2">
+      <div><span class="qlbl">Price (inc VAT)</span><input class="minp" id="m_price" placeholder="£ inc VAT"></div>
       <div>
         <span class="qlbl">Status</span>
         <select class="msel" id="m_status">
-          <option value="quoted">Quoted</option>
           <option value="booked">Booked</option>
-          <option value="pending">Pending</option>
+          <option value="quoted">Quoted — awaiting booking</option>
+          <option value="pending">Pending approval</option>
           <option value="completed">Completed</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-grid2">
+      <div><span class="qlbl">Booking date</span><input class="minp" type="date" id="m_date"></div>
+      <div><span class="qlbl">Time</span><input class="minp" type="time" id="m_time" value="09:00"></div>
+    </div>
+    <div class="modal-grid2">
+      <div>
+        <span class="qlbl">Duration</span>
+        <select class="msel" id="m_dur">
+          <option value="1 hour">1 hour</option>
+          <option value="2 hours">2 hours</option>
+          <option value="3 hours">3 hours</option>
+          <option value="4 hours">4 hours</option>
+          <option value="5 hours" selected>5 hours</option>
+          <option value="Full day">Full day</option>
+          <option value="2 days">2 days</option>
+          <option value="3 days">3 days</option>
+        </select>
+      </div>
+      <div>
+        <span class="qlbl">Assigned tech</span>
+        <select class="msel" id="m_tech">
+          <option value="Shaun">Shaun</option>
+          <option value="Charles">Charles</option>
+          <option value="Both">Both</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-grid2">
+      <div>
+        <span class="qlbl">Location</span>
+        <select class="msel" id="m_loc">
+          <option value="workshop">Workshop</option>
+          <option value="mobile">Mobile — customer site</option>
         </select>
       </div>
       <div>
@@ -831,7 +937,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         </select>
       </div>
     </div>
-    <div style="display:flex;gap:8px;margin-top:4px">
+    <div style="display:flex;gap:8px;margin-top:8px">
       <button class="btn-primary" onclick="saveNewJob()" style="flex:1;padding:10px">Save job</button>
       <button class="btn-secondary" onclick="closeAddModal()" style="flex:1;padding:10px">Cancel</button>
     </div>
@@ -927,6 +1033,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <span class="qlbl">Internal notes</span>
     <textarea class="minp" id="edit_notes" rows="2" placeholder="Notes visible to all staff..." style="resize:vertical"></textarea>
     <div class="modal-grid2">
+      <div><span class="qlbl">Booking date</span><input class="minp" type="date" id="edit_date"></div>
+      <div><span class="qlbl">Time</span><input class="minp" type="time" id="edit_time"></div>
+    </div>
+    <div class="modal-grid2">
+      <div>
+        <span class="qlbl">Duration</span>
+        <select class="msel" id="edit_duration">
+          <option value="1 hour">1 hour</option>
+          <option value="2 hours">2 hours</option>
+          <option value="3 hours">3 hours</option>
+          <option value="4 hours">4 hours</option>
+          <option value="5 hours">5 hours</option>
+          <option value="Full day">Full day</option>
+          <option value="2 days">2 days</option>
+          <option value="3 days">3 days</option>
+        </select>
+      </div>
       <div>
         <span class="qlbl">Status</span>
         <select class="msel" id="edit_status">
@@ -936,6 +1059,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <option value="completed">Completed</option>
         </select>
       </div>
+    </div>
+    <div class="modal-grid2">
       <div>
         <span class="qlbl">Assigned tech</span>
         <select class="msel" id="edit_tech">
@@ -943,6 +1068,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <option value="Charles">Charles</option>
           <option value="Both">Both</option>
         </select>
+      </div>
+      <div>
+        <span class="qlbl">Customer address</span>
+        <input class="minp" id="edit_addr" placeholder="House, street, postcode">
       </div>
     </div>
     <div class="modal-grid2">
@@ -1264,6 +1393,7 @@ function switchTab(t) {
   if (t === 'jobs') { renderJobs(); renderDeclined(); }
   if (t === 'home') { updateHomeStats(); renderHome(); }
   if (t === 'diary') { renderDiary(); renderRevBar(); }
+  if (t === 'tech') { loadTclockState(); }
   if (t === 'tech') { renderTechPortal(); }
   if (t === 'settings') { checkApiKey(); checkXeroStatus(); }
 }
@@ -1866,19 +1996,31 @@ function closeAddModal() { document.getElementById('addModal').classList.remove(
 async function saveNewJob() {
   const name = document.getElementById('m_name').value.trim();
   if (!name) { showToast('Enter customer name'); return; }
+  const date = document.getElementById('m_date').value || null;
+  const status = document.getElementById('m_status').value;
   const body = {
     customer_name: name,
-    customer_phone: document.getElementById('m_phone').value.trim(),
-    vehicle: document.getElementById('m_vehicle').value.trim(),
-    colour: document.getElementById('m_colour').value.trim(),
-    panels: document.getElementById('m_panels').value.trim(),
-    quote_price: document.getElementById('m_price').value.trim(),
-    status: document.getElementById('m_status').value,
+    customer_phone: document.getElementById('m_phone').value.trim() || null,
+    vehicle: document.getElementById('m_vehicle').value.trim() || null,
+    colour: document.getElementById('m_colour').value.trim() || null,
+    panels: document.getElementById('m_panels').value.trim() || null,
+    customer_address: document.getElementById('m_addr').value.trim() || null,
+    quote_price: document.getElementById('m_price').value.trim() || null,
+    booking_date: date,
+    booking_time: date ? document.getElementById('m_time').value : null,
+    duration: document.getElementById('m_dur').value,
+    assigned_tech: document.getElementById('m_tech').value,
+    job_location: document.getElementById('m_loc').value,
     source: document.getElementById('m_source').value,
+    status: status,
     archived: false
   };
   try {
     await sbRaw('POST', 'jobs', body);
+    // Reset form
+    ['m_name','m_phone','m_vehicle','m_colour','m_panels','m_addr','m_price','m_date'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
+    });
     closeAddModal();
     showToast('Job added ✓');
     await loadJobs();
@@ -2707,6 +2849,183 @@ async function saveManualQuote() {
 // ═══════════════════════════════════════════════════════════
 // TECH PORTAL (My Jobs — Charles view)
 // ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// TIME CLOCK
+// ═══════════════════════════════════════════════════════════
+let tcState = { clocked: false, clockInTime: null, todayEntry: null };
+
+async function loadTclockState() {
+  const today = new Date().toISOString().split('T')[0];
+  const techName = currentProfile?.full_name || '';
+  try {
+    const rows = await sbRaw('GET','time_entries',null,`?tech_name=eq.${encodeURIComponent(techName)}&date=eq.${today}&limit=1`);
+    if (rows && rows.length) {
+      tcState.todayEntry = rows[0];
+      tcState.clocked = rows[0].clock_in && !rows[0].clock_out;
+      tcState.clockInTime = rows[0].clock_in;
+    }
+  } catch(e) { console.warn('Time clock load failed', e); }
+  renderTclock();
+  updateTchrs();
+}
+
+function fmtHM(mins) {
+  const h = Math.floor(Math.abs(mins)/60);
+  const m = Math.abs(mins)%60;
+  return h + 'h ' + String(m).padStart(2,'0') + 'm';
+}
+
+function minsWorkedToday() {
+  if (!tcState.clockInTime) return 0;
+  const [hh,mm] = tcState.clockInTime.split(':').map(Number);
+  const now = new Date();
+  return (now.getHours()-hh)*60 + (now.getMinutes()-mm);
+}
+
+function renderTclock() {
+  const status = document.getElementById('tclockStatus');
+  const lbl = document.getElementById('tclockLbl');
+  const timeEl = document.getElementById('tclockTime');
+  const sub = document.getElementById('tclockSub');
+  const btn = document.getElementById('tclockBtn');
+  const summary = document.getElementById('tclockSummary');
+  if (!status) return;
+  if (tcState.clocked && tcState.clockInTime) {
+    status.className = 'tclock-status cp-in-tc';
+    lbl.textContent = 'Clocked in';
+    timeEl.textContent = tcState.clockInTime;
+    const mins = minsWorkedToday();
+    sub.textContent = 'Working · ' + fmtHM(mins) + ' so far today';
+    btn.className = 'tclock-btn tc-out';
+    btn.textContent = 'Clock out';
+    summary.textContent = 'Clocked in · ' + tcState.clockInTime + ' · ' + fmtHM(mins) + ' today';
+    summary.style.color = '#064e3b';
+    document.getElementById('tclockTimeEdit').value = tcState.clockInTime;
+  } else {
+    status.className = 'tclock-status cp-out';
+    lbl.textContent = 'Not clocked in';
+    timeEl.textContent = '--:--';
+    sub.textContent = 'Tap to start your day';
+    btn.className = 'tclock-btn tc-in';
+    btn.textContent = 'Clock in';
+    summary.textContent = 'Not clocked in';
+    summary.style.color = '#92400e';
+    const now = new Date();
+    document.getElementById('tclockTimeEdit').value = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  }
+}
+
+async function doClockAction() {
+  const today = new Date().toISOString().split('T')[0];
+  const techName = currentProfile?.full_name || '';
+  const editTime = document.getElementById('tclockTimeEdit').value;
+  const timeToUse = editTime || new Date().toTimeString().slice(0,5);
+  if (!tcState.clocked) {
+    // Clock in
+    const body = { tech_name: techName, date: today, clock_in: timeToUse };
+    try {
+      const rows = await sbRaw('POST','time_entries',body);
+      tcState.todayEntry = Array.isArray(rows) ? rows[0] : rows;
+      tcState.clocked = true;
+      tcState.clockInTime = timeToUse;
+      showToast('✓ Clocked in at ' + timeToUse);
+      renderTclock();
+      updateTchrs();
+    } catch(e) { alert('Failed: ' + e.message); }
+  } else {
+    // Clock out
+    if (!tcState.todayEntry?.id) { alert('No clock-in record found — please refresh.'); return; }
+    const [hi,mi] = (tcState.clockInTime||'09:00').split(':').map(Number);
+    const [ho,mo] = timeToUse.split(':').map(Number);
+    const totalMins = (ho*60+mo) - (hi*60+mi);
+    const hrs = (totalMins/60).toFixed(2);
+    try {
+      await sbRaw('PATCH','time_entries',{clock_out:timeToUse,hours_worked:parseFloat(hrs)},`?id=eq.${tcState.todayEntry.id}`);
+      tcState.clocked = false;
+      tcState.todayEntry.clock_out = timeToUse;
+      showToast('✓ Clocked out at ' + timeToUse + ' · ' + fmtHM(totalMins) + ' today');
+      renderTclock();
+      updateTchrs();
+    } catch(e) { alert('Failed: ' + e.message); }
+  }
+}
+
+async function saveTclockTime() {
+  const t = document.getElementById('tclockTimeEdit').value;
+  if (!t) return;
+  const today = new Date().toISOString().split('T')[0];
+  const techName = currentProfile?.full_name || '';
+  if (tcState.clocked && tcState.todayEntry?.id) {
+    // Update clock-in time
+    try {
+      await sbRaw('PATCH','time_entries',{clock_in:t},`?id=eq.${tcState.todayEntry.id}`);
+      tcState.clockInTime = t;
+      tcState.todayEntry.clock_in = t;
+      showToast('✓ Clock-in time updated to ' + t);
+      renderTclock();
+    } catch(e) { alert('Failed: ' + e.message); }
+  } else if (tcState.todayEntry?.id) {
+    // Update clock-out time
+    try {
+      const [hi,mi] = (tcState.clockInTime||'09:00').split(':').map(Number);
+      const [ho,mo] = t.split(':').map(Number);
+      const hrs = ((ho*60+mo)-(hi*60+mi))/60;
+      await sbRaw('PATCH','time_entries',{clock_out:t,hours_worked:Math.max(0,parseFloat(hrs.toFixed(2)))},`?id=eq.${tcState.todayEntry.id}`);
+      showToast('✓ Time updated to ' + t);
+      updateTchrs();
+    } catch(e) { alert('Failed: ' + e.message); }
+  }
+}
+
+async function updateTchrs() {
+  const techName = currentProfile?.full_name || '';
+  const now = new Date();
+  const thisMonth = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  const lastDate = new Date(now.getFullYear(), now.getMonth(), 0);
+  const lastMonth = lastDate.getFullYear() + '-' + String(lastDate.getMonth()+1).padStart(2,'0');
+  try {
+    const rows = await sbRaw('GET','time_entries',null,`?tech_name=eq.${encodeURIComponent(techName)}&date=gte.${thisMonth}-01&order=date.desc`);
+    const lastRows = await sbRaw('GET','time_entries',null,`?tech_name=eq.${encodeURIComponent(techName)}&date=gte.${lastMonth}-01&date=lt.${thisMonth}-01&order=date.desc`);
+    const todayStr = now.toISOString().split('T')[0];
+    const todayMins = minsWorkedToday();
+    const monthMins = (rows||[]).reduce((s,r) => s + (r.hours_worked ? r.hours_worked*60 : (r.date===todayStr?todayMins:0)), 0);
+    const lastMins = (lastRows||[]).reduce((s,r) => s + (r.hours_worked ? r.hours_worked*60 : 0), 0);
+    const el = id => document.getElementById(id);
+    if (el('thrs-today')) el('thrs-today').textContent = fmtHM(todayMins);
+    if (el('thrs-month')) el('thrs-month').textContent = fmtHM(Math.round(monthMins));
+    if (el('thrs-last')) el('thrs-last').textContent = fmtHM(Math.round(lastMins));
+    if (el('tchrs-summary-line')) el('tchrs-summary-line').textContent = fmtHM(todayMins) + ' today · ' + fmtHM(Math.round(monthMins)) + ' this month · ' + fmtHM(Math.round(lastMins)) + ' last month';
+    // Recent entries
+    const recent = document.getElementById('tchrs-recent');
+    if (recent && rows) {
+      recent.innerHTML = rows.slice(0,7).map(r => {
+        const isMissing = !r.clock_in;
+        return `<div class="tchrs-row">
+          <span class="tchrs-date">${r.date}</span>
+          <span class="tchrs-times">${isMissing ? '<span style="color:var(--red)">No entry</span>' : (r.clock_in||'?') + ' — ' + (r.clock_out||'in progress')}</span>
+          <span class="tchrs-total">${r.hours_worked ? fmtHM(Math.round(r.hours_worked*60)) : (r.clock_in&&!r.clock_out ? 'ongoing' : '—')}</span>
+        </div>`;
+      }).join('');
+    }
+  } catch(e) { console.warn('Hours update failed', e); }
+}
+
+function toggleTclockBody() {
+  const body = document.getElementById('tclockBody');
+  const chev = document.getElementById('tclockChev');
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  chev.style.transform = open ? 'rotate(180deg)' : '';
+}
+
+function toggleTchrsBody() {
+  const body = document.getElementById('tchrsBody');
+  const chev = document.getElementById('tchrsChev');
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  chev.style.transform = open ? 'rotate(180deg)' : '';
+}
+
 function renderTechPortal() {
   const el = document.getElementById('techPortal');
   const name = currentProfile?.full_name || 'Tech';
@@ -3128,8 +3447,12 @@ function openEditModal(jobId) {
   document.getElementById('edit_price').value = j.quote_price || '';
   document.getElementById('edit_panels').value = j.panels || '';
   document.getElementById('edit_notes').value = j.notes || '';
+  document.getElementById('edit_date').value = j.booking_date || '';
+  document.getElementById('edit_time').value = j.booking_time || '09:00';
+  document.getElementById('edit_duration').value = j.duration || '5 hours';
   document.getElementById('edit_status').value = j.status === 'completed' ? 'completed' : j.status;
   document.getElementById('edit_tech').value = j.assigned_tech || 'Shaun';
+  document.getElementById('edit_addr').value = j.customer_address || '';
   document.getElementById('edit_loc').value = j.job_location || 'workshop';
   document.getElementById('edit_source').value = j.source || 'other';
   document.getElementById('edit_cd').checked = !!j.cd_required;
@@ -3151,6 +3474,7 @@ function handleEditPhotos(input) {
 
 async function saveEditJob() {
   if (!_editJobId) return;
+  const editDate = document.getElementById('edit_date').value || null;
   const updates = {
     customer_name: document.getElementById('edit_name').value.trim(),
     customer_phone: document.getElementById('edit_phone').value.trim(),
@@ -3161,10 +3485,14 @@ async function saveEditJob() {
     panels: document.getElementById('edit_panels').value.trim(),
     notes: document.getElementById('edit_notes').value.trim(),
     status: document.getElementById('edit_status').value,
+    booking_date: editDate,
+    booking_time: editDate ? document.getElementById('edit_time').value : null,
+    duration: document.getElementById('edit_duration').value,
     assigned_tech: document.getElementById('edit_tech').value,
     job_location: document.getElementById('edit_loc').value,
     source: document.getElementById('edit_source').value,
-    cd_required: document.getElementById('edit_cd').checked
+    cd_required: document.getElementById('edit_cd').checked,
+    customer_address: document.getElementById('edit_addr').value.trim() || null
   };
   try {
     await sbRaw('PATCH', 'jobs', updates, '?id=eq.' + _editJobId);
