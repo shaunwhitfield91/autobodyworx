@@ -838,6 +838,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
               <option value="5 hours">5 hours</option>
               <option value="Full day">Full day</option>
               <option value="2 days">2 days</option>
+              <option value="PDR">PDR (contracted out)</option>
+              <option value="Alloys">Alloys (contracted out)</option>
             </select>
             <span class="qlbl">Notes for customer (optional)</span>
             <textarea class="qinp" id="m_note_manual" placeholder="Any notes to attach to this quote..." rows="2"></textarea>
@@ -856,8 +858,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="page" id="pg-tech">
     <div class="tech-wrap">
       <div class="tech-greeting" id="techGreeting">Your jobs</div>
-      <!-- TIME CLOCK CARD -->
-      <div class="tclock-card" id="tclockCard">
+      <!-- TIME CLOCK CARD — tech only -->
+      <div class="tclock-card" id="tclockCard" style="display:none">
         <div class="tclock-hd" onclick="toggleTclockBody()">
           <div>
             <div class="tclock-lbl">Time clock</div>
@@ -1031,6 +1033,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <option value="Full day">Full day</option>
           <option value="2 days">2 days</option>
           <option value="3 days">3 days</option>
+          <option value="PDR">PDR (contracted out)</option>
+          <option value="Alloys">Alloys (contracted out)</option>
         </select>
       </div>
       <div>
@@ -1111,6 +1115,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <option value="4 hours">4 hours</option>
       <option value="5 hours">5 hours</option>
       <option value="Full day">Full day</option>
+      <option value="2 days">2 days</option>
+      <option value="3 days">3 days</option>
+      <option value="PDR">PDR (contracted out)</option>
+      <option value="Alloys">Alloys (contracted out)</option>
     </select>
     <span class="qlbl">Assigned tech</span>
     <select class="msel" id="bk_tech">
@@ -1229,6 +1237,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <option value="Full day">Full day</option>
           <option value="2 days">2 days</option>
           <option value="3 days">3 days</option>
+          <option value="PDR">PDR (contracted out)</option>
+          <option value="Alloys">Alloys (contracted out)</option>
         </select>
       </div>
       <div>
@@ -1555,6 +1565,15 @@ function applyRole() {
     if (isTech) el.classList.add('role-hidden');
   });
 
+  // Show time clock only for techs
+  const clockCard = document.getElementById('tclockCard');
+  if (clockCard) clockCard.style.display = isTech ? 'block' : 'none';
+
+  // Request notification permission
+  requestNotifPermission();
+  // Seed notification tracking after first load
+  setTimeout(initNotifTracking, 2000);
+
   // Tech goes to My Jobs tab by default; admin/staff go to home
   if (isTech) switchTab('tech');
   // Start background auto-refresh
@@ -1596,7 +1615,9 @@ async function loadJobs() {
   try {
     const data = await sbRaw('GET', 'jobs', null,
       `?select=*,job_parts(*),job_photos(*)&archived=eq.false&status=neq.declined&order=created_at.desc`);
-    allJobs = data || [];
+    const freshJobs = data || [];
+    if (_notifsReady) checkForNewNotifs(freshJobs);
+    allJobs = freshJobs;
   } catch(e) { allJobs = []; }
   renderJobs();
   updateHomeStats();
@@ -3868,6 +3889,79 @@ async function manualRefresh() {
   }
   await loadJobs();
   showToast('✓ Refreshed');
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════
+async function requestNotifPermission() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    await Notification.requestPermission();
+  }
+}
+
+function sendNotif(title, body, icon) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  try {
+    const n = new Notification(title, {
+      body,
+      icon: icon || '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: 'panelpro-' + Date.now()
+    });
+    n.onclick = () => { window.focus(); n.close(); };
+    setTimeout(() => n.close(), 8000);
+  } catch(e) { console.warn('Notification failed', e); }
+}
+
+// Track known job IDs to detect new ones on refresh
+let _knownJobIds = new Set();
+let _notifsReady = false;
+
+function initNotifTracking() {
+  // Seed with current jobs so we don't fire for existing ones
+  allJobs.forEach(j => _knownJobIds.add(j.id));
+  _notifsReady = true;
+}
+
+function checkForNewNotifs(freshJobs) {
+  if (!_notifsReady) { initNotifTracking(); return; }
+  const role = currentProfile?.role;
+  freshJobs.forEach(j => {
+    if (_knownJobIds.has(j.id)) return; // already knew about this job
+    _knownJobIds.add(j.id);
+    // Shaun gets notified of new pending jobs (needs quoting)
+    if (role === 'admin' && j.status === 'pending') {
+      sendNotif(
+        'New quote request — ' + (j.customer_name || 'Customer'),
+        (j.vehicle || 'Vehicle') + ' · ' + (j.panels || ''),
+        '/icon-192.png'
+      );
+    }
+    // Chloe gets notified when a job is approved (ready to book)
+    if (role === 'admin_staff' && j.status === 'quoted') {
+      sendNotif(
+        'Quote approved — ' + (j.customer_name || 'Customer'),
+        (j.vehicle || '') + ' · ' + (j.quote_price || '') + ' · Ready to book in',
+        '/icon-192.png'
+      );
+    }
+  });
+  // Also check for status changes on existing jobs
+  freshJobs.forEach(j => {
+    const prev = allJobs.find(x => x.id === j.id);
+    if (!prev) return;
+    // Chloe: job changed from pending to quoted = Shaun approved it
+    if (role === 'admin_staff' && prev.status === 'pending' && j.status === 'quoted') {
+      sendNotif(
+        'Quote approved — ' + (j.customer_name || 'Customer'),
+        (j.quote_price || 'Price set') + ' · Ready to book in',
+        '/icon-192.png'
+      );
+    }
+  });
 }
 
 // ═══════════════════════════════════════════════════════════
