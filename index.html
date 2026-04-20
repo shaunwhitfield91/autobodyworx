@@ -770,7 +770,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <label class="panel-cb"><input type="checkbox" id="q_ns_mirror" onchange="updatePanelText('q')"> NS wing mirror</label>
     <label class="panel-cb"><input type="checkbox" id="q_os_mirror" onchange="updatePanelText('q')"> OS wing mirror</label>
   </div>
-  <div style="padding:6px 10px 8px"><input class="panel-notes" id="q_notes" placeholder="Additional notes, e.g. stress cracks, paint code, customer comments..." onkeyup="updatePanelText('q')" type="text"></div>
+  <div style="padding:6px 10px 8px"><input class="panel-notes" id="q_picker_notes" placeholder="Additional notes, e.g. stress cracks, paint code, customer comments..." onkeyup="updatePanelText('q')" type="text"></div>
 </div>
           <span class="qlbl">Travel distance</span>
           <div class="loc-pills" id="trvPills">
@@ -999,7 +999,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <label class="panel-cb"><input type="checkbox" id="m_ns_mirror" onchange="updatePanelText('m')"> NS wing mirror</label>
     <label class="panel-cb"><input type="checkbox" id="m_os_mirror" onchange="updatePanelText('m')"> OS wing mirror</label>
   </div>
-  <div style="padding:6px 10px 8px"><input class="panel-notes" id="m_notes" placeholder="Additional notes, e.g. stress cracks, paint code, customer comments..." onkeyup="updatePanelText('m')" type="text"></div>
+  <div style="padding:6px 10px 8px"><input class="panel-notes" id="m_picker_notes" placeholder="Additional notes, e.g. stress cracks, paint code, customer comments..." onkeyup="updatePanelText('m')" type="text"></div>
 </div>
     <span class="qlbl">Customer address</span><input class="minp" id="m_addr" placeholder="House, street, postcode">
     <div class="modal-grid2">
@@ -1208,7 +1208,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <label class="panel-cb"><input type="checkbox" id="edit_ns_mirror" onchange="updatePanelText('edit')"> NS wing mirror</label>
     <label class="panel-cb"><input type="checkbox" id="edit_os_mirror" onchange="updatePanelText('edit')"> OS wing mirror</label>
   </div>
-  <div style="padding:6px 10px 8px"><input class="panel-notes" id="edit_notes" placeholder="Additional notes, e.g. stress cracks, paint code, customer comments..." onkeyup="updatePanelText('edit')" type="text"></div>
+  <div style="padding:6px 10px 8px"><input class="panel-notes" id="edit_picker_notes" placeholder="Additional notes, e.g. stress cracks, paint code, customer comments..." onkeyup="updatePanelText('edit')" type="text"></div>
 </div>
     <span class="qlbl">Internal notes</span>
     <textarea class="minp" id="edit_notes" rows="2" placeholder="Notes visible to all staff..." style="resize:vertical"></textarea>
@@ -3630,7 +3630,8 @@ function openEditModal(jobId) {
   document.getElementById('edit_colour').value = j.colour || '';
   document.getElementById('edit_price').value = j.quote_price || '';
   document.getElementById('edit_panels').value = j.panels || '';
-  setPanelPickerFromText('edit', j.panels || '');
+  resetPanelPicker('edit');
+  if (j.panels) setPanelPickerFromText('edit', j.panels);
   document.getElementById('edit_notes').value = j.notes || '';
   document.getElementById('edit_date').value = j.booking_date || '';
   document.getElementById('edit_time').value = j.booking_time || '09:00';
@@ -3758,26 +3759,34 @@ function updatePanelText(prefix) {
   if (!picker) return;
   const checked = Array.from(picker.querySelectorAll('input[type=checkbox]:checked'))
     .map(cb => cb.parentElement.textContent.trim());
-  const notes = (document.getElementById(prefix + '_notes')?.value || '').trim();
+  // Use the PICKER notes field (separate from the job's internal notes textarea)
+  const pickerNotes = (document.getElementById(prefix + '_picker_notes')?.value || '').trim();
   const parts = [...checked];
-  if (notes) parts.push(notes);
+  if (pickerNotes) parts.push(pickerNotes);
   const hidden = document.getElementById(prefix + '_panels');
   if (hidden) hidden.value = parts.join(', ');
 }
 
 function setPanelPickerFromText(prefix, text) {
-  // When editing an existing job, try to tick matching checkboxes from saved text
   if (!text) return;
   const picker = document.getElementById(prefix + '_picker');
   if (!picker) return;
-  const boxes = picker.querySelectorAll('input[type=checkbox]');
-  boxes.forEach(cb => {
-    const label = cb.parentElement.textContent.trim().toLowerCase();
-    cb.checked = text.toLowerCase().includes(label);
+  const lowerText = text.toLowerCase();
+  const matchedLabels = [];
+  picker.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    const lbl = cb.parentElement.textContent.trim();
+    const found = lowerText.includes(lbl.toLowerCase());
+    cb.checked = found;
+    if (found) matchedLabels.push(lbl);
   });
-  // Put remaining text in notes
-  const notesEl = document.getElementById(prefix + '_notes');
-  if (notesEl) notesEl.value = text;
+  let remaining = text;
+  matchedLabels.forEach(lbl => {
+    const i = remaining.toLowerCase().indexOf(lbl.toLowerCase());
+    if (i > -1) remaining = remaining.slice(0, i) + remaining.slice(i + lbl.length);
+  });
+  remaining = remaining.split(',').map(s => s.trim()).filter(Boolean).join(' ').trim();
+  const pn = document.getElementById(prefix + '_picker_notes');
+  if (pn) pn.value = remaining;
   updatePanelText(prefix);
 }
 
@@ -3785,7 +3794,7 @@ function resetPanelPicker(prefix) {
   const picker = document.getElementById(prefix + '_picker');
   if (!picker) return;
   picker.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
-  const notesEl = document.getElementById(prefix + '_notes');
+  const notesEl = document.getElementById(prefix + '_picker_notes');
   if (notesEl) notesEl.value = '';
   const hidden = document.getElementById(prefix + '_panels');
   if (hidden) hidden.value = '';
