@@ -528,6 +528,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <div class="tbar-right">
       <div class="user-pill"><div class="user-dot"></div><span id="userLabel">—</span></div>
+      <button class="btn-logout" id="refreshBtn" onclick="manualRefresh()" title="Refresh" style="font-size:16px;padding:4px 9px">&#8635;</button>
       <button class="btn-logout" onclick="doLogout()">Sign out</button>
     </div>
   </div>
@@ -1453,6 +1454,7 @@ async function doLogin() {
 document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
 async function doLogout() {
+  if (autoRefreshTimer) { clearInterval(autoRefreshTimer); autoRefreshTimer = null; }
   try { await sbSignOut(); } catch(e) {}
   currentUser = null;
   currentProfile = null;
@@ -1548,6 +1550,8 @@ function applyRole() {
 
   // Tech goes to My Jobs tab by default; admin/staff go to home
   if (isTech) switchTab('tech');
+  // Start background auto-refresh
+  startAutoRefresh();
 }
 
 function updateHomeGreeting() {
@@ -3831,6 +3835,32 @@ function initPriceInputs() {
       });
     }
   });
+}
+
+// ═══════════════════════════════════════════════════════════
+// REFRESH
+// ═══════════════════════════════════════════════════════════
+let autoRefreshTimer = null;
+
+function startAutoRefresh() {
+  if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+  autoRefreshTimer = setInterval(async () => {
+    // Silent background refresh — no toast, no spinners
+    try {
+      await loadJobs();
+    } catch(e) { console.warn('Auto-refresh failed', e); }
+  }, 60000); // every 60 seconds
+}
+
+async function manualRefresh() {
+  const btn = document.getElementById('refreshBtn');
+  if (btn) {
+    btn.style.transform = 'rotate(360deg)';
+    btn.style.transition = 'transform .5s ease';
+    setTimeout(() => { btn.style.transform = ''; btn.style.transition = ''; }, 500);
+  }
+  await loadJobs();
+  showToast('✓ Refreshed');
 }
 
 // ═══════════════════════════════════════════════════════════
