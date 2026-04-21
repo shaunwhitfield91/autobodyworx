@@ -37,14 +37,16 @@ function buildDescription(job) {
 }
 
 function buildLineItems(job) {
-  // Prices are already inc VAT — use TaxType NONE so Xero doesn't add extra tax
-  const amount = parseFloat((job.quote_price || '0').toString().replace(/[^0-9.]/g, '')) || 0;
+  // Price is inc VAT — divide by 1.2 to get ex-VAT amount
+  // Xero adds 20% OUTPUT2 tax back, so total on invoice matches the original quoted price
+  const incVat = parseFloat((job.quote_price || '0').toString().replace(/[^0-9.]/g, '')) || 0;
+  const exVat = Math.round((incVat / 1.2) * 100) / 100;
   return [{
     Description: buildDescription(job),
     Quantity: 1,
-    UnitAmount: amount,
+    UnitAmount: exVat,
     AccountCode: '200',
-    TaxType: 'NONE'
+    TaxType: 'OUTPUT2'
   }];
 }
 
