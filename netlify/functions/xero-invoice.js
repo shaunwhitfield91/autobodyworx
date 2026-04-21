@@ -37,12 +37,14 @@ function buildDescription(job) {
 }
 
 function buildLineItems(job) {
+  // Prices are already inc VAT — use TaxType NONE so Xero doesn't add extra tax
   const amount = parseFloat((job.quote_price || '0').toString().replace(/[^0-9.]/g, '')) || 0;
   return [{
     Description: buildDescription(job),
     Quantity: 1,
     UnitAmount: amount,
-    AccountCode: '200'
+    AccountCode: '200',
+    TaxType: 'NONE'
   }];
 }
 
@@ -111,7 +113,7 @@ exports.handler = async (event) => {
           Reference: reference,
           // No LineAmountTypes — let Xero use org default
           LineItems: buildLineItems(job),
-          DueDate: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+          DueDate: new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0],
           CurrencyCode: 'GBP'
         }]
       })
