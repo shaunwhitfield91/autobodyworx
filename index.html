@@ -132,6 +132,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .js-book{background:var(--teal-bg);color:var(--teal-txt)}
 .js-done{background:#ede9fe;color:#4c1d95}
 .js-await{background:#e0f2fe;color:#0369a1}
+.js-inv{background:#fef3c7;color:#92400e}
 .js-decl{background:var(--red-bg);color:var(--red)}
 
 /* ── Badges ── */
@@ -573,6 +574,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="stat-card" onclick="setFilter('quoted')"><div class="stat-lbl">Quoted</div><div class="stat-num sn-quot" id="sQ">0</div></div>
         <div class="stat-card" onclick="setFilter('booked')"><div class="stat-lbl">Booked</div><div class="stat-num sn-book" id="sB">0</div></div>
         <div class="stat-card" onclick="setFilter('done')"><div class="stat-lbl">Completed</div><div class="stat-num sn-comp" id="sC">0</div></div>
+        <div class="stat-card" onclick="setFilter('invoice',null)" style="border:1px solid #fde047"><div class="stat-lbl" style="color:#92400e">Needs invoice</div><div class="stat-num" style="color:#713f12" id="sI">0</div></div>
       </div>
       <!-- Revenue toggle -->
       <div class="rev-toggle" onclick="toggleRevenue()">
@@ -607,6 +609,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <button class="fpill" id="fp-quot" onclick="setFilter('quoted',this)">Quoted</button>
         <button class="fpill" id="fp-book" onclick="setFilter('booked',this)">Booked</button>
         <button class="fpill" id="fp-done" onclick="setFilter('done',this)">Completed</button>
+        <button class="fpill" id="fp-inv" onclick="setFilter('invoice',this)" style="border-color:#fde047;color:#92400e">Needs invoice</button>
       </div>
       <div class="job-list" id="jobList"></div>
       <!-- Declined section -->
@@ -1729,10 +1732,13 @@ function renderHomeAttention() {
 
   const needsInvoice = allJobs.filter(j => j.status === 'completed' && !j.paid);
   if (needsInvoice.length) items.push(`
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;display:flex;align-items:center;gap:10px;margin-bottom:8px">
-      <div style="width:28px;height:28px;background:var(--blue-bg);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">💷</div>
-      <div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--txt)">${needsInvoice.length} job${needsInvoice.length>1?'s':''} need invoicing</div><div style="font-size:11px;color:var(--muted)">Send to Xero when ready</div></div>
-      <span class="badge" style="background:var(--blue-bg);color:var(--blue-txt)">Action</span>
+    <div style="background:#fefce8;border:1px solid #fde047;border-radius:var(--radius-lg);padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:8px" onclick="switchTab('jobs');setFilter('invoice')">
+      <div style="width:28px;height:28px;background:#fef9c3;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">💷</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:#713f12">${needsInvoice.length} completed job${needsInvoice.length>1?'s':''} need${needsInvoice.length===1?'s':''} invoicing</div>
+        <div style="font-size:11px;color:#92400e">${needsInvoice.map(j=>j.customer_name||'Unknown').slice(0,3).join(' · ')}${needsInvoice.length>3?' +more':''}</div>
+      </div>
+      <span class="badge" style="background:#fef9c3;color:#713f12;flex-shrink:0">Invoice now</span>
     </div>`);
 
   if (!items.length) items.push(`<div style="font-size:13px;color:var(--muted);padding:8px 0">All clear — nothing needs attention right now ✓</div>`);
@@ -1775,7 +1781,7 @@ function setFilter(f, btn) {
   document.querySelectorAll('.fpill').forEach(b => b.classList.remove('on'));
   if (btn) btn.classList.add('on');
   else {
-    const map = { all:'fp-all', mine:'fp-mine', pending:'fp-pend', quoted:'fp-quot', booked:'fp-book', done:'fp-done' };
+    const map = { all:'fp-all', mine:'fp-mine', pending:'fp-pend', quoted:'fp-quot', booked:'fp-book', done:'fp-done', invoice:'fp-inv' };
     const el = document.getElementById(map[f]);
     if (el) el.classList.add('on');
   }
@@ -1830,6 +1836,7 @@ function renderJobs() {
     if (currentFilter === 'quoted') return j.status === 'quoted';
     if (currentFilter === 'booked') return j.status === 'booked';
     if (currentFilter === 'done') return j.status === 'completed';
+    if (currentFilter === 'invoice') return j.status === 'completed' && !j.paid;
     if (currentFilter === 'mine') return j.assigned_tech === (currentProfile?.full_name||'');
     return true;
   });
@@ -1857,8 +1864,12 @@ function renderJobs() {
   // Update stat counters
   document.getElementById('sP').textContent = allJobs.filter(j=>j.status==='pending').length;
   document.getElementById('sQ').textContent = allJobs.filter(j=>j.status==='quoted').length;
+  const invCount = allJobs.filter(j=>j.status==='completed'&&!j.paid).length;
+  const invEl = document.getElementById('h-inv-count');
+  if (invEl) invEl.textContent = invCount;
   document.getElementById('sB').textContent = allJobs.filter(j=>j.status==='booked').length;
   document.getElementById('sC').textContent = allJobs.filter(j=>j.status==='completed').length;
+  document.getElementById('sI').textContent = allJobs.filter(j=>j.status==='completed'&&!j.paid).length;
 
   const el = document.getElementById('jobList');
   if (!jobs.length) {
@@ -1877,8 +1888,9 @@ function buildJobCard(j) {
   const statusMap = { pending:'pend', quoted:'quot', booked:'book', completed:'done', declined:'decl' };
   const s = statusMap[j.status] || 'pend';
   const quotedLabel = j.quote_sent_to_customer ? 'Awaiting customer' : 'Approved — send quote';
-  const statusLabel = { pending:'Pending approval', quoted:quotedLabel, booked:'Booked', completed:'Completed', declined:'Declined' }[j.status] || j.status;
-  const statusExtra = j.status === 'quoted' && j.quote_sent_to_customer ? ' js-await' : '';
+  const completedLabel = (j.status === 'completed' && !j.paid) ? 'Needs invoice' : 'Completed ✓';
+  const statusLabel = { pending:'Pending approval', quoted:quotedLabel, booked:'Booked', completed:completedLabel, declined:'Declined' }[j.status] || j.status;
+  const statusExtra = j.status === 'quoted' && j.quote_sent_to_customer ? ' js-await' : (j.status === 'completed' && !j.paid ? ' js-inv' : '');
   const photos = j.job_photos || [];
   const parts = j.job_parts || [];
   const prog = statusToProgress(j.status, j);
@@ -2306,8 +2318,6 @@ async function openInvoiceFlow(jobId) {
         paid: m,
         payment_method: m,
         status: 'completed',
-        xero_invoice_id: data.invoiceId || null,
-        xero_invoice_number: data.invoiceNum || null,
         signed_off_at: new Date().toISOString(),
         signed_off_by: currentProfile?.full_name || ''
       }, `?id=eq.${jobId}`);
