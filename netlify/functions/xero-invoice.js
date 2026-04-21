@@ -37,15 +37,12 @@ function buildDescription(job) {
 }
 
 function buildLineItems(job) {
-  // Price is inc VAT — divide by 1.2 to get ex-VAT amount for EXCLUSIVE mode
-  const incVat = parseFloat((job.quote_price || '0').toString().replace(/[^0-9.]/g, '')) || 0;
-  const exVat = Math.round((incVat / 1.2) * 100) / 100;
+  const amount = parseFloat((job.quote_price || '0').toString().replace(/[^0-9.]/g, '')) || 0;
   return [{
     Description: buildDescription(job),
     Quantity: 1,
-    UnitAmount: exVat,
-    AccountCode: '200',
-    TaxType: 'OUTPUT2'
+    UnitAmount: amount,
+    AccountCode: '200'
   }];
 }
 
@@ -112,7 +109,7 @@ exports.handler = async (event) => {
           Status: status,
           Contact: contact ? { ContactID: contact.ContactID } : buildContact(job),
           Reference: reference,
-          LineAmountTypes: 'EXCLUSIVE',  // Prices ex-VAT, Xero adds 20% VAT
+          // No LineAmountTypes — let Xero use org default
           LineItems: buildLineItems(job),
           DueDate: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
           CurrencyCode: 'GBP'
