@@ -3415,6 +3415,7 @@ function buildTechCard(j) {
         <div class="tech-job-name">${esc(j.customer_name||'Unknown')}</div>
         <div class="tech-job-sub">
           <span>${esc(j.vehicle||'—')}</span>
+          ${j.booking_time?`<span style="font-weight:600;color:var(--blue)">${esc(j.booking_time)}</span>`:''}
           ${j.job_location==='mobile'?'<span class="badge bdg-mob">Mobile</span>':'<span class="badge bdg-ws">Workshop</span>'}
           ${j.duration_days > 1
             ? `<span class="badge bdg-dur">${j.duration_days}-day job</span>`
@@ -3437,6 +3438,7 @@ function buildTechCard(j) {
             <a href="sms:${esc(j.customer_phone)}" style="background:var(--blue-bg);color:var(--blue-txt);padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;text-decoration:none">Text</a>
           </div>` : '—'}
         </div></div>
+        <div class="tech-info-item"><div class="tech-info-lbl">Appointment</div><div class="tech-info-val" style="font-size:15px;font-weight:700;color:var(--blue)">${j.booking_time||'Time not set'}${j.booking_date?' · '+fmtDate(j.booking_date):''}</div></div>
         <div class="tech-info-item"><div class="tech-info-lbl">Location</div><div class="tech-info-val">${j.job_location==='mobile'?'Mobile — go to customer':'Workshop'}${j.cd_required?' + C&D':''}</div></div>
         ${j.customer_address ? `<div class="tech-info-item full"><div class="tech-info-lbl">Address</div><div class="tech-info-val" style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap">
           <span>${esc(j.customer_address)}</span>
