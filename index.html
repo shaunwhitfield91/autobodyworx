@@ -250,6 +250,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .cal-evt-S{background:var(--blue-bg);color:var(--blue-txt)}
 .cal-evt-C{background:var(--amber-bg);color:var(--amber-txt)}
 .cal-evt-B{background:var(--teal-bg);color:var(--teal-txt)}
+.cal-evt-done{opacity:.6;text-decoration:line-through}
 .cal-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 .dot-S{background:var(--blue)}.dot-C{background:var(--amber)}.dot-B{background:var(--teal)}
 .cal-more{font-size:10px;color:var(--muted);padding:0 2px;font-weight:500}
@@ -1091,8 +1092,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="dp-row"><span class="dp-lbl">Phone</span><span class="dp-val" id="dp-phone"></span></div>
     <div class="dp-row" id="dp-notes-row"><span class="dp-lbl">Notes</span><span class="dp-val" id="dp-notes"></span></div>
     <div class="dp-actions">
-      <button class="btn-secondary" onclick="openDiaryEdit()">Edit job</button>
-      <button class="btn-danger" onclick="deleteDiaryAppointment()">Delete appointment</button>
+      <button class="btn-primary" onclick="openDiaryEdit()" style="flex:1">Edit job</button>
+      <button class="btn-secondary" onclick="openDiaryJobCard()" style="flex:1">View card</button>
+      <button class="btn-secondary" onclick="deleteDiaryAppointment()" style="color:var(--red)">Delete</button>
     </div>
   </div>
 </div>
@@ -1550,14 +1552,17 @@ function applyRole() {
   const isTech = role === 'tech';
   const isAdmin = role === 'admin';
 
-  // My Jobs tab — visible to all (techs AND admins who do repairs)
+  // Tab visibility by role
   document.getElementById('t-tech').style.display = 'flex';
-  // Settings tab — admin only
-  document.getElementById('t-settings').style.display = isAdmin ? 'flex' : 'none';
-  // New quote tab — visible to all (techs can start a quote too)
   document.getElementById('t-quote').style.display = 'flex';
+  document.getElementById('t-settings').style.display = isAdmin ? 'flex' : 'none';
+  // Techs only see My Jobs + New Quote — hide everything else
+  ['t-home','t-jobs','t-diary'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = isTech ? 'none' : 'flex';
+  });
 
-  // Hide admin-only elements for tech
+  // Hide admin-only elements for tech/staff
   document.querySelectorAll('.role-admin').forEach(el => {
     if (!isAdmin) el.classList.add('role-hidden');
   });
@@ -1705,8 +1710,8 @@ function renderHomeAttention() {
   if (pending.length) items.push(`
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:8px" onclick="switchTab('jobs');setFilter('pending')">
       <div style="width:28px;height:28px;background:var(--amber-bg);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">📋</div>
-      <div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--txt)">${pending.length} quote${pending.length>1?'s':''} awaiting approval</div><div style="font-size:11px;color:var(--muted)">${pending.map(j=>j.customer_name||'Unknown').slice(0,3).join(' · ')}</div></div>
-      <span class="badge" style="background:var(--amber-bg);color:var(--amber-txt)">Pending</span>
+      <div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--txt)">${pending.length} job${pending.length>1?'s':''} need${pending.length===1?'s':''} your quote</div><div style="font-size:11px;color:var(--muted)">${pending.map(j=>j.customer_name||'Unknown').slice(0,3).join(' · ')}</div></div>
+      <span class="badge" style="background:var(--amber-bg);color:var(--amber-txt)">Quote needed</span>
     </div>`);
 
   // Jobs awaiting customer response for 3+ days
@@ -1744,8 +1749,12 @@ function renderHomeToday() {
   }
   el.innerHTML = todayJobs.map(j => {
     const techCol = j.assigned_tech === 'Charles' ? 'var(--amber)' : j.assigned_tech === 'Both' ? 'var(--teal)' : 'var(--blue)';
-    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;border-left:4px solid ${techCol};margin-bottom:8px;cursor:pointer" onclick="switchTab('jobs')">
-      <div style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:3px">${esc(j.customer_name||'Unknown')}</div>
+    const isDone = j.status === 'completed';
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;border-left:4px solid ${isDone?'#6ee7b7':techCol};margin-bottom:8px;cursor:pointer;${isDone?'opacity:.75':''}" onclick="switchTab('jobs')">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+        <div style="font-size:13px;font-weight:700;color:var(--txt)">${esc(j.customer_name||'Unknown')}</div>
+        ${isDone?'<span style="background:#d1fae5;color:#064e3b;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">✓ Completed</span>':`<span style="font-size:12px;color:var(--muted);font-weight:500">${j.booking_time||'09:00'}</span>`}
+      </div>
       <div style="font-size:11px;color:var(--muted);margin-bottom:5px">${esc(j.vehicle||'')} · ${esc(j.panels||'')}</div>
       ${j.customer_address?`<div style="font-size:10px;color:var(--muted);margin-bottom:4px">${esc(j.customer_address)}</div>`:''}
       <div style="display:flex;gap:5px;flex-wrap:wrap">
@@ -1911,8 +1920,11 @@ function buildJobCard(j) {
     actions = `<button class="btn-primary" onclick="event.stopPropagation();sendXeroInvoice(${j.id},'deposit')" style="font-size:11px">Parts deposit invoice</button>
                <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>`;
   } else if (j.status === 'completed' && !j.paid) {
-    actions = `<button class="btn-primary" onclick="event.stopPropagation();openInvoiceFlow(${j.id})" style="font-size:11px">Send invoice / receipt</button>
+    actions = `<button class="btn-primary" onclick="event.stopPropagation();openInvoiceFlow(${j.id})" style="font-size:11px">Create invoice / receipt</button>
                <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>`;
+  } else if (j.status === 'completed' && j.paid) {
+    actions = `<button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>
+               <button class="btn-primary" onclick="event.stopPropagation();openInvoiceFlow(${j.id})" style="font-size:11px">Create invoice / receipt</button>`;
   }
 
   // Parts summary
@@ -1935,7 +1947,12 @@ function buildJobCard(j) {
   // Photos
   let photosHtml = `<div class="jbf" style="margin-bottom:6px">Photos</div>
     <div class="photos-row">
-      ${photos.map(p=>`<img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="photo-thumb" alt="damage" onclick="event.stopPropagation();window.open(this.src,'_blank')">`).join('')}
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+        ${photos.map(p=>`<div style="position:relative;display:inline-block">
+          <img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="photo-thumb" alt="damage" onclick="event.stopPropagation();window.open(this.src,'_blank')">
+          ${currentProfile?.role==='admin'||currentProfile?.role==='admin_staff'?`<button onclick="event.stopPropagation();deletePhoto(${p.id})" style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--red);border:none;color:#fff;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;font-weight:700;padding:0">✕</button>`:''}
+        </div>`).join('')}
+      </div>
       <div class="photo-add" onclick="event.stopPropagation()" title="Add photo">+</div>
     </div>`;
 
@@ -2506,10 +2523,11 @@ function renderMonthView() {
         const tipDur = tipDays > 1 ? `${tipDays}-day job` : (e.duration||'—');
         const tipCd = e.cd_required?' + C&D':'';
         const tipTech = e.assigned_tech||'';
-        html += `<div class="cal-evt cal-evt-${tc}"
+        const isDone = e.status === 'completed';
+        html += `<div class="cal-evt cal-evt-${tc}${isDone?' cal-evt-done':''}"
           onmouseenter="showDiaryTip(event,'${tipName}','${tipVeh}','${tipAddr}','${tipPrice}','${tipLoc}','${tipDur}','${tipCd}','${tipTech}')"
           onmouseleave="hideDiaryTip()"
-        ><div class="cal-dot dot-${tc}"></div>${firstName}${durShort}</div>`;
+        ><div class="cal-dot dot-${tc}"></div>${isDone?'✓ ':''}${firstName}${durShort}</div>`;
         shown++;
       });
       if (filteredEvts.length > 3) html += `<div class="cal-more">+${filteredEvts.length-3} more</div>`;
@@ -2672,7 +2690,11 @@ function closeDiaryPopup() { document.getElementById('diaryPopup').classList.rem
 
 function openDiaryEdit() {
   closeDiaryPopup();
-  // Switch to jobs and open that card
+  openEditModal(diaryJobIdForPopup);
+}
+
+function openDiaryJobCard() {
+  closeDiaryPopup();
   switchTab('jobs');
   setTimeout(() => {
     openJobId = diaryJobIdForPopup;
@@ -3320,7 +3342,10 @@ function buildTechCard(j) {
             onchange="handleTechPhotos(${j.id},this)">
         </label>
         <div class="tech-after-thumbs" id="taf-${j.id}">
-          ${amq.map(p=>`<img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="tech-after-thumb" alt="after" onclick="window.open(this.src,'_blank')">`).join('')}
+          ${amq.map(p=>`<div style="position:relative;display:inline-block">
+          <img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="tech-after-thumb" alt="after" onclick="window.open(this.src,'_blank')">
+          <button onclick="event.stopPropagation();deletePhoto(${p.id},true)" style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--red);border:none;color:#fff;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;font-weight:700;padding:0">✕</button>
+        </div>`).join('')}
         </div>
         <div class="tech-section-lbl">Panel condition notes</div>
         <textarea class="tech-edit-inp" id="tpn-${j.id}" placeholder="Any notes on panel condition, issues found..." rows="2">${esc(j.notes||'')}</textarea>
@@ -4005,6 +4030,26 @@ function checkForNewNotifs(freshJobs) {
       );
     }
   });
+}
+
+// ═══════════════════════════════════════════════════════════
+// DELETE PHOTO
+// ═══════════════════════════════════════════════════════════
+async function deletePhoto(photoId, isTechView) {
+  if (!confirm('Delete this photo? This cannot be undone.')) return;
+  try {
+    await sbRaw('DELETE', 'job_photos', null, `?id=eq.${photoId}`);
+    showToast('Photo deleted');
+    await loadJobs();
+    // Re-open current job card if in jobs view
+    if (openJobId) {
+      setTimeout(() => {
+        const el = document.getElementById('jc-' + openJobId);
+        if (el) { el.classList.add('open'); el.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+      }, 150);
+    }
+    if (isTechView) renderTechPortal();
+  } catch(e) { alert('Failed: ' + e.message); }
 }
 
 // ═══════════════════════════════════════════════════════════
