@@ -31,17 +31,19 @@ async function refreshIfNeeded(tokens, supabaseUrl, supabaseKey) {
 
 function buildDescription(job) {
   const panels = (job.panels || '').trim();
-  if (job._is_deposit) return panels ? `Parts deposit - ${panels}` : 'Parts deposit - Vehicle parts';
-  if (job._is_balance) return panels ? `Body repairs - ${panels} (balance after deposit)` : 'Body repairs - Vehicle bodywork repair (balance after deposit)';
-  return panels ? `Body repairs - ${panels}` : 'Body repairs - Vehicle bodywork repair';
+  if (job._is_deposit) return panels ? `Parts deposit — ${panels}` : 'Parts deposit — Vehicle parts';
+  if (job._is_balance) return panels ? `Body repairs — ${panels} (balance after deposit)` : 'Body repairs — Vehicle bodywork repair (balance after deposit)';
+  return panels ? `Body repairs — ${panels}` : 'Body repairs — Vehicle bodywork repair';
 }
 
 function buildLineItems(job) {
-  const amount = parseFloat((job.quote_price || job.invoice_amount || '0').toString().replace(/[^0-9.]/g, '')) || 0;
+  // Price is inc VAT — divide by 1.2 to get ex-VAT amount for EXCLUSIVE mode
+  const incVat = parseFloat((job.quote_price || '0').toString().replace(/[^0-9.]/g, '')) || 0;
+  const exVat = Math.round((incVat / 1.2) * 100) / 100;
   return [{
     Description: buildDescription(job),
     Quantity: 1,
-    UnitAmount: amount,
+    UnitAmount: exVat,
     AccountCode: '200',
     TaxType: 'OUTPUT2'
   }];
@@ -64,24 +66,15 @@ exports.handler = async (event) => {
   let job, payMethod;
   try {
     const p = JSON.parse(event.body);
-    // Support both new format { job, payMethod } and legacy { jobId, paymentMethod }
     job = p.job;
-    payMethod = p.payMethod || p.paymentMethod;
-
-    // Legacy: if jobId sent instead of full job, fetch it from Supabase
-    if (!job && p.jobId) {
-      const res = await fetch(`${supabaseUrl}/rest/v1/jobs?id=eq.${p.jobId}&limit=1`, {
-        headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
-      });
-      const data = await res.json();
-      job = data && data[0];
-    }
+    payMethod = p.payMethod;
   } catch (e) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid body: ' + e.message }) };
+    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid body' }) };
   }
 
-  if (!job) return { statusCode: 400, body: JSON.stringify({ error: 'No job data provided' }) };
-  if (!job.customer_name) job.customer_name = 'Unknown Customer';
+  if (!job || !job.customer_name) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Job data missing — customer_name required' }) };
+  }
 
   if (payMethod === 'cash') return { statusCode: 200, body: JSON.stringify({ skipped: true }) };
 
@@ -89,6 +82,7 @@ exports.handler = async (event) => {
     const tokens = await getTokens(supabaseUrl, supabaseKey);
     const accessToken = await refreshIfNeeded(tokens, supabaseUrl, supabaseKey);
     const tenantId = tokens.tenant_id;
+
     const xH = {
       'Authorization': `Bearer ${accessToken}`,
       'Xero-tenant-id': tenantId,
@@ -104,11 +98,11 @@ exports.handler = async (event) => {
     const cData = await cRes.json();
     const contact = cData?.Contacts?.[0];
 
-    const vehicleInfo = [job.vehicle, job.colour].filter(Boolean).join(' - ');
-    const reference = `PanelPro${job.id ? ' #' + job.id : ''}${vehicleInfo ? ' — ' + vehicleInfo : ''}`;
+    const vehicleInfo = [job.vehicle, job.colour].filter(Boolean).join(' — ');
+    const reference = `PanelPro #${job.id}${vehicleInfo ? ' — ' + vehicleInfo : ''}`;
 
-    // DRAFT for bacs/nopay, AUTHORISED for card
-    const status = (payMethod === 'card') ? 'AUTHORISED' : 'DRAFT';
+    // AUTHORISED for card (paid immediately), DRAFT for bacs/nopay (awaiting payment)
+    const status = payMethod === 'card' ? 'AUTHORISED' : 'DRAFT';
 
     const iRes = await fetch('https://api.xero.com/api.xro/2.0/Invoices', {
       method: 'POST', headers: xH,
@@ -118,21 +112,24 @@ exports.handler = async (event) => {
           Status: status,
           Contact: contact ? { ContactID: contact.ContactID } : buildContact(job),
           Reference: reference,
-          LineAmountTypes: 'INCLUSIVE',
+          LineAmountTypes: 'EXCLUSIVE',  // Prices ex-VAT, Xero adds 20% VAT
           LineItems: buildLineItems(job),
-          DueDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+          DueDate: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
           CurrencyCode: 'GBP'
         }]
       })
     });
     const iData = await iRes.json();
     const invoice = iData?.Invoices?.[0];
-    if (!invoice || invoice.HasErrors) throw new Error('Xero invoice error: ' + JSON.stringify(iData?.Invoices?.[0]?.ValidationErrors || iData));
 
-    // Card — record payment against the invoice
+    if (!invoice || invoice.HasErrors) {
+      throw new Error('Xero invoice error: ' + JSON.stringify(iData?.Invoices?.[0]?.ValidationErrors || iData));
+    }
+
+    // Card — record payment against invoice
     if (payMethod === 'card' && invoice.InvoiceID) {
-      const amount = parseFloat((job.quote_price || job.invoice_amount || '0').toString().replace(/[^0-9.]/g, '')) || 0;
-      if (amount > 0) {
+      const incVat = parseFloat((job.quote_price || '0').toString().replace(/[^0-9.]/g, '')) || 0;
+      if (incVat > 0) {
         await fetch('https://api.xero.com/api.xro/2.0/Payments', {
           method: 'PUT', headers: xH,
           body: JSON.stringify({
@@ -140,7 +137,7 @@ exports.handler = async (event) => {
               Invoice: { InvoiceID: invoice.InvoiceID },
               Account: { Code: '090' },
               Date: new Date().toISOString().split('T')[0],
-              Amount: amount,
+              Amount: incVat,
               Reference: `Card — ${reference}`
             }]
           })
@@ -157,6 +154,7 @@ exports.handler = async (event) => {
         type: payMethod === 'card' ? 'receipt' : 'invoice'
       })
     };
+
   } catch (e) {
     console.error('Xero error:', e.message);
     return { statusCode: 500, body: JSON.stringify({ error: e.message }) };
