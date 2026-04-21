@@ -2269,37 +2269,66 @@ async function saveNewJob() {
 // XERO INVOICE
 // ═══════════════════════════════════════════════════════════
 async function openInvoiceFlow(jobId) {
-  const j = allJobs.find(x => x.id === jobId);
-  if (!j) return;
-  const method = prompt(`Payment method for ${j.customer_name}?\n\nType: card, bacs, or cash`,'card');
+  const j = allJobs.find(x => x.id === jobId)
+             || declinedJobs?.find(x => x.id === jobId);
+  if (!j) { alert('Job not found — try refreshing'); return; }
+  const method = prompt(`Payment method for ${j.customer_name||'customer'}?\n\nType: card, bacs, cash, or nopay (invoice later)`, 'card');
   if (!method) return;
   const m = method.toLowerCase().trim();
-  if (!['card','bacs','cash'].includes(m)) { showToast('Enter card, bacs or cash'); return; }
+  if (!['card','bacs','cash','nopay'].includes(m)) { showToast('Enter: card, bacs, cash, or nopay'); return; }
+
   if (m === 'cash') {
-    await sbRaw('PATCH', 'jobs', { paid: true, payment_method: 'cash', signed_off_at: new Date().toISOString(), signed_off_by: currentProfile?.full_name }, `?id=eq.${jobId}`);
-    showToast('Marked as paid (cash — no Xero invoice)');
+    // Cash — just mark paid, no Xero
+    await sbRaw('PATCH', 'jobs', {
+      paid: 'cash',
+      payment_method: 'cash',
+      status: 'completed',
+      signed_off_at: new Date().toISOString(),
+      signed_off_by: currentProfile?.full_name || ''
+    }, `?id=eq.${jobId}`);
+    showToast('✓ Marked as paid (cash — no Xero invoice)');
     await loadJobs();
     return;
   }
+
   try {
     showToast('Creating Xero invoice...');
+    // Send the full job object so Xero function has all the data it needs
     const res = await fetch(XERO_FN, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jobId, paymentMethod: m, type: 'final' })
+      body: JSON.stringify({ job: j, payMethod: m })
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
-    await sbRaw('PATCH', 'jobs', { paid: m === 'card', payment_method: m, signed_off_at: new Date().toISOString(), signed_off_by: currentProfile?.full_name }, `?id=eq.${jobId}`);
-    showToast(m === 'card' ? '✓ Paid — receipt sent to Xero' : '✓ Draft invoice created in Xero');
+    if (!data.skipped) {
+      await sbRaw('PATCH', 'jobs', {
+        paid: m,
+        payment_method: m,
+        status: 'completed',
+        xero_invoice_id: data.invoiceId || null,
+        xero_invoice_number: data.invoiceNum || null,
+        signed_off_at: new Date().toISOString(),
+        signed_off_by: currentProfile?.full_name || ''
+      }, `?id=eq.${jobId}`);
+    }
+    const msg = m === 'card' ? '✓ Card payment — receipt created in Xero'
+               : m === 'nopay' ? '✓ Draft invoice created in Xero'
+               : '✓ BACS invoice created in Xero';
+    showToast(msg);
     await loadJobs();
   } catch(e) { alert('Xero error: ' + e.message); }
 }
 
 async function sendXeroInvoice(jobId, type) {
+  const j = allJobs.find(x => x.id === jobId);
+  if (!j) { alert('Job not found'); return; }
   try {
     showToast('Sending parts deposit invoice...');
-    const res = await fetch(XERO_FN, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ jobId, type: 'deposit' }) });
+    // Mark job as deposit type so buildDescription in Xero function uses right text
+    const jobForXero = { ...j, _is_deposit: true };
+    const res = await fetch(XERO_FN, { method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ job: jobForXero, payMethod: 'nopay' }) });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     await sbRaw('PATCH', 'jobs', { deposit_invoice_sent: true }, `?id=eq.${jobId}`);
@@ -3529,9 +3558,11 @@ async function completeTechJob(jobId) {
     payMethodSelected = null;
     await loadJobs();
     renderTechPortal();
-    // Trigger Xero if card
-    if (updates.payment_method === 'card') {
-      fetch(XERO_FN, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ jobId, paymentMethod:'card', type:'final' }) }).catch(()=>{});
+    // Trigger Xero if card or bacs — send full job object
+    if (updates.payment_method === 'card' || updates.payment_method === 'bacs') {
+      const jobForXero = { ...allJobs.find(x => x.id === jobId), ...updates };
+      fetch(XERO_FN, { method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ job: jobForXero, payMethod: updates.payment_method }) }).catch(()=>{});
     }
   } catch(e) { alert('Failed: ' + e.message); }
 }
