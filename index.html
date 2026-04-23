@@ -182,6 +182,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .parts-table td{padding:6px 8px;border-bottom:1px solid var(--border);color:var(--txt)}
 .parts-table tr:last-child td{border-bottom:none}
 .parts-add-row{display:flex;gap:6px;margin-top:8px}
+.jcard:not(.open) .parts-add-row{display:none}
 .parts-inp{flex:1;padding:6px 9px;border:1px solid var(--border2);border-radius:var(--radius);font-size:12px;color:var(--txt);background:var(--surface);font-family:inherit}
 .parts-inp:focus{outline:none;border-color:var(--blue)}
 
@@ -1730,7 +1731,7 @@ function renderHomeAttention() {
       <span class="badge" style="background:#fff7ed;color:#9a3412">Follow up</span>
     </div>`);
 
-  const needsInvoice = allJobs.filter(j => j.status === 'completed' && !j.paid);
+  const needsInvoice = allJobs.filter(j => j.status === 'completed' && !j.invoiced_at);
   if (needsInvoice.length) items.push(`
     <div style="background:#fefce8;border:1px solid #fde047;border-radius:var(--radius-lg);padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:8px" onclick="switchTab('jobs');setFilter('invoice')">
       <div style="width:28px;height:28px;background:#fef9c3;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">💷</div>
@@ -1836,7 +1837,7 @@ function renderJobs() {
     if (currentFilter === 'quoted') return j.status === 'quoted';
     if (currentFilter === 'booked') return j.status === 'booked';
     if (currentFilter === 'done') return j.status === 'completed';
-    if (currentFilter === 'invoice') return j.status === 'completed' && !j.paid;
+    if (currentFilter === 'invoice') return j.status === 'completed' && !j.invoiced_at;
     if (currentFilter === 'mine') return j.assigned_tech === (currentProfile?.full_name||'');
     return true;
   });
@@ -1888,9 +1889,9 @@ function buildJobCard(j) {
   const statusMap = { pending:'pend', quoted:'quot', booked:'book', completed:'done', declined:'decl' };
   const s = statusMap[j.status] || 'pend';
   const quotedLabel = j.quote_sent_to_customer ? 'Awaiting customer' : 'Approved — send quote';
-  const completedLabel = (j.status === 'completed' && !j.paid) ? 'Needs invoice' : 'Completed ✓';
+  const completedLabel = (j.status === 'completed' && !j.invoiced_at) ? 'Needs invoice' : 'Completed ✓';
   const statusLabel = { pending:'Pending approval', quoted:quotedLabel, booked:'Booked', completed:completedLabel, declined:'Declined' }[j.status] || j.status;
-  const statusExtra = j.status === 'quoted' && j.quote_sent_to_customer ? ' js-await' : (j.status === 'completed' && !j.paid ? ' js-inv' : '');
+  const statusExtra = j.status === 'quoted' && j.quote_sent_to_customer ? ' js-await' : (j.status === 'completed' && !j.invoiced_at ? ' js-inv' : '');
   const photos = j.job_photos || [];
   const parts = j.job_parts || [];
   const prog = statusToProgress(j.status, j);
@@ -1931,12 +1932,22 @@ function buildJobCard(j) {
   } else if (j.status === 'booked' && currentProfile?.role !== 'tech') {
     actions = `<button class="btn-primary" onclick="event.stopPropagation();sendXeroInvoice(${j.id},'deposit')" style="font-size:11px">Parts deposit invoice</button>
                <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>`;
-  } else if (j.status === 'completed' && !j.paid) {
-    actions = `<button class="btn-primary" onclick="event.stopPropagation();openInvoiceFlow(${j.id})" style="font-size:11px">Create invoice / receipt</button>
-               <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>`;
-  } else if (j.status === 'completed' && j.paid) {
-    actions = `<button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>
-               <button class="btn-primary" onclick="event.stopPropagation();openInvoiceFlow(${j.id})" style="font-size:11px">Create invoice / receipt</button>`;
+  } else if (j.status === 'completed' && !j.invoiced_at) {
+    const payHint = j.payment_method ? `Customer paying by ${j.payment_method}` : '';
+    actions = `<div style="width:100%">
+      ${payHint ? `<div style="font-size:11px;color:var(--muted);margin-bottom:8px;padding:5px 8px;background:var(--bg);border-radius:var(--radius)">💬 ${esc(payHint)}</div>` : ''}
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn-primary" onclick="event.stopPropagation();doInvoice(${j.id},'invoice')" style="font-size:11px;flex:1">Send invoice</button>
+        <button class="btn-primary" onclick="event.stopPropagation();doInvoice(${j.id},'receipt')" style="font-size:11px;flex:1;background:var(--teal)">Send receipt</button>
+        <button class="btn-secondary" onclick="event.stopPropagation();doInvoice(${j.id},'none')" style="font-size:11px">Not needed</button>
+      </div>
+      <div style="margin-top:6px">
+        <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>
+      </div>
+    </div>`;
+  } else if (j.status === 'completed' && j.invoiced_at) {
+    // Fully done — edit only
+    actions = `<button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>`;
   }
 
   // Parts summary
@@ -2017,7 +2028,7 @@ function buildJobCard(j) {
       </div>
       <!-- Parts -->
       ${partsHtml}
-      <div class="parts-add-row">
+      <div class="parts-add-row" id="par-${j.id}">
         <input class="parts-inp" id="pn-${j.id}" placeholder="Part name">
         <input class="parts-inp" id="pq-${j.id}" placeholder="Qty" style="width:60px">
         <input class="parts-inp" id="pp-${j.id}" placeholder="£" style="width:70px">
@@ -2280,54 +2291,69 @@ async function saveNewJob() {
 // ═══════════════════════════════════════════════════════════
 // XERO INVOICE
 // ═══════════════════════════════════════════════════════════
-async function openInvoiceFlow(jobId) {
-  const j = allJobs.find(x => x.id === jobId)
-             || declinedJobs?.find(x => x.id === jobId);
+// doInvoice — called by Chloe from the Needs Invoice tab
+// type: 'invoice' (BACS/awaiting payment), 'receipt' (card/already paid), 'none' (no Xero needed)
+async function doInvoice(jobId, type) {
+  const j = allJobs.find(x => x.id === jobId);
   if (!j) { alert('Job not found — try refreshing'); return; }
-  const method = prompt(`Payment method for ${j.customer_name||'customer'}?\n\nType: card, bacs, cash, or nopay (invoice later)`, 'card');
-  if (!method) return;
-  const m = method.toLowerCase().trim();
-  if (!['card','bacs','cash','nopay'].includes(m)) { showToast('Enter: card, bacs, cash, or nopay'); return; }
 
-  if (m === 'cash') {
-    // Cash — just mark paid, no Xero
+  if (type === 'none') {
+    // No invoice needed — mark as paid/done without Xero
+    if (!confirm(`Mark ${j.customer_name||'this job'} as invoiced without sending to Xero?`)) return;
+    await sbRaw('PATCH', 'jobs', {
+      paid: j.payment_method || 'none',
+      invoiced_at: new Date().toISOString(),
+      invoiced_by: currentProfile?.full_name || ''
+    }, `?id=eq.${jobId}`);
+    showToast('✓ Marked as complete — no invoice sent');
+    await loadJobs();
+    return;
+  }
+
+  // Determine Xero payMethod from type + payment_method recorded by tech
+  // invoice = BACS/awaiting payment = DRAFT in Xero
+  // receipt = already paid (card/cash) = AUTHORISED + payment recorded
+  const payMethod = type === 'receipt'
+    ? (j.payment_method === 'cash' ? 'cash' : 'card')
+    : 'nopay';
+
+  if (payMethod === 'cash') {
+    // Cash receipt — no Xero, just mark paid
     await sbRaw('PATCH', 'jobs', {
       paid: 'cash',
-      payment_method: 'cash',
-      status: 'completed',
-      signed_off_at: new Date().toISOString(),
-      signed_off_by: currentProfile?.full_name || ''
+      invoiced_at: new Date().toISOString(),
+      invoiced_by: currentProfile?.full_name || ''
     }, `?id=eq.${jobId}`);
-    showToast('✓ Marked as paid (cash — no Xero invoice)');
+    showToast('✓ Cash receipt — marked as paid');
     await loadJobs();
     return;
   }
 
   try {
-    showToast('Creating Xero invoice...');
-    // Send the full job object so Xero function has all the data it needs
+    showToast(type === 'invoice' ? 'Creating invoice in Xero...' : 'Creating receipt in Xero...');
     const res = await fetch(XERO_FN, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ job: j, payMethod: m })
+      body: JSON.stringify({ job: j, payMethod })
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
-    if (!data.skipped) {
-      await sbRaw('PATCH', 'jobs', {
-        paid: m,
-        payment_method: m,
-        status: 'completed',
-        signed_off_at: new Date().toISOString(),
-        signed_off_by: currentProfile?.full_name || ''
-      }, `?id=eq.${jobId}`);
-    }
-    const msg = m === 'card' ? '✓ Card payment — receipt created in Xero'
-               : m === 'nopay' ? '✓ Draft invoice created in Xero'
-               : '✓ BACS invoice created in Xero';
+    await sbRaw('PATCH', 'jobs', {
+      paid: type === 'receipt' ? (j.payment_method || 'card') : null,
+      invoiced_at: new Date().toISOString(),
+      invoiced_by: currentProfile?.full_name || ''
+    }, `?id=eq.${jobId}`);
+    const msg = type === 'invoice'
+      ? `✓ Invoice created in Xero — ${data.invoiceNum || ''}`
+      : `✓ Receipt created in Xero — ${data.invoiceNum || ''}`;
     showToast(msg);
     await loadJobs();
   } catch(e) { alert('Xero error: ' + e.message); }
+}
+
+// Keep openInvoiceFlow as alias for completed+paid button
+async function openInvoiceFlow(jobId) {
+  doInvoice(jobId, 'invoice');
 }
 
 async function sendXeroInvoice(jobId, type) {
@@ -3554,11 +3580,10 @@ async function techAddPhoto(jobId) {
 
 async function completeTechJob(jobId) {
   const notes = document.getElementById('tpn-' + jobId)?.value?.trim();
-  // paid column uses text values matching the DB check constraint
-  const paidVal = payMethodSelected === 'none' ? null : payMethodSelected;
+  // Record payment method but leave paid=null — Chloe handles invoicing separately
   const updates = {
     status: 'completed',
-    paid: paidVal,
+    paid: null,
     payment_method: payMethodSelected,
     signed_off_at: new Date().toISOString(),
     signed_off_by: currentProfile?.full_name || 'Tech'
@@ -3566,16 +3591,11 @@ async function completeTechJob(jobId) {
   if (notes) updates.notes = notes;
   try {
     await sbRaw('PATCH', 'jobs', updates, `?id=eq.${jobId}`);
-    showToast('Job marked complete ✓');
+    const payLabel = {card:'Card',cash:'Cash',bacs:'BACS',none:'Invoice later'}[payMethodSelected] || payMethodSelected;
+    showToast('✓ Job complete — ' + payLabel + ' — Chloe will invoice');
     payMethodSelected = null;
     await loadJobs();
     renderTechPortal();
-    // Trigger Xero if card or bacs — send full job object
-    if (updates.payment_method === 'card' || updates.payment_method === 'bacs') {
-      const jobForXero = { ...allJobs.find(x => x.id === jobId), ...updates };
-      fetch(XERO_FN, { method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({ job: jobForXero, payMethod: updates.payment_method }) }).catch(()=>{});
-    }
   } catch(e) { alert('Failed: ' + e.message); }
 }
 
