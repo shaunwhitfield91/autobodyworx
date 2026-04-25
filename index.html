@@ -377,6 +377,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tchrs-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;border-top:1px solid var(--border);user-select:none}
 .tchrs-stat{background:var(--bg);border-radius:var(--radius);padding:10px 12px}
 .tchrs-sl{font-size:11px;color:var(--muted);margin-bottom:4px}
+.hol-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:12px}
+.hol-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;user-select:none}
+.hol-hd:hover{background:var(--bg)}
+.hol-stat{background:var(--bg);border-radius:var(--radius);padding:10px 12px;text-align:center}
+.hol-stat-n{font-size:22px;font-weight:700;color:var(--txt);line-height:1}
+.hol-stat-l{font-size:11px;color:var(--muted);margin-top:3px}
+.hol-row{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-bottom:1px solid var(--border);font-size:12px}
+.hol-row:last-child{border-bottom:none}
+.hol-approved{background:#d1fae5;color:#064e3b;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700}
+.hol-pending{background:#fef9c3;color:#854d0e;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700}
+.hol-rejected{background:#fee2e2;color:#991b1b;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700}
 .tchrs-sn{font-size:20px;font-weight:700;color:var(--txt);line-height:1}
 .tchrs-row{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border-bottom:1px solid var(--border);font-size:13px}
 .tchrs-row:last-child{border-bottom:none}
@@ -906,6 +917,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           </div>
         </div>
       </div>
+      <!-- HOLIDAY CARD — tech only -->
+      <div class="hol-bar" id="holCard">
+        <div class="hol-hd" onclick="toggleHolBody()">
+          <div>
+            <div class="tclock-lbl">Holiday entitlement</div>
+            <div class="tclock-summary" id="holSummary">Loading...</div>
+          </div>
+          <span class="tclock-chev" id="holChev">&#9650;</span>
+        </div>
+        <div id="holBody" style="border-top:1px solid var(--border)">
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:12px 14px">
+            <div class="hol-stat"><div class="hol-stat-n">28</div><div class="hol-stat-l">Total days</div></div>
+            <div class="hol-stat"><div class="hol-stat-n" id="holUsed">0</div><div class="hol-stat-l">Used</div></div>
+            <div class="hol-stat"><div class="hol-stat-n" id="holLeft">28</div><div class="hol-stat-l">Remaining</div></div>
+          </div>
+          <div style="padding:0 14px 10px">
+            <button class="btn-primary" onclick="openHolRequest()" style="width:100%;padding:10px;font-size:13px">Request holiday</button>
+          </div>
+          <div id="holList" style="border-top:1px solid var(--border)"></div>
+        </div>
+      </div>
       <div id="techPortal"></div>
     </div>
   </div>
@@ -1308,6 +1340,58 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 
+<!-- COMPLETE JOB MODAL (jobs tab — no photo required) -->
+<div class="modal-overlay" id="completeModal" onclick="if(event.target===this)closeCompleteModal()">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-hd">Mark job as complete</div>
+    <div id="completeModalInfo" style="background:var(--blue-bg);border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;font-size:13px;color:var(--blue-txt);font-weight:500"></div>
+    <span class="qlbl">How is the customer paying?</span>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;margin-top:6px">
+      <button class="tech-pay-btn" id="cmb-card" onclick="selectCompleteMethod('card',this)">💳 Card</button>
+      <button class="tech-pay-btn" id="cmb-bacs" onclick="selectCompleteMethod('bacs',this)">🏦 BACS</button>
+      <button class="tech-pay-btn" id="cmb-cash" onclick="selectCompleteMethod('cash',this)">💷 Cash</button>
+      <button class="tech-pay-btn" id="cmb-none" onclick="selectCompleteMethod('none',this)">📄 Invoice later</button>
+    </div>
+    <span class="qlbl">Notes (optional)</span>
+    <textarea class="minp" id="complete_notes" rows="2" placeholder="Any handover notes..." style="resize:vertical;margin-bottom:10px"></textarea>
+    <div style="display:flex;gap:8px">
+      <button class="btn-primary" id="completeConfirmBtn" onclick="confirmComplete()" style="flex:1;padding:10px" disabled>Confirm complete</button>
+      <button class="btn-secondary" onclick="closeCompleteModal()" style="flex:1;padding:10px">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- HOLIDAY REQUEST MODAL -->
+<div class="modal-overlay" id="holModal" onclick="if(event.target===this)closeHolModal()">
+  <div class="modal-box" style="max-width:400px">
+    <div class="modal-hd">Request holiday</div>
+    <div class="modal-grid2">
+      <div><span class="qlbl">From date</span><input class="minp" type="date" id="hol_from"></div>
+      <div><span class="qlbl">To date</span><input class="minp" type="date" id="hol_to"></div>
+    </div>
+    <span class="qlbl">Reason (optional)</span>
+    <input class="minp" id="hol_reason" placeholder="e.g. Family holiday, appointment...">
+    <div style="background:var(--blue-bg);border-radius:var(--radius);padding:8px 12px;margin:10px 0;font-size:12px;color:var(--blue-txt)" id="holDaysCount">Select dates to see number of days</div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn-primary" onclick="submitHolRequest()" style="flex:1;padding:10px">Submit request</button>
+      <button class="btn-secondary" onclick="closeHolModal()" style="flex:1;padding:10px">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- HOLIDAY APPROVE MODAL (Shaun) -->
+<div class="modal-overlay" id="holApproveModal" onclick="if(event.target===this)closeHolApproveModal()">
+  <div class="modal-box" style="max-width:400px">
+    <div class="modal-hd">Holiday request</div>
+    <div id="holApproveInfo" style="background:var(--bg);border-radius:var(--radius);padding:12px;margin-bottom:14px;font-size:13px;line-height:1.6"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-approve" onclick="respondHol('approved')" style="flex:1;padding:10px">Approve ✓</button>
+      <button class="btn-danger" onclick="respondHol('rejected')" style="flex:1;padding:10px">Decline ✗</button>
+      <button class="btn-secondary" onclick="closeHolApproveModal()" style="padding:10px">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- DIARY HOVER TOOLTIP -->
 <div id="diaryHoverTip" style="display:none;position:fixed;z-index:9000;background:#111827;color:#fff;border-radius:8px;padding:8px 12px;font-size:12px;line-height:1.6;min-width:180px;max-width:260px;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.3)"></div>
 
@@ -1574,9 +1658,11 @@ function applyRole() {
     if (isTech) el.classList.add('role-hidden');
   });
 
-  // Show time clock only for techs
+  // Show time clock and holiday card only for techs
   const clockCard = document.getElementById('tclockCard');
   if (clockCard) clockCard.style.display = isTech ? 'block' : 'none';
+  const holCard = document.getElementById('holCard');
+  if (holCard) holCard.style.display = isTech ? 'block' : 'none';
 
   // Request notification permission
   requestNotifPermission();
@@ -1612,7 +1698,7 @@ function switchTab(t) {
   if (t === 'jobs') { renderJobs(); renderDeclined(); }
   if (t === 'home') { updateHomeStats(); renderHome(); }
   if (t === 'diary') { renderDiary(); renderRevBar(); }
-  if (t === 'tech') { loadTclockState(); }
+  if (t === 'tech') { loadTclockState(); if (currentProfile?.role === 'tech') loadHolidays(); }
   if (t === 'tech') { renderTechPortal(); }
   if (t === 'settings') { checkApiKey(); checkXeroStatus(); }
 }
@@ -1702,12 +1788,12 @@ function updateHomeStats() {
   document.getElementById('h-rev').textContent = '£' + revenue.toLocaleString('en-GB', {minimumFractionDigits:0,maximumFractionDigits:0});
 }
 
-function renderHome() {
-  renderHomeAttention();
+async function renderHome() {
+  await renderHomeAttention();
   renderHomeToday();
 }
 
-function renderHomeAttention() {
+async function renderHomeAttention() {
   const el = document.getElementById('h-attention');
   const items = [];
   const pending = allJobs.filter(j => j.status === 'pending');
@@ -1741,6 +1827,27 @@ function renderHomeAttention() {
       </div>
       <span class="badge" style="background:#fef9c3;color:#713f12;flex-shrink:0">Invoice now</span>
     </div>`);
+
+  // Holiday requests — admin only
+  if (currentProfile?.role === 'admin') {
+    try {
+      const holReqs = await loadHolidayRequests();
+      window._pendingHolRequests = holReqs;
+      if (holReqs.length) {
+        items.push(`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:8px">
+          <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🏖 Holiday requests — ${holReqs.length} pending</div>
+          ${holReqs.map(r => {
+            const dateStr = r.from_date===r.to_date ? fmtDate(r.from_date) : fmtDate(r.from_date)+' – '+fmtDate(r.to_date);
+            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);gap:8px">
+              <div><div style="font-size:13px;font-weight:600;color:var(--txt)">${esc(r.tech_name||'')} — ${dateStr}</div>
+              <div style="font-size:11px;color:var(--muted)">${r.days_count} day${r.days_count!==1?'s':''}</div></div>
+              <button class="btn-approve" onclick="openHolApproveModal('${r.id}')" style="font-size:11px;padding:4px 10px;flex-shrink:0">Review</button>
+            </div>`;
+          }).join('')}
+        </div>`);
+      }
+    } catch(e) {}
+  }
 
   if (!items.length) items.push(`<div style="font-size:13px;color:var(--muted);padding:8px 0">All clear — nothing needs attention right now ✓</div>`);
   el.innerHTML = items.join('');
@@ -1930,7 +2037,8 @@ function buildJobCard(j) {
         </div>`;
     }
   } else if (j.status === 'booked' && currentProfile?.role !== 'tech') {
-    actions = `<button class="btn-primary" onclick="event.stopPropagation();sendXeroInvoice(${j.id},'deposit')" style="font-size:11px">Parts deposit invoice</button>
+    actions = `<button class="btn-approve" onclick="event.stopPropagation();openCompleteModal(${j.id})" style="background:var(--teal);font-size:11px">Mark as complete</button>
+               <button class="btn-primary" onclick="event.stopPropagation();sendXeroInvoice(${j.id},'deposit')" style="font-size:11px">Parts deposit</button>
                <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>`;
   } else if (j.status === 'completed' && !j.invoiced_at) {
     const payHint = j.payment_method ? `Customer paying by ${j.payment_method}` : '';
@@ -2761,11 +2869,14 @@ function openDiaryEdit() {
 function openDiaryJobCard() {
   closeDiaryPopup();
   switchTab('jobs');
+  currentFilter = 'all'; // reset filter so job is definitely visible
   setTimeout(() => {
     openJobId = diaryJobIdForPopup;
     renderJobs();
-    const el = document.getElementById('jc-' + diaryJobIdForPopup);
-    if (el) { el.classList.add('open'); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    setTimeout(() => {
+      const el = document.getElementById('jc-' + diaryJobIdForPopup);
+      if (el) { el.classList.add('open'); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    }, 100);
   }, 100);
 }
 
@@ -4112,6 +4223,255 @@ async function deletePhoto(photoId, isTechView) {
       }, 150);
     }
     if (isTechView) renderTechPortal();
+  } catch(e) { alert('Failed: ' + e.message); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// COMPLETE JOB MODAL (jobs tab)
+// ═══════════════════════════════════════════════════════════
+let _completeJobId = null;
+let _completeMethod = null;
+
+function openCompleteModal(jobId) {
+  _completeJobId = jobId;
+  _completeMethod = null;
+  const j = allJobs.find(x => x.id === jobId);
+  if (!j) return;
+  document.getElementById('completeModalInfo').textContent = j.customer_name + ' — ' + (j.vehicle||'') + ' — ' + (j.quote_price||'TBC');
+  document.getElementById('complete_notes').value = '';
+  document.getElementById('completeConfirmBtn').disabled = true;
+  ['card','bacs','cash','none'].forEach(m => {
+    const btn = document.getElementById('cmb-' + m);
+    if (btn) btn.classList.remove('on');
+  });
+  document.getElementById('completeModal').classList.add('show');
+}
+
+function closeCompleteModal() {
+  document.getElementById('completeModal').classList.remove('show');
+  _completeJobId = null;
+  _completeMethod = null;
+}
+
+function selectCompleteMethod(method, btn) {
+  _completeMethod = method;
+  ['card','bacs','cash','none'].forEach(m => {
+    const b = document.getElementById('cmb-' + m);
+    if (b) b.classList.remove('on');
+  });
+  btn.classList.add('on');
+  document.getElementById('completeConfirmBtn').disabled = false;
+}
+
+async function confirmComplete() {
+  if (!_completeJobId || !_completeMethod) return;
+  const notes = document.getElementById('complete_notes').value.trim();
+  const updates = {
+    status: 'completed',
+    paid: null,
+    payment_method: _completeMethod,
+    signed_off_at: new Date().toISOString(),
+    signed_off_by: currentProfile?.full_name || ''
+  };
+  if (notes) updates.notes = notes;
+  try {
+    await sbRaw('PATCH', 'jobs', updates, `?id=eq.${_completeJobId}`);
+    const payLabel = {card:'Card',bacs:'BACS',cash:'Cash',none:'Invoice later'}[_completeMethod] || _completeMethod;
+    showToast('✓ Job complete — ' + payLabel + ' — awaiting invoice');
+    closeCompleteModal();
+    await loadJobs();
+  } catch(e) { alert('Failed: ' + e.message); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// HOLIDAY SYSTEM
+// ═══════════════════════════════════════════════════════════
+const HOL_ENTITLEMENT = 28;
+let _holRequests = [];
+let _holApproveId = null;
+
+function toggleHolBody() {
+  const body = document.getElementById('holBody');
+  const chev = document.getElementById('holChev');
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  chev.style.transform = open ? 'rotate(180deg)' : '';
+}
+
+async function loadHolidays() {
+  const techName = currentProfile?.full_name || '';
+  try {
+    const rows = await sbRaw('GET','holiday_requests',null,
+      `?tech_name=eq.${encodeURIComponent(techName)}&order=from_date.desc`);
+    _holRequests = rows || [];
+    renderHolidayCard();
+  } catch(e) { console.warn('Holiday load failed', e); }
+}
+
+function countWorkingDays(from, to) {
+  let count = 0;
+  const d = new Date(from);
+  const end = new Date(to);
+  while (d <= end) {
+    const day = d.getDay();
+    if (day !== 0 && day !== 6) count++;
+    d.setDate(d.getDate() + 1);
+  }
+  return count;
+}
+
+function renderHolidayCard() {
+  const approved = _holRequests.filter(r => r.status === 'approved');
+  const used = approved.reduce((s, r) => s + (r.days_count || 0), 0);
+  const left = HOL_ENTITLEMENT - used;
+  const el = id => document.getElementById(id);
+  if (el('holUsed')) el('holUsed').textContent = used;
+  if (el('holLeft')) el('holLeft').textContent = Math.max(0, left);
+  if (el('holSummary')) el('holSummary').textContent = used + ' used · ' + Math.max(0,left) + ' remaining of 28 days';
+
+  // List of requests
+  const list = el('holList');
+  if (list) {
+    if (!_holRequests.length) {
+      list.innerHTML = '<div style="padding:12px 14px;font-size:12px;color:var(--muted)">No holiday requests yet</div>';
+    } else {
+      list.innerHTML = _holRequests.map(r => {
+        const badge = r.status === 'approved'
+          ? '<span class="hol-approved">Approved</span>'
+          : r.status === 'rejected'
+          ? '<span class="hol-rejected">Declined</span>'
+          : '<span class="hol-pending">Pending</span>';
+        const dateStr = r.from_date === r.to_date
+          ? fmtDate(r.from_date)
+          : fmtDate(r.from_date) + ' – ' + fmtDate(r.to_date);
+        return `<div class="hol-row">
+          <div><div style="font-weight:600;color:var(--txt)">${dateStr}</div>
+          <div style="font-size:11px;color:var(--muted)">${r.days_count || 0} day${r.days_count!==1?'s':''}</div></div>
+          ${badge}
+        </div>`;
+      }).join('');
+    }
+  }
+}
+
+function openHolRequest() {
+  document.getElementById('hol_from').value = '';
+  document.getElementById('hol_to').value = '';
+  document.getElementById('hol_reason').value = '';
+  document.getElementById('holDaysCount').textContent = 'Select dates to see number of days';
+  document.getElementById('holModal').classList.add('show');
+  // Update day count when dates change
+  ['hol_from','hol_to'].forEach(id => {
+    document.getElementById(id).addEventListener('change', updateHolDayCount);
+  });
+}
+
+function updateHolDayCount() {
+  const from = document.getElementById('hol_from').value;
+  const to = document.getElementById('hol_to').value;
+  if (from && to && to >= from) {
+    const days = countWorkingDays(from, to);
+    const left = HOL_ENTITLEMENT - (_holRequests.filter(r=>r.status==='approved').reduce((s,r)=>s+(r.days_count||0),0));
+    document.getElementById('holDaysCount').textContent = days + ' working day' + (days!==1?'s':'') + ' · ' + left + ' remaining';
+    document.getElementById('holDaysCount').style.color = days > left ? 'var(--red)' : 'var(--blue-txt)';
+  }
+}
+
+function closeHolModal() {
+  document.getElementById('holModal').classList.remove('show');
+}
+
+async function submitHolRequest() {
+  const from = document.getElementById('hol_from').value;
+  const to = document.getElementById('hol_to').value;
+  const reason = document.getElementById('hol_reason').value.trim();
+  if (!from || !to) { showToast('Select start and end dates'); return; }
+  if (to < from) { showToast('End date must be after start date'); return; }
+  const days = countWorkingDays(from, to);
+  const techName = currentProfile?.full_name || '';
+  try {
+    await sbRaw('POST','holiday_requests',{
+      tech_name: techName,
+      from_date: from,
+      to_date: to,
+      days_count: days,
+      reason: reason || null,
+      status: 'pending',
+      requested_at: new Date().toISOString()
+    });
+    showToast('✓ Holiday request submitted — awaiting approval');
+    closeHolModal();
+    await loadHolidays();
+  } catch(e) { alert('Failed: ' + e.message); }
+}
+
+// Shaun — load all pending holiday requests for Needs Attention
+async function loadHolidayRequests() {
+  try {
+    const rows = await sbRaw('GET','holiday_requests',null,
+      `?status=eq.pending&order=requested_at.desc`);
+    return rows || [];
+  } catch(e) { return []; }
+}
+
+let _holApproveRow = null;
+function openHolApproveModal(id) {
+  const reqs = window._pendingHolRequests || [];
+  const r = reqs.find(x => x.id === id);
+  if (!r) return;
+  _holApproveId = id;
+  _holApproveRow = r;
+  const dateStr = r.from_date === r.to_date
+    ? fmtDate(r.from_date)
+    : fmtDate(r.from_date) + ' to ' + fmtDate(r.to_date);
+  document.getElementById('holApproveInfo').innerHTML =
+    '<strong>' + esc(r.tech_name) + '</strong><br>' +
+    dateStr + ' — ' + r.days_count + ' working day' + (r.days_count!==1?'s':'') +
+    (r.reason ? '<br><em>' + esc(r.reason) + '</em>' : '');
+  document.getElementById('holApproveModal').classList.add('show');
+}
+
+function closeHolApproveModal() {
+  document.getElementById('holApproveModal').classList.remove('show');
+  _holApproveId = null;
+  _holApproveRow = null;
+}
+
+async function respondHol(status) {
+  if (!_holApproveId) return;
+  try {
+    await sbRaw('PATCH','holiday_requests',{
+      status,
+      responded_at: new Date().toISOString(),
+      responded_by: currentProfile?.full_name || 'Shaun'
+    }, `?id=eq.${_holApproveId}`);
+
+    // If approved — add to diary as blocked days
+    if (status === 'approved' && _holApproveRow) {
+      const r = _holApproveRow;
+      const d = new Date(r.from_date);
+      const end = new Date(r.to_date);
+      while (d <= end) {
+        if (d.getDay() !== 0 && d.getDay() !== 6) {
+          await sbRaw('POST','jobs',{
+            customer_name: r.tech_name + ' — Holiday',
+            status: 'booked',
+            booking_date: d.toISOString().split('T')[0],
+            assigned_tech: r.tech_name,
+            job_location: 'workshop',
+            duration: 'Full day',
+            notes: 'Holiday — ' + (r.reason || 'Annual leave'),
+            source: 'Holiday',
+            archived: false
+          });
+        }
+        d.setDate(d.getDate() + 1);
+      }
+    }
+    showToast(status === 'approved' ? '✓ Holiday approved — diary updated' : '✓ Holiday declined');
+    closeHolApproveModal();
+    await loadJobs();
+    renderHome();
   } catch(e) { alert('Failed: ' + e.message); }
 }
 
