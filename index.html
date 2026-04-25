@@ -4353,8 +4353,8 @@ async function loadHolidays() {
 
 function countWorkingDays(from, to) {
   let count = 0;
-  const d = new Date(from);
-  const end = new Date(to);
+  const d = localDate(from);
+  const end = localDate(to);
   while (d <= end) {
     const day = d.getDay();
     if (day !== 0 && day !== 6) count++;
@@ -4492,14 +4492,14 @@ async function respondHol(status) {
     // If approved — add to diary as blocked days
     if (status === 'approved' && _holApproveRow) {
       const r = _holApproveRow;
-      const d = new Date(r.from_date);
-      const end = new Date(r.to_date);
+      const d = localDate(r.from_date);
+      const end = localDate(r.to_date);
       while (d <= end) {
         if (d.getDay() !== 0 && d.getDay() !== 6) {
           await sbRaw('POST','jobs',{
             customer_name: r.tech_name + ' — Holiday',
             status: 'booked',
-            booking_date: d.toISOString().split('T')[0],
+            booking_date: dateToStr(d),
             assigned_tech: r.tech_name,
             job_location: 'workshop',
             duration: 'Full day',
@@ -4599,8 +4599,8 @@ async function saveDiaryEntry() {
 
   try {
     // Insert one job row per working day
-    const d = new Date(from);
-    const end = new Date(toDate);
+    const d = localDate(from);
+    const end = localDate(toDate);
     let count = 0;
     while (d <= end) {
       const isWeekend = d.getDay() === 0 || d.getDay() === 6;
@@ -4608,7 +4608,7 @@ async function saveDiaryEntry() {
         await sbRaw('POST', 'jobs', {
           customer_name: title,
           status: 'booked',
-          booking_date: d.toISOString().split('T')[0],
+          booking_date: dateToStr(d),
           booking_time: time,
           assigned_tech: tech === 'All' ? 'Both' : tech,
           job_location: 'workshop',
@@ -4629,6 +4629,23 @@ async function saveDiaryEntry() {
     await loadJobs();
     renderDiary();
   } catch(e) { alert('Failed: ' + e.message); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// DATE HELPERS
+// ═══════════════════════════════════════════════════════════
+// Parse YYYY-MM-DD as LOCAL time (not UTC) to avoid BST shift issues
+function localDate(str) {
+  if (!str) return new Date();
+  const [y, m, d] = str.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+// Format a local Date object back to YYYY-MM-DD
+function dateToStr(d) {
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
 }
 
 // ═══════════════════════════════════════════════════════════
