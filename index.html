@@ -253,6 +253,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .cal-evt-C{background:var(--amber-bg);color:var(--amber-txt)}
 .cal-evt-B{background:var(--teal-bg);color:var(--teal-txt)}
 .cal-evt-done{opacity:.6;text-decoration:line-through}
+.cal-evt-diary{background:#f3f4f6!important;color:#374151!important;border-left:2px solid #9ca3af}
 .cal-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 .dot-S{background:var(--blue)}.dot-C{background:var(--amber)}.dot-B{background:var(--teal)}
 .cal-more{font-size:10px;color:var(--muted);padding:0 2px;font-weight:500}
@@ -1462,6 +1463,15 @@ let currentDateFilter = 'all';
 let currentRevFilter = 'all';
 let revPanelOpen = false;
 let diaryView = 'month';
+let diaryAllJobs = []; // includes diary entries (holidays etc) — for diary display only
+
+async function loadDiaryJobs() {
+  try {
+    const data = await sbRaw('GET', 'jobs', null,
+      `?select=*&archived=eq.false&status=neq.declined&order=booking_date.asc`);
+    diaryAllJobs = data || [];
+  } catch(e) { diaryAllJobs = allJobs; }
+}
 let revBarYear = new Date().getFullYear();
 let revBarMonth = new Date().getMonth();
 let diaryTechFilter = 'all'; // 'all' | 'shaun' | 'charles' | custom tech name
@@ -1740,7 +1750,7 @@ function switchTab(t) {
 
   if (t === 'jobs') { renderJobs(); renderDeclined(); }
   if (t === 'home') { updateHomeStats(); renderHome(); }
-  if (t === 'diary') { renderDiary(); renderRevBar(); }
+  if (t === 'diary') { loadDiaryJobs().then(() => { renderDiary(); renderRevBar(); }); }
   if (t === 'tech') { loadTclockState(); if (currentProfile?.role === 'tech') loadHolidays(); }
   if (t === 'tech') { renderTechPortal(); }
   if (t === 'settings') { checkApiKey(); checkXeroStatus(); }
@@ -1752,7 +1762,7 @@ function switchTab(t) {
 async function loadJobs() {
   try {
     const data = await sbRaw('GET', 'jobs', null,
-      `?select=*,job_parts(*),job_photos(*)&archived=eq.false&status=neq.declined&order=created_at.desc`);
+      `?select=*,job_parts(*),job_photos(*)&archived=eq.false&status=neq.declined&source=not.in.(Holiday,Appointment,Van%20day,Diary%20entry)&order=created_at.desc`);
     const freshJobs = data || [];
     if (_notifsReady) checkForNewNotifs(freshJobs);
     allJobs = freshJobs;
@@ -2585,8 +2595,10 @@ function renderRevBar() {
   const monthName = months[revBarMonth] + ' ' + revBarYear;
 
   // Get jobs for this month — includes booked (projected) and completed (actual)
+  const diarySourcesExclude = ['Holiday','Appointment','Van day','Diary entry'];
   const monthJobs = allJobs.filter(j => {
     if (!j.booking_date) return false;
+    if (diarySourcesExclude.includes(j.source)) return false;
     const d = new Date(j.booking_date);
     return d.getFullYear() === revBarYear && d.getMonth() === revBarMonth
       && j.status !== 'declined';
@@ -2651,14 +2663,18 @@ function renderDiary() {
   else renderWeekView();
 }
 
+function isDiaryEntry(j) {
+  return ['Holiday','Appointment','Van day','Diary entry'].includes(j?.source);
+}
+
 function getJobsForDate(dateStr) {
-  return allJobs.filter(j => {
+  // Include both regular jobs and diary entries (holidays, appointments etc)
+  return diaryAllJobs.filter(j => {
     if (!j.booking_date) return false;
-    const start = new Date(j.booking_date);
+    const start = localDate(j.booking_date);
     const days = j.duration_days || 1;
     if (days <= 1) return j.booking_date.startsWith(dateStr);
-    // Multi-day: check if dateStr falls within the job's date range
-    const check = new Date(dateStr);
+    const check = localDate(dateStr);
     const end = new Date(start);
     end.setDate(start.getDate() + days - 1);
     start.setHours(0,0,0,0); end.setHours(23,59,59,999); check.setHours(12,0,0,0);
@@ -2740,10 +2756,13 @@ function renderMonthView() {
         const tipCd = e.cd_required?' + C&D':'';
         const tipTech = e.assigned_tech||'';
         const isDone = e.status === 'completed';
-        html += `<div class="cal-evt cal-evt-${tc}${isDone?' cal-evt-done':''}"
+        const isDiaryEnt = isDiaryEntry(e);
+        const evtClass = isDiaryEnt ? 'cal-evt-diary' : `cal-evt-${tc}${isDone?' cal-evt-done':''}`;
+        const evtIcon = isDiaryEnt ? '📅 ' : isDone ? '✓ ' : '';
+        html += `<div class="cal-evt ${evtClass}"
           onmouseenter="showDiaryTip(event,'${tipName}','${tipVeh}','${tipAddr}','${tipPrice}','${tipLoc}','${tipDur}','${tipCd}','${tipTech}')"
           onmouseleave="hideDiaryTip()"
-        ><div class="cal-dot dot-${tc}"></div>${isDone?'✓ ':''}${firstName}${durShort}</div>`;
+        ><div class="cal-dot" style="background:#9ca3af;display:${isDiaryEnt?'none':'inline-block'}"></div>${evtIcon}${firstName}${durShort}</div>`;
         shown++;
       });
       if (filteredEvts.length > 3) html += `<div class="cal-more">+${filteredEvts.length-3} more</div>`;
@@ -4514,6 +4533,7 @@ async function respondHol(status) {
     showToast(status === 'approved' ? '✓ Holiday approved — diary updated' : '✓ Holiday declined');
     closeHolApproveModal();
     await loadJobs();
+    await loadDiaryJobs();
     renderHome();
   } catch(e) { alert('Failed: ' + e.message); }
 }
@@ -4626,7 +4646,7 @@ async function saveDiaryEntry() {
       : '✓ Added ' + count + ' days to diary — ' + title;
     showToast(msg);
     closeDiaryEntryModal();
-    await loadJobs();
+    await loadDiaryJobs();
     renderDiary();
   } catch(e) { alert('Failed: ' + e.message); }
 }
