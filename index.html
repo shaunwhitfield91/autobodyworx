@@ -1129,10 +1129,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="dp-row"><span class="dp-lbl">Price</span><span class="dp-val" id="dp-price"></span></div>
     <div class="dp-row"><span class="dp-lbl">Phone</span><span class="dp-val" id="dp-phone"></span></div>
     <div class="dp-row" id="dp-notes-row"><span class="dp-lbl">Notes</span><span class="dp-val" id="dp-notes"></span></div>
-    <div class="dp-actions">
+    <div class="dp-actions" id="dp-actions">
       <button class="btn-primary" onclick="openDiaryEdit()" style="flex:1">Edit job</button>
       <button class="btn-secondary" onclick="openDiaryJobCard()" style="flex:1">View card</button>
-      <button class="btn-secondary" onclick="deleteDiaryAppointment()" style="color:var(--red)">Delete</button>
+      <button class="btn-secondary" onclick="deleteDiaryAppointment()" style="color:var(--red)">Unschedule</button>
     </div>
   </div>
 </div>
@@ -2902,22 +2902,39 @@ function buildDetTags(j) {
 }
 
 function selectDiaryJob(jobId) {
-  const j = allJobs.find(x => x.id === jobId);
+  // Look in both allJobs and diaryAllJobs (diary entries only exist in diaryAllJobs)
+  const j = allJobs.find(x => x.id === jobId) || diaryAllJobs.find(x => x.id === jobId);
   if (!j) return;
   diaryJobIdForPopup = jobId;
+  const isDiaryEnt = isDiaryEntry(j);
   const pop = document.getElementById('diaryPopup');
   document.getElementById('dp-name').textContent = j.customer_name || 'Unknown';
-  document.getElementById('dp-vehicle').textContent = j.vehicle || '—';
-  document.getElementById('dp-panels').textContent = j.panels || '—';
+  document.getElementById('dp-vehicle').textContent = j.vehicle || (isDiaryEnt ? '—' : '—');
+  document.getElementById('dp-panels').textContent = j.panels || (isDiaryEnt ? j.notes || '—' : '—');
   document.getElementById('dp-date').textContent = j.booking_date ? fmtDate(j.booking_date) : '—';
   document.getElementById('dp-time').textContent = j.booking_time || '09:00';
   document.getElementById('dp-dur').textContent = j.duration || '—';
   document.getElementById('dp-tech').textContent = j.assigned_tech || '—';
   document.getElementById('dp-loc').textContent = (j.job_location==='mobile'?'Mobile':j.job_location==='workshop'?'Workshop':'—') + (j.cd_required?' + C&D':'');
   const _p = j.quote_price || j.invoice_amount || '';
-  document.getElementById('dp-price').textContent = _p ? (_p.startsWith('£') ? _p : '£'+_p) : '—';
+  document.getElementById('dp-price').textContent = _p ? (_p.startsWith('£') ? _p : '£'+_p) : (isDiaryEnt ? '—' : '—');
   document.getElementById('dp-phone').textContent = j.customer_phone || '—';
   document.getElementById('dp-notes').textContent = j.notes || '—';
+
+  // Show different action buttons for diary entries vs real jobs
+  const actions = document.getElementById('dp-actions');
+  if (actions) {
+    if (isDiaryEnt) {
+      actions.innerHTML = `
+        <button class="btn-secondary" onclick="openDiaryEntryEdit()" style="flex:1">Edit</button>
+        <button class="btn-secondary" onclick="deleteDiaryEntry()" style="color:var(--red);flex:1">Delete entry</button>`;
+    } else {
+      actions.innerHTML = `
+        <button class="btn-primary" onclick="openDiaryEdit()" style="flex:1">Edit job</button>
+        <button class="btn-secondary" onclick="openDiaryJobCard()" style="flex:1">View card</button>
+        <button class="btn-secondary" onclick="deleteDiaryAppointment()" style="color:var(--red)">Unschedule</button>`;
+    }
+  }
   pop.classList.add('show');
 }
 
@@ -2943,14 +2960,64 @@ function openDiaryJobCard() {
 }
 
 async function deleteDiaryAppointment() {
+  // Unschedule a real job — removes booking date, puts back to quoted
   if (!diaryJobIdForPopup) return;
-  const j = allJobs.find(x => x.id === diaryJobIdForPopup);
-  if (!j || !confirm(`Delete appointment for ${j.customer_name||'this customer'}? The job record will be kept as pending.`)) return;
+  const j = allJobs.find(x => x.id === diaryJobIdForPopup) || diaryAllJobs.find(x => x.id === diaryJobIdForPopup);
+  if (!j) return;
+  if (!confirm(`Remove ${j.customer_name||'this job'} from the diary? The job record will be kept.`)) return;
   await sbRaw('PATCH', 'jobs', { booking_date: null, booking_time: null, status: 'quoted' }, `?id=eq.${diaryJobIdForPopup}`);
   closeDiaryPopup();
-  showToast('Appointment removed — job back to quoted');
+  showToast('Job unscheduled — back to quoted');
   await loadJobs();
+  await loadDiaryJobs();
   renderDiary();
+}
+
+async function deleteDiaryEntry() {
+  // Permanently delete a diary entry (holiday, appointment, van day etc)
+  if (!diaryJobIdForPopup) return;
+  const j = diaryAllJobs.find(x => x.id === diaryJobIdForPopup);
+  if (!j) return;
+  if (!confirm(`Delete "${j.customer_name||'this entry'}"? This cannot be undone.`)) return;
+  await sbRaw('DELETE', 'jobs', null, `?id=eq.${diaryJobIdForPopup}`);
+  closeDiaryPopup();
+  showToast('Entry deleted');
+  await loadDiaryJobs();
+  renderDiary();
+}
+
+function openDiaryEntryEdit() {
+  // Open the diary entry modal pre-filled with this entry's data
+  if (!diaryJobIdForPopup) return;
+  const j = diaryAllJobs.find(x => x.id === diaryJobIdForPopup);
+  if (!j) return;
+  closeDiaryPopup();
+  // Map source back to type
+  const typeMap = {'Holiday':'holiday','Appointment':'appt','Van day':'van','Diary entry':'other'};
+  _diaryEntryType = typeMap[j.source] || 'other';
+  document.getElementById('de_title').value = j.customer_name || '';
+  document.getElementById('de_from').value = j.booking_date || '';
+  document.getElementById('de_to').value = j.booking_date || '';
+  document.getElementById('de_tech').value = j.assigned_tech || 'Shaun';
+  document.getElementById('de_time').value = j.booking_time || '';
+  document.getElementById('de_notes').value = j.notes || '';
+  // Set type button
+  ['holiday','appt','van','other'].forEach(t => {
+    const btn = document.getElementById('det-' + t);
+    if (btn) btn.classList.toggle('on', t === _diaryEntryType);
+  });
+  // Change save to update
+  const saveBtn = document.querySelector('#diaryEntryModal .btn-primary');
+  if (saveBtn) {
+    saveBtn.textContent = 'Update entry';
+    saveBtn.onclick = async () => {
+      // Delete old, save new
+      await sbRaw('DELETE', 'jobs', null, `?id=eq.${diaryJobIdForPopup}`);
+      diaryJobIdForPopup = null;
+      await saveDiaryEntry();
+    };
+  }
+  document.getElementById('diaryEntryModal').classList.add('show');
 }
 
 // ═══════════════════════════════════════════════════════════
