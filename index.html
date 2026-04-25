@@ -645,6 +645,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <button class="btn-secondary" onclick="diaryPrev()">&#8592; Prev</button>
           <button class="btn-secondary" onclick="diaryToday()">Today</button>
           <button class="btn-secondary" onclick="diaryNext()">Next &#8594;</button>
+          <button class="btn-primary role-admin role-admin_staff" onclick="openDiaryEntryModal()" style="font-size:12px">+ Add entry</button>
           <button class="btn-secondary on" id="dv-month" onclick="setDiaryView('month',this)">Month</button>
           <button class="btn-secondary" id="dv-week" onclick="setDiaryView('week',this)">Week</button>
           <button class="btn-primary role-admin_staff">+ Book job</button>
@@ -1388,6 +1389,48 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <button class="btn-approve" onclick="respondHol('approved')" style="flex:1;padding:10px">Approve ✓</button>
       <button class="btn-danger" onclick="respondHol('rejected')" style="flex:1;padding:10px">Decline ✗</button>
       <button class="btn-secondary" onclick="closeHolApproveModal()" style="padding:10px">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- DIARY ENTRY MODAL -->
+<div class="modal-overlay" id="diaryEntryModal" onclick="if(event.target===this)closeDiaryEntryModal()">
+  <div class="modal-box" style="max-width:440px">
+    <div class="modal-hd">Add diary entry</div>
+    <span class="qlbl">Entry type</span>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px">
+      <button class="tech-pay-btn on" id="det-holiday" onclick="selectDiaryEntryType('holiday',this)">🏖 Holiday</button>
+      <button class="tech-pay-btn" id="det-appt" onclick="selectDiaryEntryType('appt',this)">📅 Appointment</button>
+      <button class="tech-pay-btn" id="det-van" onclick="selectDiaryEntryType('van',this)">🚐 Van day</button>
+      <button class="tech-pay-btn" id="det-other" onclick="selectDiaryEntryType('other',this)">📝 Other</button>
+    </div>
+    <span class="qlbl">Title / description</span>
+    <input class="minp" id="de_title" placeholder="e.g. Shaun holiday, MOT appointment..." style="margin-bottom:10px">
+    <div class="modal-grid2">
+      <div><span class="qlbl">From date</span><input class="minp" type="date" id="de_from"></div>
+      <div><span class="qlbl">To date</span><input class="minp" type="date" id="de_to"></div>
+    </div>
+    <div class="modal-grid2">
+      <div>
+        <span class="qlbl">Assigned to</span>
+        <select class="msel" id="de_tech">
+          <option value="Shaun">Shaun</option>
+          <option value="Charles">Charles</option>
+          <option value="Both">Both</option>
+          <option value="All">All staff</option>
+        </select>
+      </div>
+      <div>
+        <span class="qlbl">Time (optional)</span>
+        <input class="minp" type="time" id="de_time" placeholder="09:00">
+      </div>
+    </div>
+    <span class="qlbl">Notes (optional)</span>
+    <input class="minp" id="de_notes" placeholder="Any extra details...">
+    <div style="font-size:12px;color:var(--muted);margin:8px 0 12px" id="de_days_count"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-primary" onclick="saveDiaryEntry()" style="flex:1;padding:10px">Add to diary</button>
+      <button class="btn-secondary" onclick="closeDiaryEntryModal()" style="flex:1;padding:10px">Cancel</button>
     </div>
   </div>
 </div>
@@ -4472,6 +4515,119 @@ async function respondHol(status) {
     closeHolApproveModal();
     await loadJobs();
     renderHome();
+  } catch(e) { alert('Failed: ' + e.message); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// DIARY MANUAL ENTRY
+// ═══════════════════════════════════════════════════════════
+let _diaryEntryType = 'holiday';
+
+function openDiaryEntryModal(prefilledDate) {
+  _diaryEntryType = 'holiday';
+  ['holiday','appt','van','other'].forEach(t => {
+    const btn = document.getElementById('det-' + t);
+    if (btn) btn.classList.toggle('on', t === 'holiday');
+  });
+  const today = prefilledDate || new Date().toISOString().split('T')[0];
+  document.getElementById('de_from').value = today;
+  document.getElementById('de_to').value = today;
+  document.getElementById('de_title').value = '';
+  document.getElementById('de_notes').value = '';
+  document.getElementById('de_time').value = '';
+  document.getElementById('de_days_count').textContent = '';
+  document.getElementById('diaryEntryModal').classList.add('show');
+  // Watch date changes
+  ['de_from','de_to'].forEach(id => {
+    document.getElementById(id).onchange = updateDiaryEntryDays;
+  });
+}
+
+function closeDiaryEntryModal() {
+  document.getElementById('diaryEntryModal').classList.remove('show');
+}
+
+function selectDiaryEntryType(type, btn) {
+  _diaryEntryType = type;
+  ['holiday','appt','van','other'].forEach(t => {
+    const b = document.getElementById('det-' + t);
+    if (b) b.classList.toggle('on', t === type);
+  });
+  // Auto-fill title if blank
+  const titleEl = document.getElementById('de_title');
+  if (!titleEl.value) {
+    const tech = document.getElementById('de_tech')?.value || 'Shaun';
+    const defaults = {
+      holiday: tech + ' — Holiday',
+      appt: 'Appointment',
+      van: 'Van day',
+      other: ''
+    };
+    titleEl.value = defaults[type] || '';
+  }
+}
+
+function updateDiaryEntryDays() {
+  const from = document.getElementById('de_from').value;
+  const to = document.getElementById('de_to').value;
+  if (from && to && to >= from) {
+    let days = 0;
+    const d = new Date(from);
+    const end = new Date(to);
+    while (d <= end) {
+      if (d.getDay() !== 0 && d.getDay() !== 6) days++;
+      d.setDate(d.getDate() + 1);
+    }
+    document.getElementById('de_days_count').textContent =
+      days + ' working day' + (days !== 1 ? 's' : '');
+  }
+}
+
+async function saveDiaryEntry() {
+  const from = document.getElementById('de_from').value;
+  const to = document.getElementById('de_to').value;
+  const title = document.getElementById('de_title').value.trim();
+  const tech = document.getElementById('de_tech').value;
+  const time = document.getElementById('de_time').value || '09:00';
+  const notes = document.getElementById('de_notes').value.trim();
+
+  if (!from) { showToast('Select a start date'); return; }
+  if (!title) { showToast('Enter a title'); return; }
+
+  const toDate = to && to >= from ? to : from;
+  const typeLabels = {holiday:'Holiday',appt:'Appointment',van:'Van day',other:'Entry'};
+
+  try {
+    // Insert one job row per working day
+    const d = new Date(from);
+    const end = new Date(toDate);
+    let count = 0;
+    while (d <= end) {
+      const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+      if (!isWeekend) {
+        await sbRaw('POST', 'jobs', {
+          customer_name: title,
+          status: 'booked',
+          booking_date: d.toISOString().split('T')[0],
+          booking_time: time,
+          assigned_tech: tech === 'All' ? 'Both' : tech,
+          job_location: 'workshop',
+          duration: 'Full day',
+          notes: notes || null,
+          source: typeLabels[_diaryEntryType] || 'Diary entry',
+          archived: false
+        });
+        count++;
+      }
+      d.setDate(d.getDate() + 1);
+    }
+    const msg = count === 1
+      ? '✓ Added to diary — ' + title
+      : '✓ Added ' + count + ' days to diary — ' + title;
+    showToast(msg);
+    closeDiaryEntryModal();
+    await loadJobs();
+    renderDiary();
   } catch(e) { alert('Failed: ' + e.message); }
 }
 
