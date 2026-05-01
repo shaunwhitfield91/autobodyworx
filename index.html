@@ -539,12 +539,32 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="ttab" id="t-diary" onclick="switchTab('diary')">Diary</div>
       <div class="ttab" id="t-quote" onclick="switchTab('quote')">New quote</div>
       <div class="ttab" id="t-tech" onclick="switchTab('tech')">My jobs</div>
+      <div class="ttab role-admin role-admin_staff" id="t-timesheet" onclick="switchTab('timesheet');initAdminTs()">Timesheets</div>
       <div class="ttab role-admin" id="t-settings" onclick="switchTab('settings')">Settings</div>
     </div>
     <div class="tbar-right">
       <div class="user-pill"><div class="user-dot"></div><span id="userLabel">—</span></div>
       <button class="btn-logout" id="refreshBtn" onclick="manualRefresh()" title="Refresh" style="font-size:16px;padding:4px 9px">&#8635;</button>
       <button class="btn-logout" onclick="doLogout()">Sign out</button>
+    </div>
+  </div>
+
+  <!-- TIMESHEET PAGE -->
+  <div class="page role-admin role-admin_staff" id="pg-timesheet">
+    <div class="page-wrap">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-size:20px;font-weight:700;color:var(--txt)">Tech timesheets</div>
+          <div style="font-size:13px;color:var(--muted)">Hours worked by all technicians</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select class="msel" id="ts-month-sel" onchange="loadAdminTs()" style="width:180px"></select>
+          <button class="btn-primary" onclick="exportTsPdf()" style="font-size:12px">Export PDF</button>
+        </div>
+      </div>
+      <div id="ts-admin-content">
+        <div style="text-align:center;color:var(--muted);padding:40px">Select a month above to view timesheets</div>
+      </div>
     </div>
   </div>
 
@@ -725,7 +745,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           </div>
           <div class="qgrid2">
             <div><span class="qlbl">Postcode</span><input class="qinp" id="q_postcode" placeholder="RG17..."></div>
-            <div><span class="qlbl">Location</span>
+            <div><span class="qlbl">Source — where did enquiry come from?</span>
+              <select class="qinp" id="q_source" style="padding:9px 10px">
+                <option value="whatsapp">WhatsApp</option>
+                <option value="phone">Phone call</option>
+                <option value="email">Email</option>
+                <option value="hubspot">HubSpot</option>
+                <option value="walkin">Walk-in</option>
+                <option value="referral">Referral</option>
+                <option value="google">Google</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div class="qgrid2">
+            <div style="grid-column:1/-1"><span class="qlbl">Location</span>
               <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
                 <button class="loc-pill on" id="loc-mobile" onclick="setLocPill('mobile',this)" type="button">Mobile — their address</button>
                 <button class="loc-pill" id="loc-workshop" onclick="setLocPill('workshop',this)" type="button">Workshop</button>
@@ -916,6 +950,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
               <div class="tchrs-stat"><div class="tchrs-sl">Last month</div><div class="tchrs-sn" id="thrs-last">0h 00m</div></div>
             </div>
             <div style="border-top:1px solid var(--border)" id="tchrs-recent"></div>
+          <div style="padding:10px 14px;border-top:1px solid var(--border)">
+            <button class="btn-secondary" onclick="openTsEditor()" style="width:100%;font-size:12px">Edit timesheet entries</button>
+          </div>
           </div>
         </div>
       </div>
@@ -1436,6 +1473,40 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 </div>
 
+<!-- TIMESHEET EDITOR MODAL (tech) -->
+<div class="modal-overlay" id="tsEditorModal" onclick="if(event.target===this)closeTsEditor()">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-hd">My timesheet</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Tap a row to edit clock in / out times</div>
+    <div id="tsEditorList"></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn-secondary" onclick="closeTsEditor()" style="flex:1;padding:10px">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- TIMESHEET ENTRY EDIT MODAL -->
+<div class="modal-overlay" id="tsEntryModal" onclick="if(event.target===this)closeTsEntryModal()">
+  <div class="modal-box" style="max-width:360px">
+    <div class="modal-hd" id="tsEntryTitle">Edit entry</div>
+    <input type="hidden" id="tse_id">
+    <div class="modal-grid2">
+      <div><span class="qlbl">Date</span><input class="minp" type="date" id="tse_date"></div>
+      <div></div>
+    </div>
+    <div class="modal-grid2">
+      <div><span class="qlbl">Clock in</span><input class="minp" type="time" id="tse_in"></div>
+      <div><span class="qlbl">Clock out</span><input class="minp" type="time" id="tse_out"></div>
+    </div>
+    <div style="background:var(--blue-bg);border-radius:var(--radius);padding:8px 12px;font-size:12px;color:var(--blue-txt);margin-bottom:12px" id="tse_calc">Select times to see hours</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn-primary" onclick="saveTsEntry()" style="flex:1;padding:10px">Save</button>
+      <button class="btn-danger" onclick="deleteTsEntry()" style="padding:10px">Delete</button>
+      <button class="btn-secondary" onclick="closeTsEntryModal()" style="flex:1;padding:10px">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- DIARY HOVER TOOLTIP -->
 <div id="diaryHoverTip" style="display:none;position:fixed;z-index:9000;background:#111827;color:#fff;border-radius:8px;padding:8px 12px;font-size:12px;line-height:1.6;min-width:180px;max-width:260px;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.3)"></div>
 
@@ -1754,6 +1825,7 @@ function switchTab(t) {
   if (t === 'tech') { loadTclockState(); if (currentProfile?.role === 'tech') loadHolidays(); }
   if (t === 'tech') { renderTechPortal(); }
   if (t === 'settings') { checkApiKey(); checkXeroStatus(); }
+  if (t === 'timesheet') { initAdminTs(); }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2092,7 +2164,8 @@ function buildJobCard(j) {
   } else if (j.status === 'booked' && currentProfile?.role !== 'tech') {
     actions = `<button class="btn-approve" onclick="event.stopPropagation();openCompleteModal(${j.id})" style="background:var(--teal);font-size:11px">Mark as complete</button>
                <button class="btn-primary" onclick="event.stopPropagation();sendXeroInvoice(${j.id},'deposit')" style="font-size:11px">Parts deposit</button>
-               <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>`;
+               <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>
+               <button class="btn-danger" onclick="event.stopPropagation();customerCancelled(${j.id})" style="font-size:11px">Customer cancelled</button>`;
   } else if (j.status === 'completed' && !j.invoiced_at) {
     const payHint = j.payment_method ? `Customer paying by ${j.payment_method}` : '';
     actions = `<div style="width:100%">
@@ -2298,7 +2371,11 @@ function renderDeclined() {
           <div class="jcard-name">${esc(j.customer_name||'Unknown')}</div>
           <div class="jcard-meta">
             <span style="font-size:12px;color:var(--txt2)">${esc(j.vehicle||'—')}</span>
-            <span style="font-size:11px;color:${j.customer_contacted?'var(--teal)':'var(--red)'}">${j.customer_contacted?'✓ Customer notified':'⚠ Needs contact'}</span>
+            <span style="font-size:11px;color:${j.customer_contacted?'var(--teal)':'var(--red)'}">
+              ${j.decline_reason==='Cancelled by customer'
+                ? '✓ Cancelled by customer'
+                : j.customer_contacted?'✓ Customer notified':'⚠ Needs contact'}
+            </span>
           </div>
           ${j.customer_address?`<div style="font-size:11px;color:var(--muted);margin-top:3px">${esc(j.customer_address)}</div>`:''}
           ${j.notes?`<div style="font-size:11px;color:var(--amber-txt);margin-top:4px;background:var(--amber-bg);padding:4px 8px;border-radius:4px">📝 ${esc(j.notes)}</div>`:''}
@@ -2310,7 +2387,8 @@ function renderDeclined() {
         </div>
       </div>
       <div style="padding:8px 14px 12px;display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid var(--border)">
-        ${!j.customer_contacted?`<button class="btn-approve" onclick="markContacted(${j.id})">✓ Mark notified</button>`:''}
+        ${!j.customer_contacted && j.decline_reason!=='Cancelled by customer'
+          ? `<button class="btn-approve" onclick="markContacted(${j.id})">✓ Mark notified</button>`:''}
         <button class="btn-secondary" onclick="restoreJob(${j.id})">↩ Restore</button>
         <button class="btn-danger" onclick="permanentDelete(${j.id})">Delete</button>
       </div>
@@ -3197,7 +3275,7 @@ async function approveQuote() {
     internal_breakdown: quoteResult.internal_breakdown,
     notes,
     status: currentProfile?.role === 'admin' ? 'quoted' : 'pending',
-    source: 'PanelPro',
+    source: document.getElementById('q_source')?.value || 'other',
     archived: false
   };
 
@@ -3206,14 +3284,12 @@ async function approveQuote() {
     // Upload photos
     if (selectedQuotePhotos.length && newJob?.id) {
       for (const p of selectedQuotePhotos) {
-        const ext = p.file.name.split('.').pop() || 'jpg';
-        const path = `${newJob.id}/${Date.now()}.${ext}`;
-        // Upload to Supabase storage
-        const storagePath = `job-${newJob.id}/${Date.now()}.${p.file.name.split('.').pop()||'jpg'}`;
+        const compAppr = await compressForStorage(p.file);
+        const storagePath = `job-${newJob.id}/${Date.now()}.jpg`;
         await fetch(`${SUPABASE_URL}/storage/v1/object/job-photos/${storagePath}`, {
           method: 'POST',
-          headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${currentUser?.access_token||SUPABASE_ANON}`, 'Content-Type': p.file.type },
-          body: p.file
+          headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${currentUser?.access_token||SUPABASE_ANON}`, 'Content-Type': 'image/jpeg' },
+          body: compAppr
         });
         await sbRaw('POST', 'job_photos', { job_id: newJob.id, storage_path: storagePath, photo_type: 'damage' });
       }
@@ -3273,7 +3349,7 @@ async function sendForApproval() {
     notes,
     job_location: quoteLocVal,
     status: 'pending',
-    source: 'Enquiry',
+    source: document.getElementById('q_source')?.value || 'Enquiry',
     archived: false
   };
 
@@ -3283,12 +3359,12 @@ async function sendForApproval() {
     // Upload photos
     if (selectedQuotePhotos.length && newJob?.id) {
       for (const p of selectedQuotePhotos) {
-        const ext = p.file.name.split('.').pop() || 'jpg';
-        const storagePath = 'job-' + newJob.id + '/' + Date.now() + '-' + Math.random().toString(36).slice(2) + '.' + ext;
+        const compressed = await compressForStorage(p.file);
+        const storagePath = 'job-' + newJob.id + '/' + Date.now() + '-' + Math.random().toString(36).slice(2) + '.jpg';
         await fetch(SUPABASE_URL + '/storage/v1/object/job-photos/' + storagePath, {
           method: 'POST',
-          headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + (currentUser?.access_token || SUPABASE_ANON), 'Content-Type': p.file.type },
-          body: p.file
+          headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + (currentUser?.access_token || SUPABASE_ANON), 'Content-Type': 'image/jpeg' },
+          body: compressed
         });
         await sbRaw('POST', 'job_photos', { job_id: newJob.id, storage_path: storagePath, photo_type: 'damage' });
       }
@@ -3308,6 +3384,7 @@ async function sendForApproval() {
     document.getElementById('quotePlaceholder').style.display = 'flex';
     document.getElementById('manualWrap').style.display = 'none';
     resetPanelPicker('q');
+    const qSrc = document.getElementById('q_source'); if (qSrc) qSrc.value = 'whatsapp';
     await loadJobs();
     showToast('Sent to Shaun ✓');
   } catch(e) {
@@ -3364,7 +3441,7 @@ async function saveManualQuote() {
     job_location: quoteLocVal,
     notes,
     status: currentProfile?.role === 'admin' ? 'quoted' : 'pending',
-    source: 'PanelPro',
+    source: document.getElementById('q_source')?.value || 'other',
     archived: false
   };
 
@@ -3374,12 +3451,12 @@ async function saveManualQuote() {
     // Upload photos if any
     if (selectedQuotePhotos.length && newJob?.id) {
       for (const p of selectedQuotePhotos) {
-        const ext = p.file.name.split('.').pop() || 'jpg';
-        const storagePath = 'job-' + newJob.id + '/' + Date.now() + '.' + ext;
+        const compMan = await compressForStorage(p.file);
+        const storagePath = 'job-' + newJob.id + '/' + Date.now() + '.jpg';
         await fetch(SUPABASE_URL + '/storage/v1/object/job-photos/' + storagePath, {
           method: 'POST',
-          headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + (currentUser?.access_token || SUPABASE_ANON), 'Content-Type': p.file.type },
-          body: p.file
+          headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + (currentUser?.access_token || SUPABASE_ANON), 'Content-Type': 'image/jpeg' },
+          body: compMan
         });
         await sbRaw('POST', 'job_photos', { job_id: newJob.id, storage_path: storagePath, photo_type: 'damage' });
       }
@@ -3778,16 +3855,16 @@ async function handleTechPhotos(jobId, input) {
   let uploaded = 0;
   for (const f of files) {
     try {
-      const ext = f.name.split('.').pop() || 'jpg';
-      const storagePath = `job-${jobId}/after-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const compressed = await compressForStorage(f);
+      const storagePath = `job-${jobId}/after-${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
       const res = await fetch(`${SUPABASE_URL}/storage/v1/object/job-photos/${storagePath}`, {
         method: 'POST',
         headers: {
           'apikey': SUPABASE_ANON,
           'Authorization': `Bearer ${currentUser?.access_token || SUPABASE_ANON}`,
-          'Content-Type': f.type || 'image/jpeg'
+          'Content-Type': 'image/jpeg'
         },
-        body: f
+        body: compressed
       });
       if (!res.ok) {
         const err = await res.text();
@@ -4096,11 +4173,12 @@ async function saveEditJob() {
     // Upload any new photos
     if (_editPhotos.length) {
       for (const f of _editPhotos) {
-        const storagePath = 'job-' + _editJobId + '/edit-' + Date.now() + '.' + (f.name.split('.').pop() || 'jpg');
+        const compEdit = await compressForStorage(f);
+        const storagePath = 'job-' + _editJobId + '/edit-' + Date.now() + '.jpg';
         await fetch(SUPABASE_URL + '/storage/v1/object/job-photos/' + storagePath, {
           method: 'POST',
-          headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + (currentUser?.access_token || SUPABASE_ANON), 'Content-Type': f.type },
-          body: f
+          headers: { 'apikey': SUPABASE_ANON, 'Authorization': 'Bearer ' + (currentUser?.access_token || SUPABASE_ANON), 'Content-Type': 'image/jpeg' },
+          body: compEdit
         });
         await sbRaw('POST', 'job_photos', { job_id: _editJobId, storage_path: storagePath, photo_type: 'damage' });
       }
@@ -4733,6 +4811,334 @@ function dateToStr(d) {
   return d.getFullYear() + '-' +
     String(d.getMonth() + 1).padStart(2, '0') + '-' +
     String(d.getDate()).padStart(2, '0');
+}
+
+// ═══════════════════════════════════════════════════════════
+// IMAGE COMPRESSION
+// Compress before upload — saves storage, full size on tap
+// ═══════════════════════════════════════════════════════════
+function compressImage(file, maxWidth, maxHeight, quality) {
+  return new Promise((resolve) => {
+    // Non-image files pass through unchanged
+    if (!file.type.startsWith('image/')) { resolve(file); return; }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        // Scale down if larger than max dimensions
+        if (w > maxWidth || h > maxHeight) {
+          const ratio = Math.min(maxWidth / w, maxHeight / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob((blob) => {
+          // Use original name but as jpeg
+          const compressed = new File([blob],
+            file.name.replace(/\.[^.]+$/, '.jpg'),
+            { type: 'image/jpeg' });
+          console.log(`Compressed: ${Math.round(file.size/1024)}KB → ${Math.round(compressed.size/1024)}KB`);
+          resolve(compressed);
+        }, 'image/jpeg', quality);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Compress for storage (damage/job photos): max 1200px, quality 0.75
+// Good detail for viewing but ~80% smaller than phone originals
+async function compressForStorage(file) {
+  return compressImage(file, 1200, 1200, 0.75);
+}
+
+// ═══════════════════════════════════════════════════════════
+// TIMESHEET EDITOR (tech — edit own entries)
+// ═══════════════════════════════════════════════════════════
+let _tsRows = [];
+
+async function openTsEditor() {
+  const techName = currentProfile?.full_name || '';
+  try {
+    const rows = await sbRaw('GET','time_entries',null,
+      `?tech_name=eq.${encodeURIComponent(techName)}&order=date.desc&limit=60`);
+    _tsRows = rows || [];
+    renderTsEditor();
+    document.getElementById('tsEditorModal').classList.add('show');
+  } catch(e) { alert('Failed to load: ' + e.message); }
+}
+
+function closeTsEditor() {
+  document.getElementById('tsEditorModal').classList.remove('show');
+}
+
+function renderTsEditor() {
+  const list = document.getElementById('tsEditorList');
+  if (!_tsRows.length) {
+    list.innerHTML = '<div style="padding:12px;color:var(--muted);font-size:13px">No entries yet</div>';
+    return;
+  }
+  list.innerHTML = _tsRows.map(r => {
+    const hrs = r.hours_worked ? fmtHM(Math.round(r.hours_worked * 60)) : (r.clock_in && !r.clock_out ? 'In progress' : '—');
+    const missing = !r.clock_in || !r.clock_out;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;${missing?'background:#fef9c3':''}" onclick="openTsEntryModal('${r.id}')">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--txt)">${fmtDate(r.date)}</div>
+        <div style="font-size:12px;color:var(--muted)">${r.clock_in||'--:--'} → ${r.clock_out||'--:--'}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:13px;font-weight:600;color:${missing?'var(--red)':'var(--txt)'}">${hrs}</span>
+        <span style="color:var(--muted);font-size:16px">›</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openTsEntryModal(id) {
+  const r = _tsRows.find(x => x.id === id);
+  if (!r) return;
+  document.getElementById('tse_id').value = id;
+  document.getElementById('tse_date').value = r.date || '';
+  document.getElementById('tse_in').value = r.clock_in || '';
+  document.getElementById('tse_out').value = r.clock_out || '';
+  document.getElementById('tsEntryTitle').textContent = fmtDate(r.date);
+  calcTsHours();
+  // Watch for time changes
+  ['tse_in','tse_out'].forEach(eid => {
+    document.getElementById(eid).onchange = calcTsHours;
+  });
+  document.getElementById('tsEntryModal').classList.add('show');
+}
+
+function calcTsHours() {
+  const inT = document.getElementById('tse_in').value;
+  const outT = document.getElementById('tse_out').value;
+  const el = document.getElementById('tse_calc');
+  if (inT && outT) {
+    const [hi,mi] = inT.split(':').map(Number);
+    const [ho,mo] = outT.split(':').map(Number);
+    const mins = (ho*60+mo) - (hi*60+mi);
+    el.textContent = mins > 0 ? fmtHM(mins) + ' worked' : 'Check times — end before start';
+    el.style.color = mins > 0 ? 'var(--blue-txt)' : 'var(--red)';
+  } else {
+    el.textContent = 'Enter both times to calculate hours';
+  }
+}
+
+function closeTsEntryModal() {
+  document.getElementById('tsEntryModal').classList.remove('show');
+}
+
+async function saveTsEntry() {
+  const id = document.getElementById('tse_id').value;
+  const inT = document.getElementById('tse_in').value;
+  const outT = document.getElementById('tse_out').value;
+  if (!inT || !outT) { showToast('Enter both clock in and out times'); return; }
+  const [hi,mi] = inT.split(':').map(Number);
+  const [ho,mo] = outT.split(':').map(Number);
+  const hrs = Math.max(0, ((ho*60+mo) - (hi*60+mi)) / 60);
+  try {
+    await sbRaw('PATCH','time_entries',{
+      clock_in: inT, clock_out: outT, hours_worked: parseFloat(hrs.toFixed(2))
+    }, `?id=eq.${id}`);
+    showToast('✓ Entry updated');
+    closeTsEntryModal();
+    await openTsEditor();
+    updateTchrs();
+  } catch(e) { alert('Failed: ' + e.message); }
+}
+
+async function deleteTsEntry() {
+  const id = document.getElementById('tse_id').value;
+  if (!confirm('Delete this time entry?')) return;
+  try {
+    await sbRaw('DELETE','time_entries',null,`?id=eq.${id}`);
+    showToast('Entry deleted');
+    closeTsEntryModal();
+    await openTsEditor();
+    updateTchrs();
+  } catch(e) { alert('Failed: ' + e.message); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ADMIN TIMESHEET VIEW
+// ═══════════════════════════════════════════════════════════
+function initAdminTs() {
+  const sel = document.getElementById('ts-month-sel');
+  if (!sel || sel.options.length > 0) return;
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const val = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    const lbl = d.toLocaleString('en-GB',{month:'long',year:'numeric'});
+    const opt = document.createElement('option');
+    opt.value = val; opt.textContent = lbl;
+    if (i === 0) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  loadAdminTs();
+}
+
+async function loadAdminTs() {
+  const sel = document.getElementById('ts-month-sel');
+  const month = sel?.value;
+  if (!month) return;
+  const content = document.getElementById('ts-admin-content');
+  content.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">Loading...</div>';
+  try {
+    const nextMonth = month.slice(0,4) + '-' + String(parseInt(month.slice(5)) + 1).padStart(2,'0');
+    const rows = await sbRaw('GET','time_entries',null,
+      `?date=gte.${month}-01&date=lt.${nextMonth}-01&order=tech_name.asc,date.asc`);
+    if (!rows || !rows.length) {
+      content.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">No entries for this month</div>';
+      return;
+    }
+    // Group by tech
+    const byTech = {};
+    rows.forEach(r => {
+      if (!byTech[r.tech_name]) byTech[r.tech_name] = [];
+      byTech[r.tech_name].push(r);
+    });
+    const monthLabel = new Date(month + '-01').toLocaleString('en-GB',{month:'long',year:'numeric'});
+    let html = '';
+    const techDots = {Shaun:'#1e40af', Charles:'#b45309'};
+    Object.entries(byTech).forEach(([tech, entries]) => {
+      const totalMins = entries.reduce((s,r) => s + (r.hours_worked ? r.hours_worked*60 : 0), 0);
+      const missing = entries.filter(r => !r.clock_in || !r.clock_out).length;
+      const dot = techDots[tech] || '#6b7280';
+      html += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:14px;overflow:hidden">
+        <div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;background:var(--bg)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:10px;height:10px;border-radius:50%;background:${dot}"></div>
+            <div style="font-size:15px;font-weight:700;color:var(--txt)">${esc(tech)}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:18px;font-weight:700;color:var(--txt)">${fmtHM(Math.round(totalMins))}</div>
+            <div style="font-size:11px;color:var(--muted)">${entries.length} days${missing?' · '+missing+' missing':''}</div>
+          </div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:var(--bg)">
+              <th style="text-align:left;padding:8px 16px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border)">Date</th>
+              <th style="text-align:center;padding:8px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border)">Clock in</th>
+              <th style="text-align:center;padding:8px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border)">Clock out</th>
+              <th style="text-align:right;padding:8px 16px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border)">Hours</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${entries.map(r => {
+              const hrs = r.hours_worked ? fmtHM(Math.round(r.hours_worked*60)) : '—';
+              const missing = !r.clock_in || !r.clock_out;
+              return `<tr style="${missing?'background:#fef9c3':''}">
+                <td style="padding:9px 16px;border-bottom:1px solid var(--border);color:var(--txt)">${fmtDate(r.date)}</td>
+                <td style="padding:9px 8px;border-bottom:1px solid var(--border);text-align:center;color:${r.clock_in?'var(--txt)':'var(--red)'}">${r.clock_in||'Missing'}</td>
+                <td style="padding:9px 8px;border-bottom:1px solid var(--border);text-align:center;color:${r.clock_out?'var(--txt)':'var(--red)'}">${r.clock_out||'Missing'}</td>
+                <td style="padding:9px 16px;border-bottom:1px solid var(--border);text-align:right;font-weight:600;color:${missing?'var(--red)':'var(--txt)'}">${hrs}</td>
+              </tr>`;
+            }).join('')}
+            <tr style="background:var(--bg)">
+              <td colspan="3" style="padding:10px 16px;font-weight:700;color:var(--txt)">Total — ${esc(tech)}</td>
+              <td style="padding:10px 16px;font-weight:700;color:var(--txt);text-align:right">${fmtHM(Math.round(totalMins))}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>`;
+    });
+    content.innerHTML = html;
+    // Store for PDF
+    window._tsAdminData = { month: monthLabel, byTech, rows };
+  } catch(e) { content.innerHTML = `<div style="color:var(--red);padding:20px">${e.message}</div>`; }
+}
+
+function exportTsPdf() {
+  const data = window._tsAdminData;
+  if (!data) { showToast('Load a month first'); return; }
+  const techDots = {Shaun:'#1e40af', Charles:'#b45309'};
+  let body = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Timesheet — ${data.month}</title>
+    <style>
+      body{font-family:Arial,sans-serif;padding:30px;color:#111;font-size:13px}
+      h1{font-size:22px;margin-bottom:4px}
+      .sub{color:#666;margin-bottom:24px;font-size:13px}
+      .tech-block{margin-bottom:28px;page-break-inside:avoid}
+      .tech-hd{display:flex;justify-content:space-between;align-items:center;background:#f3f4f6;padding:10px 14px;border-radius:6px 6px 0 0;border:1px solid #e5e7eb}
+      .tech-name{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+      .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+      .tech-total{font-size:16px;font-weight:700}
+      table{width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-top:none}
+      th{background:#f9fafb;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;border-bottom:1px solid #e5e7eb}
+      td{padding:9px 12px;border-bottom:1px solid #f3f4f6;font-size:13px}
+      .total-row td{background:#f9fafb;font-weight:700;border-top:1px solid #e5e7eb}
+      .missing{color:#dc2626}
+      .footer{margin-top:30px;color:#9ca3af;font-size:11px;border-top:1px solid #e5e7eb;padding-top:12px}
+      @media print{body{padding:15px}}
+    </style></head><body>
+    <h1>Timesheet — ${data.month}</h1>
+    <div class="sub">Auto Bodyworx Minor Body Repairs Ltd · Generated ${new Date().toLocaleDateString('en-GB')}</div>`;
+
+  Object.entries(data.byTech).forEach(([tech, entries]) => {
+    const totalMins = entries.reduce((s,r) => s + (r.hours_worked ? r.hours_worked*60 : 0), 0);
+    const dot = techDots[tech] || '#6b7280';
+    const missing = entries.filter(r => !r.clock_in || !r.clock_out).length;
+    body += `<div class="tech-block">
+      <div class="tech-hd">
+        <div class="tech-name"><span class="dot" style="background:${dot}"></span>${tech}</div>
+        <div class="tech-total">${fmtHM(Math.round(totalMins))}</div>
+      </div>
+      <table>
+        <thead><tr><th>Date</th><th>Clock in</th><th>Clock out</th><th>Total hours</th></tr></thead>
+        <tbody>
+          ${entries.map(r => {
+            const hrs = r.hours_worked ? fmtHM(Math.round(r.hours_worked*60)) : '—';
+            const m = !r.clock_in || !r.clock_out;
+            return `<tr>
+              <td>${fmtDate(r.date)}</td>
+              <td class="${m&&!r.clock_in?'missing':''}">${r.clock_in||'MISSING'}</td>
+              <td class="${m&&!r.clock_out?'missing':''}">${r.clock_out||'MISSING'}</td>
+              <td class="${m?'missing':''}">${hrs}</td>
+            </tr>`;
+          }).join('')}
+          <tr class="total-row"><td colspan="3">${tech} — ${data.month} total</td><td>${fmtHM(Math.round(totalMins))}</td></tr>
+        </tbody>
+      </table>
+    </div>`;
+  });
+
+  body += `<div class="footer">PanelPro · Auto Bodyworx · Shefford Woodlands · This document was generated automatically</div>
+    </body></html>`;
+
+  const w = window.open('','_blank');
+  w.document.write(body);
+  w.document.close();
+  w.focus();
+  setTimeout(() => w.print(), 500);
+}
+
+// ═══════════════════════════════════════════════════════════
+// CUSTOMER CANCELLED
+// ═══════════════════════════════════════════════════════════
+async function customerCancelled(jobId) {
+  const j = allJobs.find(x => x.id === jobId);
+  if (!j) return;
+  if (!confirm(`Mark ${j.customer_name || 'this job'} as cancelled by customer?`)) return;
+  try {
+    await sbRaw('PATCH', 'jobs', {
+      status: 'declined',
+      decline_reason: 'Cancelled by customer',
+      customer_contacted: true,   // already contacted — they cancelled, no need to call
+      booking_date: null,         // remove from diary
+      booking_time: null,
+      archived: false
+    }, `?id=eq.${jobId}`);
+    showToast('Job marked as cancelled by customer');
+    await loadJobs();
+  } catch(e) { alert('Failed: ' + e.message); }
 }
 
 // ═══════════════════════════════════════════════════════════
