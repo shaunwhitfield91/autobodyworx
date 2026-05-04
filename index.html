@@ -15,7 +15,7 @@
 :root{
   --blue:#1e40af;--blue-bg:#dbeafe;--blue-txt:#1e3a8a;--blue-bdr:#93c5fd;
   --amber:#b45309;--amber-bg:#fef3c7;--amber-txt:#92400e;--amber-bdr:#fcd34d;
-  --teal:#065f46;--teal-bg:#d1fae5;--teal-txt:#064e3b;--teal-bdr:#6ee7b7;
+  --teal:#065f46;--teal-bg:#d1fae5;--teal-txt:#064e3b;--teal-bdr:#6ee7b7;--tony:#7c3aed;--tony-bg:#ede9fe;--tony-txt:#4c1d95;--tony-bdr:#c4b5fd;
   --accent:#6d28d9;
   --bg:#f0efec;--surface:#fff;--surface2:#f9f9f8;
   --border:#e5e7eb;--border2:#d1d5db;
@@ -227,6 +227,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .diary-tech-btn.on{background:var(--txt);color:#fff;border-color:var(--txt)}
 #dtb-shaun.on{background:var(--blue)!important;color:#fff!important;border-color:var(--blue)!important}
 #dtb-charles.on{background:var(--amber)!important;color:#fff!important;border-color:var(--amber)!important}
+#dtb-tony.on{background:var(--tony)!important;color:#fff!important;border-color:var(--tony)!important}
 .leg-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-weight:500}
 .leg-dot{width:13px;height:13px;border-radius:3px;flex-shrink:0}
 .leg-dot-s{background:var(--blue)}.leg-dot-c{background:var(--amber)}.leg-dot-b{background:var(--teal)}
@@ -255,7 +256,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .cal-evt-done{opacity:.6;text-decoration:line-through}
 .cal-evt-diary{background:#f3f4f6!important;color:#374151!important;border-left:2px solid #9ca3af}
 .cal-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.dot-S{background:var(--blue)}.dot-C{background:var(--amber)}.dot-B{background:var(--teal)}
+.dot-S{background:var(--blue)}.dot-C{background:var(--amber)}
+.dot-T{background:var(--tony)}
+.cal-evt-T{background:var(--tony-bg);color:var(--tony-txt)}.dot-B{background:var(--teal)}
 .cal-more{font-size:10px;color:var(--muted);padding:0 2px;font-weight:500}
 .cal-flags{display:flex;gap:2px;margin-top:2px;flex-wrap:wrap}
 
@@ -625,12 +628,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <button class="fpill" id="rfp-year" onclick="setRevFilter('year',this)">This year</button>
         </div>
       </div>
+      <!-- Revenue summary -->
+      <div id="jobsRevBar" style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap"></div>
       <!-- Date filter -->
       <div class="date-strip">
         <span class="dstrip-lbl">Date:</span>
         <button class="dpill on" id="dfp-all" onclick="setDateFilter('all',this)">All</button>
         <button class="dpill" id="dfp-today" onclick="setDateFilter('today',this)">Today</button>
         <button class="dpill" id="dfp-week" onclick="setDateFilter('week',this)">This week</button>
+        <button class="dpill" id="dfp-lastweek" onclick="setDateFilter('lastweek',this)">Last week</button>
         <button class="dpill" id="dfp-next" onclick="setDateFilter('next',this)">Next week</button>
       </div>
       <!-- Filter pills -->
@@ -693,6 +699,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           </button>
           <button class="diary-tech-btn" id="dtb-charles" onclick="setDiaryTech('charles',this)" style="border-color:var(--amber-bdr);color:var(--amber-txt)">
             <div class="leg-dot leg-dot-c" style="display:inline-block;vertical-align:middle;margin-right:4px"></div>Charles only
+          </button>
+          <button class="diary-tech-btn" id="dtb-tony" onclick="setDiaryTech('tony',this)" style="border-color:var(--tony-bdr);color:var(--tony-txt)">
+            <div class="leg-dot" style="width:8px;height:8px;border-radius:50%;background:var(--tony);display:inline-block;vertical-align:middle;margin-right:4px"></div>Tony only
           </button>
           <div style="height:20px;width:1px;background:var(--border);margin:0 4px"></div>
           <div class="leg-item"><div class="leg-dot leg-dot-b"></div><span style="color:var(--teal-txt);font-weight:600">Both</span></div>
@@ -1128,11 +1137,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       </div>
       <div>
         <span class="qlbl">Assigned tech</span>
-        <select class="msel" id="m_tech">
-          <option value="Shaun">Shaun</option>
-          <option value="Charles">Charles</option>
-          <option value="Both">Both</option>
-        </select>
+        <div class="tech-cb-group" id="m_tech_cbg" onclick="event.stopPropagation()">
+          <label class="tech-cb-lbl"><input type="checkbox" class="tech-cb" name="m_tech" value="Shaun" onchange="onTechCbChange('m_tech')"> Shaun</label>
+          <label class="tech-cb-lbl"><input type="checkbox" class="tech-cb" name="m_tech" value="Tony" onchange="onTechCbChange('m_tech')"> Tony</label>
+          <label class="tech-cb-lbl"><input type="checkbox" class="tech-cb" name="m_tech" value="Charles" onchange="onTechCbChange('m_tech')"> Charles</label>
+          <label class="tech-cb-lbl"><input type="checkbox" class="tech-cb" name="m_tech" value="Both" onchange="onTechCbChange('m_tech')"> Both (see notes)</label>
+          <input type="hidden" id="m_tech" value="Shaun">
+        </div>
       </div>
     </div>
     <div class="modal-grid2">
@@ -1211,11 +1222,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <option value="Alloys">Alloys (contracted out)</option>
     </select>
     <span class="qlbl">Assigned tech</span>
-    <select class="msel" id="bk_tech">
-      <option value="Shaun">Shaun</option>
-      <option value="Charles">Charles</option>
-      <option value="Both">Both</option>
-    </select>
+    <div class="tech-cb-group" id="bk_tech_cbg">
+      <label class="tech-cb-lbl"><input type="checkbox" value="Shaun" onchange="onTechCbChange('bk_tech')"> Shaun</label>
+      <label class="tech-cb-lbl"><input type="checkbox" value="Tony" onchange="onTechCbChange('bk_tech')"> Tony</label>
+      <label class="tech-cb-lbl"><input type="checkbox" value="Charles" onchange="onTechCbChange('bk_tech')"> Charles</label>
+      <label class="tech-cb-lbl"><input type="checkbox" value="Both" onchange="onTechCbChange('bk_tech')"> Both (see notes)</label>
+      <input type="hidden" id="bk_tech" value="Shaun">
+    </div>
     <span class="qlbl">Location</span>
     <select class="msel" id="bk_loc">
       <option value="mobile">Mobile — customer site</option>
@@ -1344,11 +1357,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="modal-grid2">
       <div>
         <span class="qlbl">Assigned tech</span>
-        <select class="msel" id="edit_tech">
-          <option value="Shaun">Shaun</option>
-          <option value="Charles">Charles</option>
-          <option value="Both">Both</option>
-        </select>
+        <div class="tech-cb-group" id="edit_tech_cbg" onclick="event.stopPropagation()">
+          <label class="tech-cb-lbl"><input type="checkbox" value="Shaun" onchange="onTechCbChange('edit_tech')"> Shaun</label>
+          <label class="tech-cb-lbl"><input type="checkbox" value="Tony" onchange="onTechCbChange('edit_tech')"> Tony</label>
+          <label class="tech-cb-lbl"><input type="checkbox" value="Charles" onchange="onTechCbChange('edit_tech')"> Charles</label>
+          <label class="tech-cb-lbl"><input type="checkbox" value="Both" onchange="onTechCbChange('edit_tech')"> Both (see notes)</label>
+          <input type="hidden" id="edit_tech" value="">
+        </div>
       </div>
       <div>
         <span class="qlbl">Customer address</span>
@@ -1464,12 +1479,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="modal-grid2">
       <div>
         <span class="qlbl">Assigned to</span>
-        <select class="msel" id="de_tech">
-          <option value="Shaun">Shaun</option>
-          <option value="Charles">Charles</option>
-          <option value="Both">Both</option>
-          <option value="All">All staff</option>
-        </select>
+        <div class="tech-cb-group" id="de_tech_cbg">
+          <label class="tech-cb-lbl"><input type="checkbox" value="Shaun" onchange="onTechCbChange('de_tech')"> Shaun</label>
+          <label class="tech-cb-lbl"><input type="checkbox" value="Tony" onchange="onTechCbChange('de_tech')"> Tony</label>
+          <label class="tech-cb-lbl"><input type="checkbox" value="Charles" onchange="onTechCbChange('de_tech')"> Charles</label>
+          <label class="tech-cb-lbl"><input type="checkbox" value="Both" onchange="onTechCbChange('de_tech')"> Both (see notes)</label>
+          <input type="hidden" id="de_tech" value="Shaun">
+        </div>
       </div>
       <div>
         <span class="qlbl">Time (optional)</span>
@@ -2051,6 +2067,32 @@ function setDateFilter(f, btn) {
   renderJobs();
 }
 
+// Date filter logic — used in renderJobs
+function passesDateFilter(j) {
+  if (currentDateFilter === 'all') return true;
+  if (!j.booking_date) return currentDateFilter === 'all';
+  const now = new Date();
+  if (currentDateFilter === 'today') {
+    return j.booking_date.startsWith(now.toISOString().split('T')[0]);
+  }
+  if (currentDateFilter === 'week') {
+    const mon = new Date(now); mon.setDate(now.getDate() - (now.getDay()||7) + 1); mon.setHours(0,0,0,0);
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6); sun.setHours(23,59,59,999);
+    const d = new Date(j.booking_date); return d >= mon && d <= sun;
+  }
+  if (currentDateFilter === 'lastweek') {
+    const mon = new Date(now); mon.setDate(now.getDate() - (now.getDay()||7) - 6); mon.setHours(0,0,0,0);
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6); sun.setHours(23,59,59,999);
+    const d = new Date(j.booking_date); return d >= mon && d <= sun;
+  }
+  if (currentDateFilter === 'next') {
+    const mon = new Date(now); mon.setDate(now.getDate() - (now.getDay()||7) + 8); mon.setHours(0,0,0,0);
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6); sun.setHours(23,59,59,999);
+    const d = new Date(j.booking_date); return d >= mon && d <= sun;
+  }
+  return true;
+}
+
 function setRevFilter(f, btn) {
   currentRevFilter = f;
   document.querySelectorAll('#rev-panel .fpill').forEach(b => b.classList.remove('on'));
@@ -2098,14 +2140,7 @@ function renderJobs() {
 
   // Date filter
   if (currentDateFilter !== 'all') {
-    jobs = jobs.filter(j => {
-      if (!j.booking_date) return currentDateFilter === 'all';
-      const d = new Date(j.booking_date); d.setHours(0,0,0,0);
-      if (currentDateFilter === 'today') return d.getTime() === today.getTime();
-      if (currentDateFilter === 'week') return d >= today && d <= endOfWeek;
-      if (currentDateFilter === 'next') return d >= nextWeekStart && d <= nextWeekEnd;
-      return true;
-    });
+    jobs = jobs.filter(j => passesDateFilter(j));
   }
 
   // Search
@@ -2129,9 +2164,11 @@ function renderJobs() {
   const el = document.getElementById('jobList');
   if (!jobs.length) {
     el.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div>No jobs match your filter</div>`;
+    renderJobsRevBar([]);
     return;
   }
   el.innerHTML = jobs.map(j => buildJobCard(j)).join('');
+  renderJobsRevBar(jobs);
   // Re-open any previously open card
   if (openJobId) {
     const el = document.getElementById('jc-' + openJobId);
@@ -2787,6 +2824,7 @@ function techClass(tech) {
   const t = tech.toLowerCase();
   if (t.includes('both')) return 'B';
   if (t.includes('charles')) return 'C';
+  if (t.includes('tony')) return 'T';
   return 'S';
 }
 
@@ -2832,6 +2870,7 @@ function renderMonthView() {
         const tc = techClass(e.assigned_tech);
         if (diaryTechFilter === 'shaun') return tc === 'S' || tc === 'B';
         if (diaryTechFilter === 'charles') return tc === 'C' || tc === 'B';
+        if (diaryTechFilter === 'tony') return tc === 'T' || tc === 'B';
         return true;
       });
       let shown = 0;
@@ -4046,10 +4085,9 @@ function pad2(n) { return n < 10 ? '0' + n : '' + n; }
 
 function techBadge(tech) {
   if (!tech) return '';
-  const t = tech.toLowerCase();
-  if (t.includes('both')) return '<span class="badge bdg-both">Both</span>';
-  if (t.includes('charles')) return '<span class="badge bdg-charles">Charles</span>';
-  return '<span class="badge bdg-shaun">Shaun</span>';
+  const tc = techClass(tech);
+  const col = tc==='C' ? 'var(--amber)' : tc==='B' ? 'var(--teal)' : tc==='T' ? 'var(--tony)' : 'var(--blue)';
+  return `<span class="badge" style="background:${col}20;color:${col};border:1px solid ${col}40">${esc(tech)}</span>`;
 }
 
 let _toastTimer;
@@ -4076,7 +4114,7 @@ function openBookModal(jobId) {
   document.getElementById('bk_date').value = j.booking_date || '';
   document.getElementById('bk_time').value = j.booking_time || '09:00';
   document.getElementById('bk_dur').value = j.duration || '3 hours';
-  document.getElementById('bk_tech').value = j.assigned_tech || 'Shaun';
+  setTechCheckboxes('bk_tech', j.assigned_tech || 'Shaun');
   document.getElementById('bk_loc').value = j.job_location || 'workshop';
   // Pre-fill address from customer address if mobile job
   if (j.job_location === 'mobile' && j.customer_address) {
@@ -4147,7 +4185,7 @@ function openEditModal(jobId) {
   document.getElementById('edit_time').value = j.booking_time || '09:00';
   document.getElementById('edit_duration').value = j.duration || '5 hours';
   document.getElementById('edit_status').value = j.status === 'completed' ? 'completed' : j.status;
-  document.getElementById('edit_tech').value = j.assigned_tech || 'Shaun';
+  setTechCheckboxes('edit_tech', j.assigned_tech || 'Shaun');
   document.getElementById('edit_addr').value = j.customer_address || '';
   document.getElementById('edit_loc').value = j.job_location || 'workshop';
   document.getElementById('edit_source').value = j.source || 'other';
@@ -5230,6 +5268,81 @@ async function savePastEntry() {
     document.getElementById('past_date').value = '';
     await updateTchrs();
   } catch(e) { alert('Failed: ' + e.message); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// JOBS TAB REVENUE BAR
+// ═══════════════════════════════════════════════════════════
+function renderJobsRevBar(jobs) {
+  const el = document.getElementById('jobsRevBar');
+  if (!el) return;
+  // Only show revenue bar when date filter is active
+  if (currentDateFilter === 'all') { el.innerHTML = ''; return; }
+
+  const diaryExclude = ['Holiday','Appointment','Van day','Diary entry'];
+  const realJobs = jobs.filter(j => !diaryExclude.includes(j.source));
+
+  function getPrice(j) {
+    return parseFloat((j.quote_price || j.invoice_amount || '0').toString().replace(/[^0-9.]/g,'')) || 0;
+  }
+
+  const total = realJobs.reduce((s,j) => s + getPrice(j), 0);
+  const invoiced = realJobs.filter(j=>j.invoiced_at).reduce((s,j) => s + getPrice(j), 0);
+  const pending = realJobs.filter(j=>!j.invoiced_at&&j.status!=='declined').reduce((s,j) => s + getPrice(j), 0);
+  const fmt = n => '£' + Math.round(n).toLocaleString('en-GB');
+
+  const labels = {
+    today: 'Today',
+    week: 'This week',
+    lastweek: 'Last week',
+    next: 'Next week'
+  };
+  const label = labels[currentDateFilter] || '';
+
+  el.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 14px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;width:100%">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">${label} revenue</div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap">
+        <div><div style="font-size:11px;color:var(--muted)">Total</div><div style="font-size:18px;font-weight:700;color:var(--txt)">${fmt(total)}</div></div>
+        <div><div style="font-size:11px;color:var(--muted)">Invoiced</div><div style="font-size:18px;font-weight:700;color:#059669">${fmt(invoiced)}</div></div>
+        <div><div style="font-size:11px;color:var(--muted)">Awaiting invoice</div><div style="font-size:18px;font-weight:700;color:#b45309">${fmt(pending)}</div></div>
+        <div><div style="font-size:11px;color:var(--muted)">Jobs</div><div style="font-size:18px;font-weight:700;color:var(--txt)">${realJobs.length}</div></div>
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+// TECH CHECKBOX HELPERS
+// ═══════════════════════════════════════════════════════════
+function onTechCbChange(fieldId) {
+  const checked = Array.from(document.querySelectorAll(`#${fieldId}_cbg input:checked`)).map(c => c.value);
+  const hidden = document.getElementById(fieldId);
+  if (!hidden) return;
+  // If "Both" is checked, uncheck individuals; if individuals all checked, keep as-is
+  if (checked.includes('Both')) {
+    // Clear all others
+    document.querySelectorAll(`#${fieldId}_cbg input`).forEach(c => {
+      if (c.value !== 'Both') c.checked = false;
+    });
+    hidden.value = 'Both';
+  } else {
+    hidden.value = checked.join(', ') || '';
+  }
+}
+
+function setTechCheckboxes(fieldId, value) {
+  // Pre-tick checkboxes from a saved value
+  if (!value) return;
+  document.querySelectorAll(`#${fieldId}_cbg input`).forEach(c => {
+    c.checked = value.includes(c.value);
+  });
+  const hidden = document.getElementById(fieldId);
+  if (hidden) hidden.value = value;
+}
+
+function getTechValue(fieldId) {
+  const hidden = document.getElementById(fieldId);
+  return hidden ? hidden.value : '';
 }
 
 // ═══════════════════════════════════════════════════════════
