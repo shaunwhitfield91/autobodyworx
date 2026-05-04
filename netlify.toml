@@ -8,3 +8,6 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+[functions."backup"]
+  schedule = "0 23 * * 0"
