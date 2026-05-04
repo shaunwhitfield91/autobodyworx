@@ -1036,6 +1036,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <button class="btn-primary" onclick="downloadBackup()" id="backupBtn" style="margin-bottom:8px">⬇ Download backup now</button>
         <div style="font-size:11px;color:var(--muted)" id="backupStatus">Backup includes: all jobs, photos, parts, time entries, holiday requests</div>
       </div>
+      <div class="settings-card">
+        <div class="settings-card-hd">SMS Test</div>
+        <div class="settings-card-sub">Send a test SMS to check Twilio is connected and working correctly. Sends a sample reminder and review message to the number you enter.</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+          <input class="minp" id="testSmsPhone" placeholder="07700 000000" style="flex:1;min-width:140px">
+          <button class="btn-secondary" onclick="sendTestSms('reminder')" style="white-space:nowrap">Send test reminder</button>
+          <button class="btn-secondary" onclick="sendTestSms('review')" style="white-space:nowrap">Send test review</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted)" id="testSmsStatus">Enter a mobile number and tap either button</div>
+      </div>
     </div>
   </div>
 </div>
@@ -5384,6 +5394,32 @@ async function downloadBackup() {
     alert('Backup failed: ' + e.message);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '⬇ Download backup now'; }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// TEST SMS
+// ═══════════════════════════════════════════════════════════
+async function sendTestSms(type) {
+  const phone = document.getElementById('testSmsPhone').value.trim();
+  if (!phone) { showToast('Enter a phone number first'); return; }
+  const status = document.getElementById('testSmsStatus');
+  status.textContent = 'Sending...';
+  status.style.color = 'var(--muted)';
+  try {
+    const res = await fetch('/.netlify/functions/send-test-sms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: phone, type })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    status.textContent = '✓ ' + (type === 'reminder' ? 'Reminder' : 'Review') + ' SMS sent to ' + phone;
+    status.style.color = 'var(--teal)';
+    showToast('✓ Test SMS sent successfully');
+  } catch(e) {
+    status.textContent = '✗ Failed: ' + e.message;
+    status.style.color = 'var(--red)';
   }
 }
 
