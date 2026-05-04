@@ -513,9 +513,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .panel-cb input{width:13px;height:13px;cursor:pointer;accent-color:var(--blue);flex-shrink:0}
 .panel-notes{width:100%;border:1px solid var(--border2);border-radius:var(--radius);padding:7px 10px;font-size:12px;font-family:inherit;color:var(--txt);background:var(--surface);resize:vertical;margin-top:4px;min-height:38px}
 .panel-notes:focus{outline:none;border-color:var(--blue)}
+
+/* Chrome password manager decoy fields */
+.chrome-autofill-decoy { position:absolute; width:0; height:0; overflow:hidden; opacity:0; pointer-events:none; left:-9999px; top:-9999px; }
 </style>
 </head>
 <body>
+
+<!-- Chrome autofill decoy — prevents password save prompts on modals -->
+<div style="position:absolute;width:0;height:0;overflow:hidden;opacity:0;left:-9999px" aria-hidden="true">
+  <input type="text" name="fakeusernameremembered" tabindex="-1" autocomplete="off">
+  <input type="password" name="fakepasswordremembered" tabindex="-1" autocomplete="new-password">
+</div>
 
 <!-- LOGIN -->
 <div id="loginScreen">
