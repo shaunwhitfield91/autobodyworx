@@ -950,6 +950,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
               <div class="tchrs-stat"><div class="tchrs-sl">Last month</div><div class="tchrs-sn" id="thrs-last">0h 00m</div></div>
             </div>
             <div style="border-top:1px solid var(--border)" id="tchrs-recent"></div>
+          <!-- Add past entry -->
+          <div style="border-top:1px solid var(--border);padding:10px 14px">
+            <div class="tclock-lbl" style="margin-bottom:8px">Add a missed entry</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;align-items:end">
+              <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">Date</div>
+              <input type="date" id="past_date" style="border:1px solid var(--border2);border-radius:var(--radius);padding:5px 8px;font-size:12px;width:100%;font-family:inherit;background:var(--surface);color:var(--txt)"></div>
+              <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">Clock in</div>
+              <input type="time" id="past_in" value="09:00" style="border:1px solid var(--border2);border-radius:var(--radius);padding:5px 8px;font-size:12px;width:100%;font-family:inherit;background:var(--surface);color:var(--txt)"></div>
+              <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">Clock out</div>
+              <input type="time" id="past_out" value="17:00" style="border:1px solid var(--border2);border-radius:var(--radius);padding:5px 8px;font-size:12px;width:100%;font-family:inherit;background:var(--surface);color:var(--txt)"></div>
+              <button onclick="savePastEntry()" style="padding:6px 10px;background:var(--blue);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:12px;font-family:inherit;white-space:nowrap">Save</button>
+            </div>
+          </div>
           <div style="padding:10px 14px;border-top:1px solid var(--border)">
             <button class="btn-secondary" onclick="openTsEditor()" style="width:100%;font-size:12px">Edit timesheet entries</button>
           </div>
@@ -1958,6 +1971,15 @@ async function renderHomeAttention() {
     try {
       const holReqs = await loadHolidayRequests();
       window._pendingHolRequests = holReqs;
+      // Show cancelled-approved holidays needing diary cleanup
+      const allHolReqs = await sbRaw('GET','holiday_requests',null,`?order=responded_at.desc`).catch(()=>[]);
+      const cancelledApproved = (allHolReqs||[]).filter(r=>r.status==='cancelled'&&r.reason&&r.reason.includes('CANCELLED BY TECH'));
+      if (cancelledApproved.length) {
+        items.push(`<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:8px">
+          <div style="font-size:12px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">⚠ Holiday cancelled — diary action needed</div>
+          ${cancelledApproved.map(r=>`<div style="font-size:13px;color:var(--txt);padding:4px 0">${esc(r.tech_name||'')} cancelled: ${fmtDate(r.from_date)}${r.from_date!==r.to_date?' – '+fmtDate(r.to_date):''}<br><span style="font-size:11px;color:#991b1b">Remove diary entries manually</span></div>`).join('')}
+        </div>`);
+      }
       if (holReqs.length) {
         items.push(`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:8px">
           <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🏖 Holiday requests — ${holReqs.length} pending</div>
@@ -2097,12 +2119,12 @@ function renderJobs() {
   // Update stat counters
   document.getElementById('sP').textContent = allJobs.filter(j=>j.status==='pending').length;
   document.getElementById('sQ').textContent = allJobs.filter(j=>j.status==='quoted').length;
-  const invCount = allJobs.filter(j=>j.status==='completed'&&!j.paid).length;
+  const invCount = allJobs.filter(j=>j.status==='completed'&&!j.invoiced_at).length;
   const invEl = document.getElementById('h-inv-count');
   if (invEl) invEl.textContent = invCount;
   document.getElementById('sB').textContent = allJobs.filter(j=>j.status==='booked').length;
   document.getElementById('sC').textContent = allJobs.filter(j=>j.status==='completed').length;
-  document.getElementById('sI').textContent = allJobs.filter(j=>j.status==='completed'&&!j.paid).length;
+  document.getElementById('sI').textContent = invCount;
 
   const el = document.getElementById('jobList');
   if (!jobs.length) {
@@ -4551,10 +4573,17 @@ function renderHolidayCard() {
         const dateStr = r.from_date === r.to_date
           ? fmtDate(r.from_date)
           : fmtDate(r.from_date) + ' – ' + fmtDate(r.to_date);
-        return `<div class="hol-row">
-          <div><div style="font-weight:600;color:var(--txt)">${dateStr}</div>
-          <div style="font-size:11px;color:var(--muted)">${r.days_count || 0} day${r.days_count!==1?'s':''}</div></div>
-          ${badge}
+        // Can amend/cancel if pending or approved (approved needs Shaun re-notified)
+        const canAmend = r.status !== 'rejected';
+        return `<div class="hol-row" style="flex-wrap:wrap;gap:6px">
+          <div style="flex:1">
+            <div style="font-weight:600;color:var(--txt)">${dateStr}</div>
+            <div style="font-size:11px;color:var(--muted)">${r.days_count || 0} day${r.days_count!==1?'s':''}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            ${badge}
+            ${canAmend ? `<button onclick="cancelHolidayRequest('${r.id}','${r.status}')" style="font-size:10px;padding:2px 7px;border:1px solid var(--red);border-radius:4px;background:transparent;color:var(--red);cursor:pointer;font-family:inherit">Cancel</button>` : ''}
+          </div>
         </div>`;
       }).join('');
     }
@@ -5138,6 +5167,68 @@ async function customerCancelled(jobId) {
     }, `?id=eq.${jobId}`);
     showToast('Job marked as cancelled by customer');
     await loadJobs();
+  } catch(e) { alert('Failed: ' + e.message); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// HOLIDAY CANCELLATION (tech side)
+// ═══════════════════════════════════════════════════════════
+async function cancelHolidayRequest(id, currentStatus) {
+  const msg = currentStatus === 'approved'
+    ? 'This holiday was already approved. Cancelling will notify Shaun to remove it from the diary. Continue?'
+    : 'Cancel this holiday request?';
+  if (!confirm(msg)) return;
+  try {
+    await sbRaw('PATCH', 'holiday_requests', {
+      status: 'cancelled',
+      responded_at: new Date().toISOString(),
+      responded_by: currentProfile?.full_name || ''
+    }, `?id=eq.${id}`);
+
+    // If it was approved, flag it so Shaun knows to remove from diary
+    if (currentStatus === 'approved') {
+      // Update with a note for Shaun
+      await sbRaw('PATCH', 'holiday_requests', {
+        reason: ((await sbRaw('GET','holiday_requests',null,`?id=eq.${id}&select=reason`))?.[0]?.reason || '') + ' [CANCELLED BY TECH — please remove from diary]'
+      }, `?id=eq.${id}`);
+    }
+    showToast('Holiday request cancelled');
+    await loadHolidays();
+  } catch(e) { alert('Failed: ' + e.message); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAST TIME ENTRY
+// ═══════════════════════════════════════════════════════════
+async function savePastEntry() {
+  const date = document.getElementById('past_date')?.value;
+  const clockIn = document.getElementById('past_in')?.value;
+  const clockOut = document.getElementById('past_out')?.value;
+  if (!date) { showToast('Select a date'); return; }
+  if (!clockIn || !clockOut) { showToast('Enter clock in and out times'); return; }
+  if (clockOut <= clockIn) { showToast('Clock out must be after clock in'); return; }
+  const [hi, mi] = clockIn.split(':').map(Number);
+  const [ho, mo] = clockOut.split(':').map(Number);
+  const hrs = Math.round(((ho * 60 + mo) - (hi * 60 + mi)) / 60 * 100) / 100;
+  const techName = currentProfile?.full_name || '';
+  try {
+    // Check if entry already exists for this date
+    const existing = await sbRaw('GET','time_entries',null,
+      `?tech_name=eq.${encodeURIComponent(techName)}&date=eq.${date}&limit=1`);
+    if (existing && existing.length) {
+      if (!confirm(`An entry already exists for ${fmtDate(date)}. Replace it?`)) return;
+      await sbRaw('PATCH','time_entries',{
+        clock_in: clockIn, clock_out: clockOut, hours_worked: hrs
+      }, `?tech_name=eq.${encodeURIComponent(techName)}&date=eq.${date}`);
+    } else {
+      await sbRaw('POST','time_entries',{
+        tech_name: techName, date, clock_in: clockIn,
+        clock_out: clockOut, hours_worked: hrs
+      });
+    }
+    showToast(`✓ Entry saved — ${fmtDate(date)}, ${fmtHM(Math.round(hrs*60))}`);
+    document.getElementById('past_date').value = '';
+    await updateTchrs();
   } catch(e) { alert('Failed: ' + e.message); }
 }
 
