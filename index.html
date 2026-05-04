@@ -641,7 +641,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       </div>
       <!-- Filter pills -->
       <div class="toolbar">
-        <input class="t-srch" id="jobSearch" placeholder="Search name, vehicle, phone..." oninput="renderJobs()">
+        <input autocomplete="off" class="t-srch" id="jobSearch" placeholder="Search name, vehicle, phone..." oninput="renderJobs()">
         <button class="fpill on" id="fp-all" onclick="setFilter('all',this)">All</button>
         <button class="fpill" id="fp-mine" onclick="setFilter('mine',this)">My jobs</button>
         <button class="fpill" id="fp-pend" onclick="setFilter('pending',this)">Pending</button>
@@ -735,25 +735,25 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <!-- Left: form -->
         <div class="quote-form-card">
           <div class="q-section-hd">Customer</div>
-          <span class="qlbl">Name</span><input class="qinp" id="q_custName" placeholder="Full name">
+          <span class="qlbl">Name</span><input autocomplete="off" class="qinp" id="q_custName" placeholder="Full name">
           <div class="qgrid2">
-            <div><span class="qlbl">Phone</span><input class="qinp" id="q_custPhone" placeholder="07700..."></div>
-            <div><span class="qlbl">Email</span><input class="qinp" id="q_custEmail" placeholder="email@..."></div>
+            <div><span class="qlbl">Phone</span><input autocomplete="off" class="qinp" id="q_custPhone" placeholder="07700..."></div>
+            <div><span class="qlbl">Email</span><input autocomplete="off" class="qinp" id="q_custEmail" placeholder="email@..."></div>
           </div>
           <div class="q-section-hd">Vehicle</div>
           <div class="qgrid3">
-            <div><span class="qlbl">Make</span><input class="qinp" id="q_make" placeholder="VW"></div>
-            <div><span class="qlbl">Model</span><input class="qinp" id="q_model" placeholder="Golf"></div>
-            <div><span class="qlbl">Year</span><input class="qinp" id="q_year" placeholder="2022"></div>
+            <div><span class="qlbl">Make</span><input autocomplete="off" class="qinp" id="q_make" placeholder="VW"></div>
+            <div><span class="qlbl">Model</span><input autocomplete="off" class="qinp" id="q_model" placeholder="Golf"></div>
+            <div><span class="qlbl">Year</span><input autocomplete="off" class="qinp" id="q_year" placeholder="2022"></div>
           </div>
-          <span class="qlbl">Colour</span><input class="qinp" id="q_colour" placeholder="Pearl White">
+          <span class="qlbl">Colour</span><input autocomplete="off" class="qinp" id="q_colour" placeholder="Pearl White">
           <div class="q-section-hd">Damage</div>
           <div class="qgrid2">
-            <div><span class="qlbl">Address line 1</span><input class="qinp" id="q_addr1" placeholder="House number & street"></div>
-            <div><span class="qlbl">Town / City</span><input class="qinp" id="q_addr2" placeholder="Town"></div>
+            <div><span class="qlbl">Address line 1</span><input autocomplete="off" class="qinp" id="q_addr1" placeholder="House number & street"></div>
+            <div><span class="qlbl">Town / City</span><input autocomplete="off" class="qinp" id="q_addr2" placeholder="Town"></div>
           </div>
           <div class="qgrid2">
-            <div><span class="qlbl">Postcode</span><input class="qinp" id="q_postcode" placeholder="RG17..."></div>
+            <div><span class="qlbl">Postcode</span><input autocomplete="off" class="qinp" id="q_postcode" placeholder="RG17..."></div>
             <div><span class="qlbl">Source — where did enquiry come from?</span>
               <select class="qinp" id="q_source" style="padding:9px 10px">
                 <option value="whatsapp">WhatsApp</option>
@@ -777,62 +777,62 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
             </div>
           </div>
           <span class="qlbl">Panels / damage</span>
-          <input type="hidden" id="q_panels">
+          <input autocomplete="off" type="hidden" id="q_panels">
 <div class="panel-picker" id="q_picker">
   <div class="panel-cat">Bumpers & corners</div>
   <div class="panel-items">
-    <label class="panel-cb"><input type="checkbox" id="q_front_bumper" onchange="updatePanelText('q')"> Front bumper</label>
-    <label class="panel-cb"><input type="checkbox" id="q_rear_bumper" onchange="updatePanelText('q')"> Rear bumper</label>
-    <label class="panel-cb"><input type="checkbox" id="q_nsf_corner" onchange="updatePanelText('q')"> NSF bumper corner</label>
-    <label class="panel-cb"><input type="checkbox" id="q_osf_corner" onchange="updatePanelText('q')"> OSF bumper corner</label>
-    <label class="panel-cb"><input type="checkbox" id="q_nsr_corner" onchange="updatePanelText('q')"> NSR bumper corner</label>
-    <label class="panel-cb"><input type="checkbox" id="q_osr_corner" onchange="updatePanelText('q')"> OSR bumper corner</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_front_bumper" onchange="updatePanelText('q')"> Front bumper</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_rear_bumper" onchange="updatePanelText('q')"> Rear bumper</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_nsf_corner" onchange="updatePanelText('q')"> NSF bumper corner</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_osf_corner" onchange="updatePanelText('q')"> OSF bumper corner</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_nsr_corner" onchange="updatePanelText('q')"> NSR bumper corner</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_osr_corner" onchange="updatePanelText('q')"> OSR bumper corner</label>
   </div>
   <div class="panel-cat">Doors & pillars</div>
   <div class="panel-items">
-    <label class="panel-cb"><input type="checkbox" id="q_nsf_door" onchange="updatePanelText('q')"> NSF door</label>
-    <label class="panel-cb"><input type="checkbox" id="q_osf_door" onchange="updatePanelText('q')"> OSF door</label>
-    <label class="panel-cb"><input type="checkbox" id="q_nsr_door" onchange="updatePanelText('q')"> NSR door</label>
-    <label class="panel-cb"><input type="checkbox" id="q_osr_door" onchange="updatePanelText('q')"> OSR door</label>
-    <label class="panel-cb"><input type="checkbox" id="q_a_pillar" onchange="updatePanelText('q')"> A-pillar</label>
-    <label class="panel-cb"><input type="checkbox" id="q_b_pillar" onchange="updatePanelText('q')"> B-pillar</label>
-    <label class="panel-cb"><input type="checkbox" id="q_c_pillar" onchange="updatePanelText('q')"> C-pillar</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_nsf_door" onchange="updatePanelText('q')"> NSF door</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_osf_door" onchange="updatePanelText('q')"> OSF door</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_nsr_door" onchange="updatePanelText('q')"> NSR door</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_osr_door" onchange="updatePanelText('q')"> OSR door</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_a_pillar" onchange="updatePanelText('q')"> A-pillar</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_b_pillar" onchange="updatePanelText('q')"> B-pillar</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_c_pillar" onchange="updatePanelText('q')"> C-pillar</label>
   </div>
   <div class="panel-cat">Wings, sills & body</div>
   <div class="panel-items">
-    <label class="panel-cb"><input type="checkbox" id="q_ns_wing" onchange="updatePanelText('q')"> NS front wing</label>
-    <label class="panel-cb"><input type="checkbox" id="q_os_wing" onchange="updatePanelText('q')"> OS front wing</label>
-    <label class="panel-cb"><input type="checkbox" id="q_ns_sill" onchange="updatePanelText('q')"> NS sill</label>
-    <label class="panel-cb"><input type="checkbox" id="q_os_sill" onchange="updatePanelText('q')"> OS sill</label>
-    <label class="panel-cb"><input type="checkbox" id="q_ns_quarter" onchange="updatePanelText('q')"> NS quarter panel</label>
-    <label class="panel-cb"><input type="checkbox" id="q_os_quarter" onchange="updatePanelText('q')"> OS quarter panel</label>
-    <label class="panel-cb"><input type="checkbox" id="q_bonnet" onchange="updatePanelText('q')"> Bonnet</label>
-    <label class="panel-cb"><input type="checkbox" id="q_boot" onchange="updatePanelText('q')"> Boot / tailgate</label>
-    <label class="panel-cb"><input type="checkbox" id="q_roof" onchange="updatePanelText('q')"> Roof</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_ns_wing" onchange="updatePanelText('q')"> NS front wing</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_os_wing" onchange="updatePanelText('q')"> OS front wing</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_ns_sill" onchange="updatePanelText('q')"> NS sill</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_os_sill" onchange="updatePanelText('q')"> OS sill</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_ns_quarter" onchange="updatePanelText('q')"> NS quarter panel</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_os_quarter" onchange="updatePanelText('q')"> OS quarter panel</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_bonnet" onchange="updatePanelText('q')"> Bonnet</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_boot" onchange="updatePanelText('q')"> Boot / tailgate</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_roof" onchange="updatePanelText('q')"> Roof</label>
   </div>
   <div class="panel-cat">Trims & arch liners</div>
   <div class="panel-items">
-    <label class="panel-cb"><input type="checkbox" id="q_ns_arch_trim" onchange="updatePanelText('q')"> NS wheel arch trim</label>
-    <label class="panel-cb"><input type="checkbox" id="q_os_arch_trim" onchange="updatePanelText('q')"> OS wheel arch trim</label>
-    <label class="panel-cb"><input type="checkbox" id="q_nsf_bumper_trim" onchange="updatePanelText('q')"> NSF bumper trim</label>
-    <label class="panel-cb"><input type="checkbox" id="q_osf_bumper_trim" onchange="updatePanelText('q')"> OSF bumper trim</label>
-    <label class="panel-cb"><input type="checkbox" id="q_nsr_bumper_trim" onchange="updatePanelText('q')"> NSR bumper trim</label>
-    <label class="panel-cb"><input type="checkbox" id="q_osr_bumper_trim" onchange="updatePanelText('q')"> OSR bumper trim</label>
-    <label class="panel-cb"><input type="checkbox" id="q_ns_door_trim" onchange="updatePanelText('q')"> NS door trim</label>
-    <label class="panel-cb"><input type="checkbox" id="q_os_door_trim" onchange="updatePanelText('q')"> OS door trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_ns_arch_trim" onchange="updatePanelText('q')"> NS wheel arch trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_os_arch_trim" onchange="updatePanelText('q')"> OS wheel arch trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_nsf_bumper_trim" onchange="updatePanelText('q')"> NSF bumper trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_osf_bumper_trim" onchange="updatePanelText('q')"> OSF bumper trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_nsr_bumper_trim" onchange="updatePanelText('q')"> NSR bumper trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_osr_bumper_trim" onchange="updatePanelText('q')"> OSR bumper trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_ns_door_trim" onchange="updatePanelText('q')"> NS door trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_os_door_trim" onchange="updatePanelText('q')"> OS door trim</label>
   </div>
   <div class="panel-cat">Glass & lights</div>
   <div class="panel-items">
-    <label class="panel-cb"><input type="checkbox" id="q_windscreen" onchange="updatePanelText('q')"> Windscreen</label>
-    <label class="panel-cb"><input type="checkbox" id="q_rear_screen" onchange="updatePanelText('q')"> Rear screen</label>
-    <label class="panel-cb"><input type="checkbox" id="q_ns_front_light" onchange="updatePanelText('q')"> NS front light</label>
-    <label class="panel-cb"><input type="checkbox" id="q_os_front_light" onchange="updatePanelText('q')"> OS front light</label>
-    <label class="panel-cb"><input type="checkbox" id="q_ns_rear_light" onchange="updatePanelText('q')"> NS rear light</label>
-    <label class="panel-cb"><input type="checkbox" id="q_os_rear_light" onchange="updatePanelText('q')"> OS rear light</label>
-    <label class="panel-cb"><input type="checkbox" id="q_ns_mirror" onchange="updatePanelText('q')"> NS wing mirror</label>
-    <label class="panel-cb"><input type="checkbox" id="q_os_mirror" onchange="updatePanelText('q')"> OS wing mirror</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_windscreen" onchange="updatePanelText('q')"> Windscreen</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_rear_screen" onchange="updatePanelText('q')"> Rear screen</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_ns_front_light" onchange="updatePanelText('q')"> NS front light</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_os_front_light" onchange="updatePanelText('q')"> OS front light</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_ns_rear_light" onchange="updatePanelText('q')"> NS rear light</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_os_rear_light" onchange="updatePanelText('q')"> OS rear light</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_ns_mirror" onchange="updatePanelText('q')"> NS wing mirror</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="q_os_mirror" onchange="updatePanelText('q')"> OS wing mirror</label>
   </div>
-  <div style="padding:6px 10px 8px"><input class="panel-notes" id="q_picker_notes" placeholder="Additional notes, e.g. stress cracks, paint code, customer comments..." onkeyup="updatePanelText('q')" type="text"></div>
+  <div style="padding:6px 10px 8px"><input autocomplete="off" class="panel-notes" id="q_picker_notes" placeholder="Additional notes, e.g. stress cracks, paint code, customer comments..." onkeyup="updatePanelText('q')" type="text"></div>
 </div>
           <span class="qlbl">Travel distance</span>
           <div class="loc-pills" id="trvPills">
@@ -845,9 +845,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
             <div class="upzone-sub">Camera or gallery · multiple allowed · stay with job</div>
             <div class="up-prev" id="upPrev"></div>
           </div>
-          <input type="file" id="photoInput" accept="image/*" multiple style="display:none" onchange="handlePhotos(this)">
+          <input autocomplete="off" type="file" id="photoInput" accept="image/*" multiple style="display:none" onchange="handlePhotos(this)">
           <div class="q-section-hd">Engineer notes (optional)</div>
-          <textarea class="qinp" id="q_notes" placeholder="Any observations, conditions, caveats..." rows="3" style="resize:vertical"></textarea>
+          <textarea autocomplete="off" class="qinp" id="q_notes" placeholder="Any observations, conditions, caveats..." rows="3" style="resize:vertical"></textarea>
           <button class="btn-primary" id="sendApprovalBtn" onclick="sendForApproval()" style="width:100%;padding:12px;font-size:14px;margin-top:4px">Send to Shaun for approval</button>
           <div style="display:flex;gap:8px;margin-top:8px">
             <button class="btn-secondary" id="genBtn" onclick="generateQuote()" style="flex:1;padding:9px;font-size:12px">Generate AI price suggestion</button>
@@ -880,7 +880,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <div id="manualWrap" style="display:none">
             <div style="font-size:13px;font-weight:600;color:var(--txt);margin-bottom:14px">Manual quote</div>
             <span class="qlbl">Price (inc VAT)</span>
-            <input class="qinp" id="m_price_manual" placeholder="e.g. £320" style="font-size:22px;font-weight:700;text-align:center;color:var(--teal)">
+            <input autocomplete="off" class="qinp" id="m_price_manual" placeholder="e.g. £320" style="font-size:22px;font-weight:700;text-align:center;color:var(--teal)">
             <span class="qlbl" style="margin-top:8px">Rung / complexity</span>
             <select class="qinp" id="m_rung_manual" style="margin-bottom:10px">
               <option value="1">Rung 1 — minor touch up</option>
@@ -903,7 +903,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
               <option value="Alloys">Alloys (contracted out)</option>
             </select>
             <span class="qlbl">Notes for customer (optional)</span>
-            <textarea class="qinp" id="m_note_manual" placeholder="Any notes to attach to this quote..." rows="2"></textarea>
+            <textarea autocomplete="off" class="qinp" id="m_note_manual" placeholder="Any notes to attach to this quote..." rows="2"></textarea>
             <div style="display:flex;gap:8px;margin-top:4px">
               <button class="btn-primary" onclick="saveManualQuote()" style="flex:1;padding:10px">Save quote</button>
               <button class="btn-secondary" onclick="cancelManual()" style="flex:1;padding:10px">Cancel</button>
@@ -939,7 +939,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
               <button class="tclock-btn tc-in" id="tclockBtn" onclick="doClockAction()">Clock in</button>
               <div style="display:flex;align-items:center;gap:6px;font-size:12px">
                 <span style="color:var(--muted)">Edit time:</span>
-                <input type="time" id="tclockTimeEdit" style="border:1px solid var(--border2);border-radius:var(--radius);padding:4px 8px;font-size:12px;color:var(--txt);background:var(--surface);font-family:inherit;width:80px">
+                <input autocomplete="off" type="time" id="tclockTimeEdit" style="border:1px solid var(--border2);border-radius:var(--radius);padding:4px 8px;font-size:12px;color:var(--txt);background:var(--surface);font-family:inherit;width:80px">
                 <button onclick="saveTclockTime()" style="padding:4px 8px;font-size:11px;border:1px solid var(--border2);border-radius:var(--radius);cursor:pointer;background:transparent;font-family:inherit;color:var(--txt2)">Save</button>
               </div>
             </div>
@@ -964,11 +964,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
             <div class="tclock-lbl" style="margin-bottom:8px">Add a missed entry</div>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;align-items:end">
               <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">Date</div>
-              <input type="date" id="past_date" style="border:1px solid var(--border2);border-radius:var(--radius);padding:5px 8px;font-size:12px;width:100%;font-family:inherit;background:var(--surface);color:var(--txt)"></div>
+              <input autocomplete="off" type="date" id="past_date" style="border:1px solid var(--border2);border-radius:var(--radius);padding:5px 8px;font-size:12px;width:100%;font-family:inherit;background:var(--surface);color:var(--txt)"></div>
               <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">Clock in</div>
-              <input type="time" id="past_in" value="09:00" style="border:1px solid var(--border2);border-radius:var(--radius);padding:5px 8px;font-size:12px;width:100%;font-family:inherit;background:var(--surface);color:var(--txt)"></div>
+              <input autocomplete="off" type="time" id="past_in" value="09:00" style="border:1px solid var(--border2);border-radius:var(--radius);padding:5px 8px;font-size:12px;width:100%;font-family:inherit;background:var(--surface);color:var(--txt)"></div>
               <div><div style="font-size:10px;color:var(--muted);margin-bottom:3px">Clock out</div>
-              <input type="time" id="past_out" value="17:00" style="border:1px solid var(--border2);border-radius:var(--radius);padding:5px 8px;font-size:12px;width:100%;font-family:inherit;background:var(--surface);color:var(--txt)"></div>
+              <input autocomplete="off" type="time" id="past_out" value="17:00" style="border:1px solid var(--border2);border-radius:var(--radius);padding:5px 8px;font-size:12px;width:100%;font-family:inherit;background:var(--surface);color:var(--txt)"></div>
               <button onclick="savePastEntry()" style="padding:6px 10px;background:var(--blue);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:12px;font-family:inherit;white-space:nowrap">Save</button>
             </div>
           </div>
@@ -1011,7 +1011,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="settings-card-hd">AI Quote Generator</div>
         <div class="settings-card-sub">Anthropic API key — required for quote generation. Stored in this browser only, never uploaded anywhere.</div>
         <div class="settings-row">
-          <input class="api-key-inp" type="password" id="anthropicKey" placeholder="sk-ant-...">
+          <input autocomplete="off" class="api-key-inp" type="password" id="anthropicKey" placeholder="sk-ant-...">
           <button class="btn-secondary" onclick="toggleKey()">Show</button>
           <button class="btn-primary" onclick="saveKey()">Save</button>
         </div>
@@ -1040,7 +1040,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="settings-card-hd">SMS Test</div>
         <div class="settings-card-sub">Send a test SMS to check Twilio is connected and working correctly. Sends a sample reminder and review message to the number you enter.</div>
         <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-          <input class="minp" id="testSmsPhone" placeholder="07700 000000" style="flex:1;min-width:140px">
+          <input autocomplete="off" class="minp" id="testSmsPhone" placeholder="07700 000000" style="flex:1;min-width:140px">
           <button class="btn-secondary" onclick="sendTestSms('reminder')" style="white-space:nowrap">Send test reminder</button>
           <button class="btn-secondary" onclick="sendTestSms('review')" style="white-space:nowrap">Send test review</button>
         </div>
@@ -1055,72 +1055,72 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="modal-box">
     <div class="modal-hd">Add job manually</div>
     <div class="modal-grid2">
-      <div><span class="qlbl">Customer name</span><input class="minp" id="m_name" placeholder="Full name"></div>
-      <div><span class="qlbl">Phone</span><input class="minp" id="m_phone" placeholder="07700..."></div>
+      <div><span class="qlbl">Customer name</span><input autocomplete="off" class="minp" id="m_name" placeholder="Full name"></div>
+      <div><span class="qlbl">Phone</span><input autocomplete="off" class="minp" id="m_phone" placeholder="07700..."></div>
     </div>
-    <span class="qlbl">Vehicle</span><input class="minp" id="m_vehicle" placeholder="Make, model, year">
-    <span class="qlbl">Colour</span><input class="minp" id="m_colour" placeholder="Colour">
+    <span class="qlbl">Vehicle</span><input autocomplete="off" class="minp" id="m_vehicle" placeholder="Make, model, year">
+    <span class="qlbl">Colour</span><input autocomplete="off" class="minp" id="m_colour" placeholder="Colour">
     <span class="qlbl">Panels / damage</span>
-    <input type="hidden" id="m_panels">
+    <input autocomplete="off" type="hidden" id="m_panels">
 <div class="panel-picker" id="m_picker">
   <div class="panel-cat">Bumpers & corners</div>
   <div class="panel-items">
-    <label class="panel-cb"><input type="checkbox" id="m_front_bumper" onchange="updatePanelText('m')"> Front bumper</label>
-    <label class="panel-cb"><input type="checkbox" id="m_rear_bumper" onchange="updatePanelText('m')"> Rear bumper</label>
-    <label class="panel-cb"><input type="checkbox" id="m_nsf_corner" onchange="updatePanelText('m')"> NSF bumper corner</label>
-    <label class="panel-cb"><input type="checkbox" id="m_osf_corner" onchange="updatePanelText('m')"> OSF bumper corner</label>
-    <label class="panel-cb"><input type="checkbox" id="m_nsr_corner" onchange="updatePanelText('m')"> NSR bumper corner</label>
-    <label class="panel-cb"><input type="checkbox" id="m_osr_corner" onchange="updatePanelText('m')"> OSR bumper corner</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_front_bumper" onchange="updatePanelText('m')"> Front bumper</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_rear_bumper" onchange="updatePanelText('m')"> Rear bumper</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_nsf_corner" onchange="updatePanelText('m')"> NSF bumper corner</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_osf_corner" onchange="updatePanelText('m')"> OSF bumper corner</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_nsr_corner" onchange="updatePanelText('m')"> NSR bumper corner</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_osr_corner" onchange="updatePanelText('m')"> OSR bumper corner</label>
   </div>
   <div class="panel-cat">Doors & pillars</div>
   <div class="panel-items">
-    <label class="panel-cb"><input type="checkbox" id="m_nsf_door" onchange="updatePanelText('m')"> NSF door</label>
-    <label class="panel-cb"><input type="checkbox" id="m_osf_door" onchange="updatePanelText('m')"> OSF door</label>
-    <label class="panel-cb"><input type="checkbox" id="m_nsr_door" onchange="updatePanelText('m')"> NSR door</label>
-    <label class="panel-cb"><input type="checkbox" id="m_osr_door" onchange="updatePanelText('m')"> OSR door</label>
-    <label class="panel-cb"><input type="checkbox" id="m_a_pillar" onchange="updatePanelText('m')"> A-pillar</label>
-    <label class="panel-cb"><input type="checkbox" id="m_b_pillar" onchange="updatePanelText('m')"> B-pillar</label>
-    <label class="panel-cb"><input type="checkbox" id="m_c_pillar" onchange="updatePanelText('m')"> C-pillar</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_nsf_door" onchange="updatePanelText('m')"> NSF door</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_osf_door" onchange="updatePanelText('m')"> OSF door</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_nsr_door" onchange="updatePanelText('m')"> NSR door</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_osr_door" onchange="updatePanelText('m')"> OSR door</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_a_pillar" onchange="updatePanelText('m')"> A-pillar</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_b_pillar" onchange="updatePanelText('m')"> B-pillar</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_c_pillar" onchange="updatePanelText('m')"> C-pillar</label>
   </div>
   <div class="panel-cat">Wings, sills & body</div>
   <div class="panel-items">
-    <label class="panel-cb"><input type="checkbox" id="m_ns_wing" onchange="updatePanelText('m')"> NS front wing</label>
-    <label class="panel-cb"><input type="checkbox" id="m_os_wing" onchange="updatePanelText('m')"> OS front wing</label>
-    <label class="panel-cb"><input type="checkbox" id="m_ns_sill" onchange="updatePanelText('m')"> NS sill</label>
-    <label class="panel-cb"><input type="checkbox" id="m_os_sill" onchange="updatePanelText('m')"> OS sill</label>
-    <label class="panel-cb"><input type="checkbox" id="m_ns_quarter" onchange="updatePanelText('m')"> NS quarter panel</label>
-    <label class="panel-cb"><input type="checkbox" id="m_os_quarter" onchange="updatePanelText('m')"> OS quarter panel</label>
-    <label class="panel-cb"><input type="checkbox" id="m_bonnet" onchange="updatePanelText('m')"> Bonnet</label>
-    <label class="panel-cb"><input type="checkbox" id="m_boot" onchange="updatePanelText('m')"> Boot / tailgate</label>
-    <label class="panel-cb"><input type="checkbox" id="m_roof" onchange="updatePanelText('m')"> Roof</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_ns_wing" onchange="updatePanelText('m')"> NS front wing</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_os_wing" onchange="updatePanelText('m')"> OS front wing</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_ns_sill" onchange="updatePanelText('m')"> NS sill</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_os_sill" onchange="updatePanelText('m')"> OS sill</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_ns_quarter" onchange="updatePanelText('m')"> NS quarter panel</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_os_quarter" onchange="updatePanelText('m')"> OS quarter panel</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_bonnet" onchange="updatePanelText('m')"> Bonnet</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_boot" onchange="updatePanelText('m')"> Boot / tailgate</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_roof" onchange="updatePanelText('m')"> Roof</label>
   </div>
   <div class="panel-cat">Trims & arch liners</div>
   <div class="panel-items">
-    <label class="panel-cb"><input type="checkbox" id="m_ns_arch_trim" onchange="updatePanelText('m')"> NS wheel arch trim</label>
-    <label class="panel-cb"><input type="checkbox" id="m_os_arch_trim" onchange="updatePanelText('m')"> OS wheel arch trim</label>
-    <label class="panel-cb"><input type="checkbox" id="m_nsf_bumper_trim" onchange="updatePanelText('m')"> NSF bumper trim</label>
-    <label class="panel-cb"><input type="checkbox" id="m_osf_bumper_trim" onchange="updatePanelText('m')"> OSF bumper trim</label>
-    <label class="panel-cb"><input type="checkbox" id="m_nsr_bumper_trim" onchange="updatePanelText('m')"> NSR bumper trim</label>
-    <label class="panel-cb"><input type="checkbox" id="m_osr_bumper_trim" onchange="updatePanelText('m')"> OSR bumper trim</label>
-    <label class="panel-cb"><input type="checkbox" id="m_ns_door_trim" onchange="updatePanelText('m')"> NS door trim</label>
-    <label class="panel-cb"><input type="checkbox" id="m_os_door_trim" onchange="updatePanelText('m')"> OS door trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_ns_arch_trim" onchange="updatePanelText('m')"> NS wheel arch trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_os_arch_trim" onchange="updatePanelText('m')"> OS wheel arch trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_nsf_bumper_trim" onchange="updatePanelText('m')"> NSF bumper trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_osf_bumper_trim" onchange="updatePanelText('m')"> OSF bumper trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_nsr_bumper_trim" onchange="updatePanelText('m')"> NSR bumper trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_osr_bumper_trim" onchange="updatePanelText('m')"> OSR bumper trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_ns_door_trim" onchange="updatePanelText('m')"> NS door trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_os_door_trim" onchange="updatePanelText('m')"> OS door trim</label>
   </div>
   <div class="panel-cat">Glass & lights</div>
   <div class="panel-items">
-    <label class="panel-cb"><input type="checkbox" id="m_windscreen" onchange="updatePanelText('m')"> Windscreen</label>
-    <label class="panel-cb"><input type="checkbox" id="m_rear_screen" onchange="updatePanelText('m')"> Rear screen</label>
-    <label class="panel-cb"><input type="checkbox" id="m_ns_front_light" onchange="updatePanelText('m')"> NS front light</label>
-    <label class="panel-cb"><input type="checkbox" id="m_os_front_light" onchange="updatePanelText('m')"> OS front light</label>
-    <label class="panel-cb"><input type="checkbox" id="m_ns_rear_light" onchange="updatePanelText('m')"> NS rear light</label>
-    <label class="panel-cb"><input type="checkbox" id="m_os_rear_light" onchange="updatePanelText('m')"> OS rear light</label>
-    <label class="panel-cb"><input type="checkbox" id="m_ns_mirror" onchange="updatePanelText('m')"> NS wing mirror</label>
-    <label class="panel-cb"><input type="checkbox" id="m_os_mirror" onchange="updatePanelText('m')"> OS wing mirror</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_windscreen" onchange="updatePanelText('m')"> Windscreen</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_rear_screen" onchange="updatePanelText('m')"> Rear screen</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_ns_front_light" onchange="updatePanelText('m')"> NS front light</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_os_front_light" onchange="updatePanelText('m')"> OS front light</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_ns_rear_light" onchange="updatePanelText('m')"> NS rear light</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_os_rear_light" onchange="updatePanelText('m')"> OS rear light</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_ns_mirror" onchange="updatePanelText('m')"> NS wing mirror</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_os_mirror" onchange="updatePanelText('m')"> OS wing mirror</label>
   </div>
-  <div style="padding:6px 10px 8px"><input class="panel-notes" id="m_picker_notes" placeholder="Additional notes, e.g. stress cracks, paint code, customer comments..." onkeyup="updatePanelText('m')" type="text"></div>
+  <div style="padding:6px 10px 8px"><input autocomplete="off" class="panel-notes" id="m_picker_notes" placeholder="Additional notes, e.g. stress cracks, paint code, customer comments..." onkeyup="updatePanelText('m')" type="text"></div>
 </div>
-    <span class="qlbl">Customer address</span><input class="minp" id="m_addr" placeholder="House, street, postcode">
+    <span class="qlbl">Customer address</span><input autocomplete="off" class="minp" id="m_addr" placeholder="House, street, postcode">
     <div class="modal-grid2">
-      <div><span class="qlbl">Price (inc VAT)</span><input class="minp" id="m_price" placeholder="£ inc VAT"></div>
+      <div><span class="qlbl">Price (inc VAT)</span><input autocomplete="off" class="minp" id="m_price" placeholder="£ inc VAT"></div>
       <div>
         <span class="qlbl">Status</span>
         <select class="msel" id="m_status">
@@ -1132,8 +1132,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       </div>
     </div>
     <div class="modal-grid2">
-      <div><span class="qlbl">Booking date</span><input class="minp" type="date" id="m_date"></div>
-      <div><span class="qlbl">Time</span><input class="minp" type="time" id="m_time" value="09:00"></div>
+      <div><span class="qlbl">Booking date</span><input autocomplete="off" class="minp" type="date" id="m_date"></div>
+      <div><span class="qlbl">Time</span><input autocomplete="off" class="minp" type="time" id="m_time" value="09:00"></div>
     </div>
     <div class="modal-grid2">
       <div>
@@ -1154,11 +1154,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div>
         <span class="qlbl">Assigned tech</span>
         <div class="tech-cb-group" id="m_tech_cbg" onclick="event.stopPropagation()">
-          <label class="tech-cb-lbl"><input type="checkbox" class="tech-cb" name="m_tech" value="Shaun" onchange="onTechCbChange('m_tech')"> Shaun</label>
-          <label class="tech-cb-lbl"><input type="checkbox" class="tech-cb" name="m_tech" value="Tony" onchange="onTechCbChange('m_tech')"> Tony</label>
-          <label class="tech-cb-lbl"><input type="checkbox" class="tech-cb" name="m_tech" value="Charles" onchange="onTechCbChange('m_tech')"> Charles</label>
-          <label class="tech-cb-lbl"><input type="checkbox" class="tech-cb" name="m_tech" value="Both" onchange="onTechCbChange('m_tech')"> Both (see notes)</label>
-          <input type="hidden" id="m_tech" value="Shaun">
+          <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" class="tech-cb" name="m_tech" value="Shaun" onchange="onTechCbChange('m_tech')"> Shaun</label>
+          <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" class="tech-cb" name="m_tech" value="Tony" onchange="onTechCbChange('m_tech')"> Tony</label>
+          <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" class="tech-cb" name="m_tech" value="Charles" onchange="onTechCbChange('m_tech')"> Charles</label>
+          <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" class="tech-cb" name="m_tech" value="Both" onchange="onTechCbChange('m_tech')"> Both (see notes)</label>
+          <input autocomplete="off" type="hidden" id="m_tech" value="Shaun">
         </div>
       </div>
     </div>
@@ -1221,8 +1221,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="modal-hd">Book job</div>
     <div id="bookModalInfo" style="background:var(--blue-bg);border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;font-size:13px;color:var(--blue-txt);font-weight:500"></div>
     <div class="modal-grid2">
-      <div><span class="qlbl">Date</span><input class="minp" type="date" id="bk_date"></div>
-      <div><span class="qlbl">Time</span><input class="minp" type="time" id="bk_time" value="09:00"></div>
+      <div><span class="qlbl">Date</span><input autocomplete="off" class="minp" type="date" id="bk_date"></div>
+      <div><span class="qlbl">Time</span><input autocomplete="off" class="minp" type="time" id="bk_time" value="09:00"></div>
     </div>
     <span class="qlbl">Duration</span>
     <select class="msel" id="bk_dur">
@@ -1239,11 +1239,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </select>
     <span class="qlbl">Assigned tech</span>
     <div class="tech-cb-group" id="bk_tech_cbg">
-      <label class="tech-cb-lbl"><input type="checkbox" value="Shaun" onchange="onTechCbChange('bk_tech')"> Shaun</label>
-      <label class="tech-cb-lbl"><input type="checkbox" value="Tony" onchange="onTechCbChange('bk_tech')"> Tony</label>
-      <label class="tech-cb-lbl"><input type="checkbox" value="Charles" onchange="onTechCbChange('bk_tech')"> Charles</label>
-      <label class="tech-cb-lbl"><input type="checkbox" value="Both" onchange="onTechCbChange('bk_tech')"> Both (see notes)</label>
-      <input type="hidden" id="bk_tech" value="Shaun">
+      <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" value="Shaun" onchange="onTechCbChange('bk_tech')"> Shaun</label>
+      <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" value="Tony" onchange="onTechCbChange('bk_tech')"> Tony</label>
+      <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" value="Charles" onchange="onTechCbChange('bk_tech')"> Charles</label>
+      <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" value="Both" onchange="onTechCbChange('bk_tech')"> Both (see notes)</label>
+      <input autocomplete="off" type="hidden" id="bk_tech" value="Shaun">
     </div>
     <span class="qlbl">Location</span>
     <select class="msel" id="bk_loc">
@@ -1251,11 +1251,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <option value="workshop">Workshop</option>
     </select>
     <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
-      <input type="checkbox" id="bk_cd" style="width:16px;height:16px;cursor:pointer">
+      <input autocomplete="off" type="checkbox" id="bk_cd" style="width:16px;height:16px;cursor:pointer">
       <label for="bk_cd" style="font-size:13px;color:var(--txt);cursor:pointer">Collection &amp; Delivery required</label>
     </div>
     <span class="qlbl" style="margin-top:12px">Customer address (if mobile / C&amp;D)</span>
-    <input class="minp" id="bk_addr" placeholder="Full address">
+    <input autocomplete="off" class="minp" id="bk_addr" placeholder="Full address">
     <div style="display:flex;gap:8px;margin-top:8px">
       <button class="btn-primary" onclick="saveBooking()" style="flex:1;padding:10px">Confirm booking</button>
       <button class="btn-secondary" onclick="closeBookModal()" style="flex:1;padding:10px">Cancel</button>
@@ -1267,82 +1267,82 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="modal-overlay" id="editModal" onclick="if(event.target===this)closeEditModal()">
   <div class="modal-box" style="max-width:560px">
     <div class="modal-hd">Edit job</div>
-    <input type="hidden" id="edit_jobId">
+    <input autocomplete="off" type="hidden" id="edit_jobId">
     <div class="modal-grid2">
-      <div><span class="qlbl">Customer name</span><input class="minp" id="edit_name" placeholder="Full name"></div>
-      <div><span class="qlbl">Phone</span><input class="minp" id="edit_phone" placeholder="07700..."></div>
+      <div><span class="qlbl">Customer name</span><input autocomplete="off" class="minp" id="edit_name" placeholder="Full name"></div>
+      <div><span class="qlbl">Phone</span><input autocomplete="off" class="minp" id="edit_phone" placeholder="07700..."></div>
     </div>
     <div class="modal-grid2">
-      <div><span class="qlbl">Email</span><input class="minp" id="edit_email" placeholder="email@..."></div>
-      <div><span class="qlbl">Vehicle</span><input class="minp" id="edit_vehicle" placeholder="Make, model, year"></div>
+      <div><span class="qlbl">Email</span><input autocomplete="off" class="minp" id="edit_email" placeholder="email@..."></div>
+      <div><span class="qlbl">Vehicle</span><input autocomplete="off" class="minp" id="edit_vehicle" placeholder="Make, model, year"></div>
     </div>
     <div class="modal-grid2">
-      <div><span class="qlbl">Colour</span><input class="minp" id="edit_colour" placeholder="Colour"></div>
-      <div><span class="qlbl">Quote price (inc VAT)</span><input class="minp" id="edit_price" placeholder="£ inc VAT"></div>
+      <div><span class="qlbl">Colour</span><input autocomplete="off" class="minp" id="edit_colour" placeholder="Colour"></div>
+      <div><span class="qlbl">Quote price (inc VAT)</span><input autocomplete="off" class="minp" id="edit_price" placeholder="£ inc VAT"></div>
     </div>
     <span class="qlbl">Panels / damage</span>
-    <input type="hidden" id="edit_panels">
+    <input autocomplete="off" type="hidden" id="edit_panels">
 <div class="panel-picker" id="edit_picker">
   <div class="panel-cat">Bumpers & corners</div>
   <div class="panel-items">
-    <label class="panel-cb"><input type="checkbox" id="edit_front_bumper" onchange="updatePanelText('edit')"> Front bumper</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_rear_bumper" onchange="updatePanelText('edit')"> Rear bumper</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_nsf_corner" onchange="updatePanelText('edit')"> NSF bumper corner</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_osf_corner" onchange="updatePanelText('edit')"> OSF bumper corner</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_nsr_corner" onchange="updatePanelText('edit')"> NSR bumper corner</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_osr_corner" onchange="updatePanelText('edit')"> OSR bumper corner</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_front_bumper" onchange="updatePanelText('edit')"> Front bumper</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_rear_bumper" onchange="updatePanelText('edit')"> Rear bumper</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_nsf_corner" onchange="updatePanelText('edit')"> NSF bumper corner</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_osf_corner" onchange="updatePanelText('edit')"> OSF bumper corner</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_nsr_corner" onchange="updatePanelText('edit')"> NSR bumper corner</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_osr_corner" onchange="updatePanelText('edit')"> OSR bumper corner</label>
   </div>
   <div class="panel-cat">Doors & pillars</div>
   <div class="panel-items">
-    <label class="panel-cb"><input type="checkbox" id="edit_nsf_door" onchange="updatePanelText('edit')"> NSF door</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_osf_door" onchange="updatePanelText('edit')"> OSF door</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_nsr_door" onchange="updatePanelText('edit')"> NSR door</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_osr_door" onchange="updatePanelText('edit')"> OSR door</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_a_pillar" onchange="updatePanelText('edit')"> A-pillar</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_b_pillar" onchange="updatePanelText('edit')"> B-pillar</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_c_pillar" onchange="updatePanelText('edit')"> C-pillar</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_nsf_door" onchange="updatePanelText('edit')"> NSF door</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_osf_door" onchange="updatePanelText('edit')"> OSF door</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_nsr_door" onchange="updatePanelText('edit')"> NSR door</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_osr_door" onchange="updatePanelText('edit')"> OSR door</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_a_pillar" onchange="updatePanelText('edit')"> A-pillar</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_b_pillar" onchange="updatePanelText('edit')"> B-pillar</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_c_pillar" onchange="updatePanelText('edit')"> C-pillar</label>
   </div>
   <div class="panel-cat">Wings, sills & body</div>
   <div class="panel-items">
-    <label class="panel-cb"><input type="checkbox" id="edit_ns_wing" onchange="updatePanelText('edit')"> NS front wing</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_os_wing" onchange="updatePanelText('edit')"> OS front wing</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_ns_sill" onchange="updatePanelText('edit')"> NS sill</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_os_sill" onchange="updatePanelText('edit')"> OS sill</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_ns_quarter" onchange="updatePanelText('edit')"> NS quarter panel</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_os_quarter" onchange="updatePanelText('edit')"> OS quarter panel</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_bonnet" onchange="updatePanelText('edit')"> Bonnet</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_boot" onchange="updatePanelText('edit')"> Boot / tailgate</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_roof" onchange="updatePanelText('edit')"> Roof</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_ns_wing" onchange="updatePanelText('edit')"> NS front wing</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_os_wing" onchange="updatePanelText('edit')"> OS front wing</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_ns_sill" onchange="updatePanelText('edit')"> NS sill</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_os_sill" onchange="updatePanelText('edit')"> OS sill</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_ns_quarter" onchange="updatePanelText('edit')"> NS quarter panel</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_os_quarter" onchange="updatePanelText('edit')"> OS quarter panel</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_bonnet" onchange="updatePanelText('edit')"> Bonnet</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_boot" onchange="updatePanelText('edit')"> Boot / tailgate</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_roof" onchange="updatePanelText('edit')"> Roof</label>
   </div>
   <div class="panel-cat">Trims & arch liners</div>
   <div class="panel-items">
-    <label class="panel-cb"><input type="checkbox" id="edit_ns_arch_trim" onchange="updatePanelText('edit')"> NS wheel arch trim</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_os_arch_trim" onchange="updatePanelText('edit')"> OS wheel arch trim</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_nsf_bumper_trim" onchange="updatePanelText('edit')"> NSF bumper trim</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_osf_bumper_trim" onchange="updatePanelText('edit')"> OSF bumper trim</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_nsr_bumper_trim" onchange="updatePanelText('edit')"> NSR bumper trim</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_osr_bumper_trim" onchange="updatePanelText('edit')"> OSR bumper trim</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_ns_door_trim" onchange="updatePanelText('edit')"> NS door trim</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_os_door_trim" onchange="updatePanelText('edit')"> OS door trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_ns_arch_trim" onchange="updatePanelText('edit')"> NS wheel arch trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_os_arch_trim" onchange="updatePanelText('edit')"> OS wheel arch trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_nsf_bumper_trim" onchange="updatePanelText('edit')"> NSF bumper trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_osf_bumper_trim" onchange="updatePanelText('edit')"> OSF bumper trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_nsr_bumper_trim" onchange="updatePanelText('edit')"> NSR bumper trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_osr_bumper_trim" onchange="updatePanelText('edit')"> OSR bumper trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_ns_door_trim" onchange="updatePanelText('edit')"> NS door trim</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_os_door_trim" onchange="updatePanelText('edit')"> OS door trim</label>
   </div>
   <div class="panel-cat">Glass & lights</div>
   <div class="panel-items">
-    <label class="panel-cb"><input type="checkbox" id="edit_windscreen" onchange="updatePanelText('edit')"> Windscreen</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_rear_screen" onchange="updatePanelText('edit')"> Rear screen</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_ns_front_light" onchange="updatePanelText('edit')"> NS front light</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_os_front_light" onchange="updatePanelText('edit')"> OS front light</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_ns_rear_light" onchange="updatePanelText('edit')"> NS rear light</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_os_rear_light" onchange="updatePanelText('edit')"> OS rear light</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_ns_mirror" onchange="updatePanelText('edit')"> NS wing mirror</label>
-    <label class="panel-cb"><input type="checkbox" id="edit_os_mirror" onchange="updatePanelText('edit')"> OS wing mirror</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_windscreen" onchange="updatePanelText('edit')"> Windscreen</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_rear_screen" onchange="updatePanelText('edit')"> Rear screen</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_ns_front_light" onchange="updatePanelText('edit')"> NS front light</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_os_front_light" onchange="updatePanelText('edit')"> OS front light</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_ns_rear_light" onchange="updatePanelText('edit')"> NS rear light</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_os_rear_light" onchange="updatePanelText('edit')"> OS rear light</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_ns_mirror" onchange="updatePanelText('edit')"> NS wing mirror</label>
+    <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_os_mirror" onchange="updatePanelText('edit')"> OS wing mirror</label>
   </div>
-  <div style="padding:6px 10px 8px"><input class="panel-notes" id="edit_picker_notes" placeholder="Additional notes, e.g. stress cracks, paint code, customer comments..." onkeyup="updatePanelText('edit')" type="text"></div>
+  <div style="padding:6px 10px 8px"><input autocomplete="off" class="panel-notes" id="edit_picker_notes" placeholder="Additional notes, e.g. stress cracks, paint code, customer comments..." onkeyup="updatePanelText('edit')" type="text"></div>
 </div>
     <span class="qlbl">Internal notes</span>
-    <textarea class="minp" id="edit_notes" rows="2" placeholder="Notes visible to all staff..." style="resize:vertical"></textarea>
+    <textarea autocomplete="off" class="minp" id="edit_notes" rows="2" placeholder="Notes visible to all staff..." style="resize:vertical"></textarea>
     <div class="modal-grid2">
-      <div><span class="qlbl">Booking date</span><input class="minp" type="date" id="edit_date"></div>
-      <div><span class="qlbl">Time</span><input class="minp" type="time" id="edit_time"></div>
+      <div><span class="qlbl">Booking date</span><input autocomplete="off" class="minp" type="date" id="edit_date"></div>
+      <div><span class="qlbl">Time</span><input autocomplete="off" class="minp" type="time" id="edit_time"></div>
     </div>
     <div class="modal-grid2">
       <div>
@@ -1374,16 +1374,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div>
         <span class="qlbl">Assigned tech</span>
         <div class="tech-cb-group" id="edit_tech_cbg" onclick="event.stopPropagation()">
-          <label class="tech-cb-lbl"><input type="checkbox" value="Shaun" onchange="onTechCbChange('edit_tech')"> Shaun</label>
-          <label class="tech-cb-lbl"><input type="checkbox" value="Tony" onchange="onTechCbChange('edit_tech')"> Tony</label>
-          <label class="tech-cb-lbl"><input type="checkbox" value="Charles" onchange="onTechCbChange('edit_tech')"> Charles</label>
-          <label class="tech-cb-lbl"><input type="checkbox" value="Both" onchange="onTechCbChange('edit_tech')"> Both (see notes)</label>
-          <input type="hidden" id="edit_tech" value="">
+          <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" value="Shaun" onchange="onTechCbChange('edit_tech')"> Shaun</label>
+          <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" value="Tony" onchange="onTechCbChange('edit_tech')"> Tony</label>
+          <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" value="Charles" onchange="onTechCbChange('edit_tech')"> Charles</label>
+          <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" value="Both" onchange="onTechCbChange('edit_tech')"> Both (see notes)</label>
+          <input autocomplete="off" type="hidden" id="edit_tech" value="">
         </div>
       </div>
       <div>
         <span class="qlbl">Customer address</span>
-        <input class="minp" id="edit_addr" placeholder="House, street, postcode">
+        <input autocomplete="off" class="minp" id="edit_addr" placeholder="House, street, postcode">
       </div>
     </div>
     <div class="modal-grid2">
@@ -1407,7 +1407,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       </div>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
-      <input type="checkbox" id="edit_cd" style="width:16px;height:16px;cursor:pointer">
+      <input autocomplete="off" type="checkbox" id="edit_cd" style="width:16px;height:16px;cursor:pointer">
       <label for="edit_cd" style="font-size:13px;color:var(--txt);cursor:pointer">Collection &amp; Delivery required</label>
     </div>
     <span class="qlbl">Add photos</span>
@@ -1415,7 +1415,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div style="font-size:12px;color:var(--muted);font-weight:600" id="editUpLbl">Tap to add photos</div>
       <div style="font-size:10px;color:var(--hint);margin-top:2px">Camera or gallery · added to job permanently</div>
     </div>
-    <input type="file" id="editPhotoInput" accept="image/*" multiple style="display:none" onchange="handleEditPhotos(this)">
+    <input autocomplete="off" type="file" id="editPhotoInput" accept="image/*" multiple style="display:none" onchange="handleEditPhotos(this)">
     <div style="display:flex;gap:8px;margin-top:4px">
       <button class="btn-primary" onclick="saveEditJob()" style="flex:1;padding:10px">Save changes</button>
       <button class="btn-secondary" onclick="closeEditModal()" style="flex:1;padding:10px">Cancel</button>
@@ -1436,7 +1436,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <button class="tech-pay-btn" id="cmb-none" onclick="selectCompleteMethod('none',this)">📄 Invoice later</button>
     </div>
     <span class="qlbl">Notes (optional)</span>
-    <textarea class="minp" id="complete_notes" rows="2" placeholder="Any handover notes..." style="resize:vertical;margin-bottom:10px"></textarea>
+    <textarea autocomplete="off" class="minp" id="complete_notes" rows="2" placeholder="Any handover notes..." style="resize:vertical;margin-bottom:10px"></textarea>
     <div style="display:flex;gap:8px">
       <button class="btn-primary" id="completeConfirmBtn" onclick="confirmComplete()" style="flex:1;padding:10px" disabled>Confirm complete</button>
       <button class="btn-secondary" onclick="closeCompleteModal()" style="flex:1;padding:10px">Cancel</button>
@@ -1449,11 +1449,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="modal-box" style="max-width:400px">
     <div class="modal-hd">Request holiday</div>
     <div class="modal-grid2">
-      <div><span class="qlbl">From date</span><input class="minp" type="date" id="hol_from"></div>
-      <div><span class="qlbl">To date</span><input class="minp" type="date" id="hol_to"></div>
+      <div><span class="qlbl">From date</span><input autocomplete="off" class="minp" type="date" id="hol_from"></div>
+      <div><span class="qlbl">To date</span><input autocomplete="off" class="minp" type="date" id="hol_to"></div>
     </div>
     <span class="qlbl">Reason (optional)</span>
-    <input class="minp" id="hol_reason" placeholder="e.g. Family holiday, appointment...">
+    <input autocomplete="off" class="minp" id="hol_reason" placeholder="e.g. Family holiday, appointment...">
     <div style="background:var(--blue-bg);border-radius:var(--radius);padding:8px 12px;margin:10px 0;font-size:12px;color:var(--blue-txt)" id="holDaysCount">Select dates to see number of days</div>
     <div style="display:flex;gap:8px;margin-top:4px">
       <button class="btn-primary" onclick="submitHolRequest()" style="flex:1;padding:10px">Submit request</button>
@@ -1487,29 +1487,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <button class="tech-pay-btn" id="det-other" onclick="selectDiaryEntryType('other',this)">📝 Other</button>
     </div>
     <span class="qlbl">Title / description</span>
-    <input class="minp" id="de_title" placeholder="e.g. Shaun holiday, MOT appointment..." style="margin-bottom:10px">
+    <input autocomplete="off" class="minp" id="de_title" placeholder="e.g. Shaun holiday, MOT appointment..." style="margin-bottom:10px">
     <div class="modal-grid2">
-      <div><span class="qlbl">From date</span><input class="minp" type="date" id="de_from"></div>
-      <div><span class="qlbl">To date</span><input class="minp" type="date" id="de_to"></div>
+      <div><span class="qlbl">From date</span><input autocomplete="off" class="minp" type="date" id="de_from"></div>
+      <div><span class="qlbl">To date</span><input autocomplete="off" class="minp" type="date" id="de_to"></div>
     </div>
     <div class="modal-grid2">
       <div>
         <span class="qlbl">Assigned to</span>
         <div class="tech-cb-group" id="de_tech_cbg">
-          <label class="tech-cb-lbl"><input type="checkbox" value="Shaun" onchange="onTechCbChange('de_tech')"> Shaun</label>
-          <label class="tech-cb-lbl"><input type="checkbox" value="Tony" onchange="onTechCbChange('de_tech')"> Tony</label>
-          <label class="tech-cb-lbl"><input type="checkbox" value="Charles" onchange="onTechCbChange('de_tech')"> Charles</label>
-          <label class="tech-cb-lbl"><input type="checkbox" value="Both" onchange="onTechCbChange('de_tech')"> Both (see notes)</label>
-          <input type="hidden" id="de_tech" value="Shaun">
+          <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" value="Shaun" onchange="onTechCbChange('de_tech')"> Shaun</label>
+          <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" value="Tony" onchange="onTechCbChange('de_tech')"> Tony</label>
+          <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" value="Charles" onchange="onTechCbChange('de_tech')"> Charles</label>
+          <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" value="Both" onchange="onTechCbChange('de_tech')"> Both (see notes)</label>
+          <input autocomplete="off" type="hidden" id="de_tech" value="Shaun">
         </div>
       </div>
       <div>
         <span class="qlbl">Time (optional)</span>
-        <input class="minp" type="time" id="de_time" placeholder="09:00">
+        <input autocomplete="off" class="minp" type="time" id="de_time" placeholder="09:00">
       </div>
     </div>
     <span class="qlbl">Notes (optional)</span>
-    <input class="minp" id="de_notes" placeholder="Any extra details...">
+    <input autocomplete="off" class="minp" id="de_notes" placeholder="Any extra details...">
     <div style="font-size:12px;color:var(--muted);margin:8px 0 12px" id="de_days_count"></div>
     <div style="display:flex;gap:8px">
       <button class="btn-primary" onclick="saveDiaryEntry()" style="flex:1;padding:10px">Add to diary</button>
@@ -1534,14 +1534,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="modal-overlay" id="tsEntryModal" onclick="if(event.target===this)closeTsEntryModal()">
   <div class="modal-box" style="max-width:360px">
     <div class="modal-hd" id="tsEntryTitle">Edit entry</div>
-    <input type="hidden" id="tse_id">
+    <input autocomplete="off" type="hidden" id="tse_id">
     <div class="modal-grid2">
-      <div><span class="qlbl">Date</span><input class="minp" type="date" id="tse_date"></div>
+      <div><span class="qlbl">Date</span><input autocomplete="off" class="minp" type="date" id="tse_date"></div>
       <div></div>
     </div>
     <div class="modal-grid2">
-      <div><span class="qlbl">Clock in</span><input class="minp" type="time" id="tse_in"></div>
-      <div><span class="qlbl">Clock out</span><input class="minp" type="time" id="tse_out"></div>
+      <div><span class="qlbl">Clock in</span><input autocomplete="off" class="minp" type="time" id="tse_in"></div>
+      <div><span class="qlbl">Clock out</span><input autocomplete="off" class="minp" type="time" id="tse_out"></div>
     </div>
     <div style="background:var(--blue-bg);border-radius:var(--radius);padding:8px 12px;font-size:12px;color:var(--blue-txt);margin-bottom:12px" id="tse_calc">Select times to see hours</div>
     <div style="display:flex;gap:8px">
@@ -2342,9 +2342,9 @@ function buildJobCard(j) {
       <!-- Parts -->
       ${partsHtml}
       <div class="parts-add-row" id="par-${j.id}">
-        <input class="parts-inp" id="pn-${j.id}" placeholder="Part name">
-        <input class="parts-inp" id="pq-${j.id}" placeholder="Qty" style="width:60px">
-        <input class="parts-inp" id="pp-${j.id}" placeholder="£" style="width:70px">
+        <input autocomplete="off" class="parts-inp" id="pn-${j.id}" placeholder="Part name">
+        <input autocomplete="off" class="parts-inp" id="pq-${j.id}" placeholder="Qty" style="width:60px">
+        <input autocomplete="off" class="parts-inp" id="pp-${j.id}" placeholder="£" style="width:70px">
         <button class="btn-secondary" onclick="event.stopPropagation();addPart(${j.id})" style="font-size:11px;white-space:nowrap">+ Add part</button>
       </div>
       <!-- Photos -->
@@ -3800,7 +3800,7 @@ function buildTechCard(j) {
         <label class="tech-upload-area" for="tph-${j.id}" style="cursor:pointer">
           <div style="font-size:24px;color:var(--teal)">📷</div>
           <p>Tap to add after photos</p>
-          <input type="file" id="tph-${j.id}" accept="image/*" multiple
+          <input autocomplete="off" type="file" id="tph-${j.id}" accept="image/*" multiple
             style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"
             onchange="handleTechPhotos(${j.id},this)">
         </label>
@@ -3811,7 +3811,7 @@ function buildTechCard(j) {
         </div>`).join('')}
         </div>
         <div class="tech-section-lbl">Panel condition notes</div>
-        <textarea class="tech-edit-inp" id="tpn-${j.id}" placeholder="Any notes on panel condition, issues found..." rows="2">${esc(j.notes||'')}</textarea>
+        <textarea autocomplete="off" class="tech-edit-inp" id="tpn-${j.id}" placeholder="Any notes on panel condition, issues found..." rows="2">${esc(j.notes||'')}</textarea>
         <div class="tech-section-lbl">Payment received</div>
         <div class="tech-pay-row" id="tpr-${j.id}">
           <button class="tech-pay-btn" onclick="selectPayMethod(${j.id},'card',this)">Card</button>
@@ -3838,8 +3838,8 @@ function buildTechCard(j) {
   // Editable fields for tech
   const editBox = !done ? `<div class="tech-edit-box">
     <div class="tech-edit-hd">Edit job details</div>
-    <input class="tech-edit-inp" id="tep-${j.id}" placeholder="Price (£ inc VAT)" value="${esc(j.quote_price||'')}">
-    <input class="tech-edit-inp" id="ten-${j.id}" placeholder="Panel notes..." value="${esc(j.panels||'')}">
+    <input autocomplete="off" class="tech-edit-inp" id="tep-${j.id}" placeholder="Price (£ inc VAT)" value="${esc(j.quote_price||'')}">
+    <input autocomplete="off" class="tech-edit-inp" id="ten-${j.id}" placeholder="Panel notes..." value="${esc(j.panels||'')}">
     <button class="btn-secondary" style="font-size:11px" onclick="saveTechEdit(${j.id})">Save changes</button>
   </div>` : '';
 
