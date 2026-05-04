@@ -11,3 +11,6 @@
 
 [functions."backup"]
   schedule = "0 23 * * 0"
+
+[functions."sms-scheduler"]
+  schedule = "0 8 * * *"
