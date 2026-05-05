@@ -292,10 +292,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .det-title{font-size:14px;font-weight:700;color:var(--txt)}
 .det-warn{background:var(--yellow-bg);border-bottom:1px solid var(--yellow-bdr);padding:8px 16px;font-size:12px;color:var(--yellow-txt);font-weight:600;display:none;align-items:center;gap:6px}
 .det-warn.show{display:flex}
-.det-cols-hd{display:grid;grid-template-columns:68px 1fr 1fr;background:var(--surface2);border-bottom:1px solid var(--border)}
+.det-cols-hd{display:grid;grid-template-columns:68px 1fr 1fr 1fr;background:var(--surface2);border-bottom:1px solid var(--border)}
 .dchd{padding:9px 10px;font-size:11px;font-weight:700;text-align:center;border-right:1px solid var(--border)}
 .dchd:last-child{border-right:none}
-.det-row{display:grid;grid-template-columns:68px 1fr 1fr;border-bottom:1px solid var(--border);min-height:60px}
+.det-row{display:grid;grid-template-columns:68px 1fr 1fr 1fr;border-bottom:1px solid var(--border);min-height:60px}
 .det-row:last-child{border-bottom:none}
 .det-time{padding:10px 8px;font-size:11px;color:var(--muted);background:var(--surface2);border-right:1px solid var(--border);font-weight:600;display:flex;align-items:flex-start;padding-top:13px}
 .det-cell{padding:8px;border-right:1px solid var(--border)}
@@ -726,9 +726,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <button class="btn-secondary" onclick="document.getElementById('detPanel').style.display='none'">Close</button>
         </div>
         <div class="det-warn" id="detWarn">&#9888; Workshop and mobile on same day — Shaun will be split. Heads up only.</div>
-        <div class="det-cols-hd">
+        <div class="det-cols-hd" id="detColsHd">
           <div class="dchd" style="text-align:left;font-size:10px;color:var(--muted);border-right:1px solid var(--border)">Time</div>
           <div class="dchd" id="dchd-shaun" style="color:var(--blue);border-right:1px solid var(--border)">&#9632; Shaun</div>
+          <div class="dchd" id="dchd-tony" style="color:var(--tony);border-right:1px solid var(--border)">&#9632; Tony</div>
           <div class="dchd" id="dchd-charles" style="color:var(--amber)">&#9632; Charles</div>
         </div>
         <div id="detBody"></div>
@@ -849,12 +850,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
             <button class="loc-pill" data-v="distant">Distant (30+ min)</button>
           </div>
           <div class="q-section-hd">Photos</div>
-          <div class="upzone" onclick="document.getElementById('photoInput').click()">
+          <label class="upzone" for="photoInput" style="display:block;cursor:pointer">
             <div class="upzone-lbl" id="upLbl">Tap to upload damage photos</div>
             <div class="upzone-sub">Camera or gallery · multiple allowed · stay with job</div>
             <div class="up-prev" id="upPrev"></div>
-          </div>
-          <input autocomplete="off" type="file" id="photoInput" accept="image/*" multiple style="display:none" onchange="handlePhotos(this)">
+            <input autocomplete="off" type="file" id="photoInput" accept="image/*" multiple
+              style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"
+              onchange="handlePhotos(this)">
+          </label>
           <div class="q-section-hd">Engineer notes (optional)</div>
           <textarea autocomplete="off" class="qinp" id="q_notes" placeholder="Any observations, conditions, caveats..." rows="3" style="resize:vertical"></textarea>
           <button class="btn-primary" id="sendApprovalBtn" onclick="sendForApproval()" style="width:100%;padding:12px;font-size:14px;margin-top:4px">Send to Shaun for approval</button>
@@ -1067,6 +1070,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div><span class="qlbl">Customer name</span><input autocomplete="off" class="minp" id="m_name" placeholder="Full name"></div>
       <div><span class="qlbl">Phone</span><input autocomplete="off" class="minp" id="m_phone" placeholder="07700..."></div>
     </div>
+    <div class="modal-grid2">
+      <div><span class="qlbl">Email</span><input autocomplete="off" class="minp" id="m_email" placeholder="email@..." type="email"></div>
+      <div><span class="qlbl">Customer address</span><input autocomplete="off" class="minp" id="m_addr2" placeholder="Address, postcode"></div>
+    </div>
     <span class="qlbl">Vehicle</span><input autocomplete="off" class="minp" id="m_vehicle" placeholder="Make, model, year">
     <span class="qlbl">Colour</span><input autocomplete="off" class="minp" id="m_colour" placeholder="Colour">
     <span class="qlbl">Panels / damage</span>
@@ -1191,6 +1198,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         </select>
       </div>
     </div>
+    <span class="qlbl">Photos (optional)</span>
+    <label class="upzone" for="m_photo_input" style="display:block;cursor:pointer;padding:12px;margin-bottom:8px">
+      <div style="font-size:12px;color:var(--muted);font-weight:600" id="mAddUpLbl">Tap to add damage photos</div>
+      <div style="font-size:10px;color:var(--hint);margin-top:2px">Camera or gallery</div>
+      <div id="mAddPrev" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
+      <input autocomplete="off" type="file" id="m_photo_input" accept="image/*" multiple
+        style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"
+        onchange="handleAddJobPhotos(this)">
+    </label>
     <div style="display:flex;gap:8px;margin-top:8px">
       <button class="btn-primary" onclick="saveNewJob()" style="flex:1;padding:10px">Save job</button>
       <button class="btn-secondary" onclick="closeAddModal()" style="flex:1;padding:10px">Cancel</button>
@@ -1349,6 +1365,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
     <span class="qlbl">Internal notes</span>
     <textarea autocomplete="off" class="minp" id="edit_notes" rows="2" placeholder="Notes visible to all staff..." style="resize:vertical"></textarea>
+    <span class="qlbl" style="margin-top:10px">Parts</span>
+    <div id="edit_parts_list" style="margin-bottom:8px"></div>
+    <div style="display:flex;gap:6px;margin-bottom:4px">
+      <input autocomplete="off" class="minp" id="edit_pn" placeholder="Part name" style="flex:2">
+      <input autocomplete="off" class="minp" id="edit_pq" placeholder="Qty" style="width:55px">
+      <input autocomplete="off" class="minp" id="edit_pp" placeholder="£" style="width:65px">
+      <button class="btn-secondary" onclick="addPartFromEdit()" style="font-size:11px;padding:6px 10px;white-space:nowrap">+ Add</button>
+    </div>
     <div class="modal-grid2">
       <div><span class="qlbl">Booking date</span><input autocomplete="off" class="minp" type="date" id="edit_date"></div>
       <div><span class="qlbl">Time</span><input autocomplete="off" class="minp" type="time" id="edit_time"></div>
@@ -1420,11 +1444,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <label for="edit_cd" style="font-size:13px;color:var(--txt);cursor:pointer">Collection &amp; Delivery required</label>
     </div>
     <span class="qlbl">Add photos</span>
-    <div class="upzone" onclick="document.getElementById('editPhotoInput').click()" style="padding:14px;margin-bottom:10px">
+    <label class="upzone" for="editPhotoInput" style="display:block;cursor:pointer;padding:14px;margin-bottom:10px">
       <div style="font-size:12px;color:var(--muted);font-weight:600" id="editUpLbl">Tap to add photos</div>
       <div style="font-size:10px;color:var(--hint);margin-top:2px">Camera or gallery · added to job permanently</div>
-    </div>
-    <input autocomplete="off" type="file" id="editPhotoInput" accept="image/*" multiple style="display:none" onchange="handleEditPhotos(this)">
+      <input autocomplete="off" type="file" id="editPhotoInput" accept="image/*" multiple
+        style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"
+        onchange="handleEditPhotos(this)">
+    </label>
     <div style="display:flex;gap:8px;margin-top:4px">
       <button class="btn-primary" onclick="saveEditJob()" style="flex:1;padding:10px">Save changes</button>
       <button class="btn-secondary" onclick="closeEditModal()" style="flex:1;padding:10px">Cancel</button>
@@ -2350,12 +2376,7 @@ function buildJobCard(j) {
       </div>
       <!-- Parts -->
       ${partsHtml}
-      <div class="parts-add-row" id="par-${j.id}">
-        <input autocomplete="off" class="parts-inp" id="pn-${j.id}" placeholder="Part name">
-        <input autocomplete="off" class="parts-inp" id="pq-${j.id}" placeholder="Qty" style="width:60px">
-        <input autocomplete="off" class="parts-inp" id="pp-${j.id}" placeholder="£" style="width:70px">
-        <button class="btn-secondary" onclick="event.stopPropagation();addPart(${j.id})" style="font-size:11px;white-space:nowrap">+ Add part</button>
-      </div>
+      ${parts.length === 0 ? '<div style="font-size:11px;color:var(--hint);margin-top:4px;padding:4px 0">No parts added — use Edit Job to add parts</div>' : ''}
       <!-- Photos -->
       <div style="margin-top:14px">${photosHtml}</div>
       <!-- Actions -->
@@ -2588,10 +2609,11 @@ async function saveNewJob() {
   const body = {
     customer_name: name,
     customer_phone: document.getElementById('m_phone').value.trim() || null,
+    customer_email: document.getElementById('m_email')?.value.trim() || null,
     vehicle: document.getElementById('m_vehicle').value.trim() || null,
     colour: document.getElementById('m_colour').value.trim() || null,
     panels: document.getElementById('m_panels').value.trim() || null,
-    customer_address: document.getElementById('m_addr').value.trim() || null,
+    customer_address: (document.getElementById('m_addr')?.value || document.getElementById('m_addr2')?.value || '').trim() || null,
     quote_price: document.getElementById('m_price').value.trim() || null,
     booking_date: date,
     booking_time: date ? document.getElementById('m_time').value : null,
@@ -2603,11 +2625,31 @@ async function saveNewJob() {
     archived: false
   };
   try {
-    await sbRaw('POST', 'jobs', body);
+    const result = await sbRaw('POST', 'jobs', body);
+    const newJob = Array.isArray(result) ? result[0] : result;
+    // Upload photos if any
+    if (newJob?.id && _addJobPhotos.length) {
+      for (const f of _addJobPhotos) {
+        const compressed = await compressForStorage(f);
+        const sp = `job-${newJob.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+        await fetch(`${SUPABASE_URL}/storage/v1/object/job-photos/${sp}`, {
+          method: 'POST',
+          headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${currentUser?.access_token||SUPABASE_ANON}`, 'Content-Type': 'image/jpeg' },
+          body: compressed
+        });
+        await sbRaw('POST', 'job_photos', { job_id: newJob.id, storage_path: sp, photo_type: 'damage' });
+      }
+    }
+    _addJobPhotos = [];
     // Reset form
-    ['m_name','m_phone','m_vehicle','m_colour','m_panels','m_addr','m_price','m_date'].forEach(id => {
+    ['m_name','m_phone','m_email','m_vehicle','m_colour','m_panels','m_addr','m_addr2','m_price','m_date'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = '';
     });
+    const lbl = document.getElementById('mAddUpLbl');
+    if (lbl) lbl.textContent = 'Tap to add damage photos';
+    const prev = document.getElementById('mAddPrev');
+    if (prev) prev.innerHTML = '';
+    resetPanelPicker('m');
     closeAddModal();
     showToast('Job added ✓');
     await loadJobs();
@@ -2925,8 +2967,9 @@ function renderMonthView() {
         const tipTech = e.assigned_tech||'';
         const isDone = e.status === 'completed';
         const isDiaryEnt = isDiaryEntry(e);
+        const isMobile = e.job_location === 'mobile';
         const evtClass = isDiaryEnt ? 'cal-evt-diary' : `cal-evt-${tc}${isDone?' cal-evt-done':''}`;
-        const evtIcon = isDiaryEnt ? '📅 ' : isDone ? '✓ ' : '';
+        const evtIcon = isDiaryEnt ? '📅 ' : isDone ? '✓ ' : isMobile ? '🚐 ' : '';
         html += `<div class="cal-evt ${evtClass}"
           onmouseenter="showDiaryTip(event,'${tipName}','${tipVeh}','${tipAddr}','${tipPrice}','${tipLoc}','${tipDur}','${tipCd}','${tipTech}')"
           onmouseleave="hideDiaryTip()"
@@ -3020,34 +3063,34 @@ function selectDiaryDay(ds, label) {
   const hasMix = sJobs.some(j=>j.job_location==='mobile') && sJobs.some(j=>j.job_location==='workshop');
   warn.className = 'det-warn' + (hasMix ? ' show' : '');
 
-  // Build Shaun and Charles rows — respect tech filter in detail view too
+  // Build Shaun, Tony and Charles rows
   const shaunJobs = evts.filter(j => { const t = techClass(j.assigned_tech); return t==='S'||t==='B'; });
+  const tonyJobs  = evts.filter(j => { const t = techClass(j.assigned_tech); return t==='T'||t==='B'; });
   const charlesJobs = evts.filter(j => { const t = techClass(j.assigned_tech); return t==='C'||t==='B'; });
-  // If filtered to one tech, dim the other column header
-  const shaunDim = diaryTechFilter === 'charles' ? 'opacity:.3' : '';
-  const charlesDim = diaryTechFilter === 'shaun' ? 'opacity:.3' : '';
-  const maxRows = Math.max(shaunJobs.length, charlesJobs.length, 1);
+  // Dim columns based on filter
+  const sHd2 = document.getElementById('dchd-shaun');
+  const tHd = document.getElementById('dchd-tony');
+  const cHd2 = document.getElementById('dchd-charles');
+  if (sHd2) sHd2.style.opacity = (diaryTechFilter==='charles'||diaryTechFilter==='tony') ? '0.3' : '1';
+  if (tHd)  tHd.style.opacity  = (diaryTechFilter==='charles'||diaryTechFilter==='shaun') ? '0.3' : '1';
+  if (cHd2) cHd2.style.opacity = (diaryTechFilter==='shaun'||diaryTechFilter==='tony') ? '0.3' : '1';
+
+  const maxRows = Math.max(shaunJobs.length, tonyJobs.length, charlesJobs.length, 1);
 
   let body = '';
   for (let i = 0; i < maxRows; i++) {
     const sj = shaunJobs[i] || null;
+    const tj = tonyJobs[i] || null;
     const cj = charlesJobs[i] || null;
-    // Check if same job (both)
-    const isBoth = sj && cj && sj.id === cj.id;
-    if (isBoth) {
-      body += `<div class="det-row"><div class="det-time">${sj.booking_time||'09:00'}</div>
-        <div class="det-cell span2"><div class="djob djob-B">
-          <div class="djob-name">${esc(sj.customer_name||'')} — both Shaun &amp; Charles</div>
-          <div class="djob-veh">${esc(sj.vehicle||'')} · ${esc(sj.panels||'')}</div>
-          <div class="djob-tags">${buildDetTags(sj)}</div>
-        </div></div></div>`;
-    } else {
-      body += `<div class="det-row">
-        <div class="det-time">${(sj||cj)?.booking_time||'09:00'}</div>
-        <div class="det-cell">${sj ? detJobCard(sj,'S') : '<div class="det-empty">Free</div>'}</div>
-        <div class="det-cell">${cj ? detJobCard(cj,'C') : '<div class="det-empty">Free</div>'}</div>
-      </div>`;
-    }
+    const time = (sj||tj||cj)?.booking_time || '09:00';
+    // Both = job assigned to multiple techs — show spanning
+    const isBothAll = sj && tj && cj && sj.id === tj.id && sj.id === cj.id;
+    body += `<div class="det-row">
+      <div class="det-time">${time}</div>
+      <div class="det-cell">${sj ? detJobCard(sj,'S') : '<div class="det-empty">Free</div>'}</div>
+      <div class="det-cell">${tj && (!sj || tj.id !== sj.id) ? detJobCard(tj,'T') : (sj && tj && tj.id===sj.id ? '<div class="det-empty" style="font-size:10px;color:var(--muted)">↑ same</div>' : '<div class="det-empty">Free</div>')}</div>
+      <div class="det-cell">${cj ? detJobCard(cj,'C') : '<div class="det-empty">Free</div>'}</div>
+    </div>`;
   }
   if (!evts.length) body = '<div style="padding:20px;text-align:center;font-size:13px;color:var(--muted)">No jobs booked for this day</div>';
   document.getElementById('detBody').innerHTML = body;
@@ -4193,7 +4236,7 @@ async function saveBooking() {
 let _editJobId = null;
 let _editPhotos = [];
 
-function openEditModal(jobId) {
+async function openEditModal(jobId) {
   setTimeout(initPriceInputs, 50);
   _editJobId = jobId;
   _editPhotos = [];
@@ -4220,6 +4263,16 @@ function openEditModal(jobId) {
   document.getElementById('edit_source').value = j.source || 'other';
   document.getElementById('edit_cd').checked = !!j.cd_required;
   document.getElementById('editUpLbl').textContent = 'Tap to add photos';
+  // Load existing parts into edit modal parts list
+  try {
+    const existingParts = await sbRaw('GET','job_parts',null,`?job_id=eq.${jobId}&order=created_at.asc`);
+    const listEl = document.getElementById('edit_parts_list');
+    if (listEl) listEl.innerHTML = (existingParts||[]).map(p => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
+      <span>${esc(p.part_name||'')} × ${p.quantity||1}</span>
+      <span style="display:flex;gap:8px;align-items:center">£${p.unit_price||0}
+        <button onclick="deletePart(${p.id},${jobId})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:11px">✕</button>
+      </span></div>`).join('') || '<div style="font-size:11px;color:var(--muted)">No parts yet</div>';
+  } catch(e) {}
   document.getElementById('editModal').classList.add('show');
 }
 
@@ -5430,6 +5483,57 @@ async function sendTestSms(type) {
     status.textContent = '✗ Failed: ' + e.message;
     status.style.color = 'var(--red)';
   }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ADD JOB PHOTOS
+// ═══════════════════════════════════════════════════════════
+let _addJobPhotos = [];
+
+function handleAddJobPhotos(input) {
+  const files = Array.from(input.files);
+  _addJobPhotos = _addJobPhotos.concat(files);
+  const lbl = document.getElementById('mAddUpLbl');
+  if (lbl) lbl.textContent = _addJobPhotos.length + ' photo' + (_addJobPhotos.length!==1?'s':'') + ' ready';
+  const prev = document.getElementById('mAddPrev');
+  if (prev) {
+    files.forEach(f => {
+      const r = new FileReader();
+      r.onload = e => {
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.style.cssText = 'width:56px;height:56px;object-fit:cover;border-radius:var(--radius);border:1px solid var(--border)';
+        prev.appendChild(img);
+      };
+      r.readAsDataURL(f);
+    });
+  }
+}
+
+// ADD PARTS FROM EDIT MODAL
+async function addPartFromEdit() {
+  const name = document.getElementById('edit_pn')?.value.trim();
+  const qty = parseInt(document.getElementById('edit_pq')?.value) || 1;
+  const price = parseFloat(document.getElementById('edit_pp')?.value?.replace(/[^0-9.]/g,'')) || 0;
+  if (!name || !_editJobId) return;
+  try {
+    await sbRaw('POST', 'job_parts', { job_id: _editJobId, part_name: name, quantity: qty, unit_price: price });
+    document.getElementById('edit_pn').value = '';
+    document.getElementById('edit_pq').value = '';
+    document.getElementById('edit_pp').value = '';
+    showToast('Part added ✓');
+    // Refresh parts list in edit modal
+    const parts = await sbRaw('GET','job_parts',null,`?job_id=eq.${_editJobId}&order=created_at.asc`);
+    const listEl = document.getElementById('edit_parts_list');
+    if (listEl) {
+      listEl.innerHTML = (parts||[]).map(p => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
+        <span>${esc(p.part_name||'')} × ${p.quantity||1}</span>
+        <span style="display:flex;gap:8px;align-items:center">£${p.unit_price||0}
+          <button onclick="deletePart(${p.id},${_editJobId})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:11px">✕</button>
+        </span></div>`).join('') || '<div style="font-size:11px;color:var(--muted)">No parts yet</div>';
+    }
+    await loadJobs();
+  } catch(e) { alert('Failed: ' + e.message); }
 }
 
 // ═══════════════════════════════════════════════════════════
