@@ -2894,9 +2894,25 @@ function techClass(tech) {
   if (!tech) return 'S';
   const t = tech.toLowerCase();
   if (t.includes('both')) return 'B';
+  // Multi-tech: "Shaun, Tony" etc — return 'B' (both/all) so it shows in every column
+  const names = ['shaun','tony','charles'];
+  const matches = names.filter(n => t.includes(n));
+  if (matches.length > 1) return 'B';
   if (t.includes('charles')) return 'C';
   if (t.includes('tony')) return 'T';
   return 'S';
+}
+
+// Check if a job belongs to a specific tech (for detail panel column filtering)
+function jobBelongsTo(tech, col) {
+  if (!tech) return col === 'S';
+  const t = tech.toLowerCase();
+  if (t.includes('both')) return true;
+  // Multi-tech assignment — check if this column's tech is included
+  if (col === 'S') return t.includes('shaun') || (!t.includes('charles') && !t.includes('tony'));
+  if (col === 'T') return t.includes('tony');
+  if (col === 'C') return t.includes('charles');
+  return false;
 }
 
 function renderMonthView() {
@@ -2939,9 +2955,9 @@ function renderMonthView() {
       const filteredEvts = evts.filter(e => {
         if (diaryTechFilter === 'all') return true;
         const tc = techClass(e.assigned_tech);
-        if (diaryTechFilter === 'shaun') return tc === 'S' || tc === 'B';
-        if (diaryTechFilter === 'charles') return tc === 'C' || tc === 'B';
-        if (diaryTechFilter === 'tony') return tc === 'T' || tc === 'B';
+        if (diaryTechFilter === 'shaun') return jobBelongsTo(e.assigned_tech, 'S');
+        if (diaryTechFilter === 'charles') return jobBelongsTo(e.assigned_tech, 'C');
+        if (diaryTechFilter === 'tony') return jobBelongsTo(e.assigned_tech, 'T');
         return true;
       });
       let shown = 0;
@@ -3064,9 +3080,9 @@ function selectDiaryDay(ds, label) {
   warn.className = 'det-warn' + (hasMix ? ' show' : '');
 
   // Build Shaun, Tony and Charles rows
-  const shaunJobs = evts.filter(j => { const t = techClass(j.assigned_tech); return t==='S'||t==='B'; });
-  const tonyJobs  = evts.filter(j => { const t = techClass(j.assigned_tech); return t==='T'||t==='B'; });
-  const charlesJobs = evts.filter(j => { const t = techClass(j.assigned_tech); return t==='C'||t==='B'; });
+  const shaunJobs = evts.filter(j => jobBelongsTo(j.assigned_tech, 'S'));
+  const tonyJobs  = evts.filter(j => jobBelongsTo(j.assigned_tech, 'T'));
+  const charlesJobs = evts.filter(j => jobBelongsTo(j.assigned_tech, 'C'));
   // Dim columns based on filter
   const sHd2 = document.getElementById('dchd-shaun');
   const tHd = document.getElementById('dchd-tony');
