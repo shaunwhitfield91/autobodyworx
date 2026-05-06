@@ -681,10 +681,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <button class="btn-secondary" onclick="diaryPrev()">&#8592; Prev</button>
           <button class="btn-secondary" onclick="diaryToday()">Today</button>
           <button class="btn-secondary" onclick="diaryNext()">Next &#8594;</button>
-          <button class="btn-primary role-admin role-admin_staff" onclick="openDiaryEntryModal()" style="font-size:12px">+ Add entry</button>
+          <button class="btn-primary role-admin_staff" onclick="openDiaryEntryModal()" style="font-size:12px">+ Add entry</button>
           <button class="btn-secondary on" id="dv-month" onclick="setDiaryView('month',this)">Month</button>
           <button class="btn-secondary" id="dv-week" onclick="setDiaryView('week',this)">Week</button>
-          <button class="btn-primary role-admin_staff">+ Book job</button>
+          <button class="btn-primary role-admin_staff" onclick="openBookModalFromDiary()">+ Book job</button>
         </div>
       </div>
       <!-- Revenue bar -->
@@ -3836,29 +3836,42 @@ function renderTechPortal() {
   const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1); yesterday.setHours(0,0,0,0);
   const ahead = new Date(now); ahead.setDate(now.getDate() + 7); ahead.setHours(23,59,59,999);
 
+  const DIARY_SOURCES = ['Holiday','Appointment','Van day','Diary entry'];
+
   const myJobs = allJobs.filter(j => {
     if (!j.assigned_tech) return false;
     const t = j.assigned_tech.toLowerCase();
     const nameMatch = t.includes(name.toLowerCase()) || t.includes('both');
     if (!nameMatch) return false;
     if (j.status !== 'booked' && j.status !== 'completed') return false;
-    // Include unscheduled jobs too
     if (!j.booking_date) return true;
     const dStart = new Date(j.booking_date); dStart.setHours(0,0,0,0);
     const numDays = j.duration_days || 1;
     const dEnd = new Date(dStart); dEnd.setDate(dStart.getDate() + numDays - 1);
-    // Show if job starts in window OR is still running during window
     return dEnd >= yesterday && dStart <= ahead;
   });
 
-  if (!myJobs.length) {
+  // Also include diary entries (holidays, appointments) for this tech
+  const myDiaryEntries = diaryAllJobs.filter(j => {
+    if (!DIARY_SOURCES.includes(j.source)) return false;
+    if (!j.booking_date) return false;
+    const t = (j.assigned_tech||'').toLowerCase();
+    const nameMatch = t.includes(name.toLowerCase()) || t.includes('both') || t === 'all';
+    if (!nameMatch) return false;
+    const d = new Date(j.booking_date); d.setHours(0,0,0,0);
+    return d >= yesterday && d <= ahead;
+  });
+
+  const allMyItems = [...myJobs, ...myDiaryEntries];
+
+  if (!allMyItems.length) {
     el.innerHTML = `<div class="tech-empty"><div class="tech-empty-icon">🔧</div><div>No jobs assigned to you yet</div></div>`;
     return;
   }
 
   // Group by date
   const byDate = {};
-  myJobs.forEach(j => {
+  allMyItems.forEach(j => {
     const dk = j.booking_date || 'Unscheduled';
     if (!byDate[dk]) byDate[dk] = [];
     byDate[dk].push(j);
@@ -3874,7 +3887,17 @@ function renderTechPortal() {
         ${dk === 'Unscheduled' ? 'Unscheduled' : fmtDate(dk)}
         ${isToday?'<span class="tech-today-badge">TODAY</span>':''}
       </div>
-      ${jobs.map(j => buildTechCard(j)).join('')}`;
+      ${jobs.map(j => {
+        if (DIARY_SOURCES.includes(j.source)) {
+          const icons = {Holiday:'🏖',Appointment:'📅','Van day':'🚐','Diary entry':'📝'};
+          return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:8px;border-left:4px solid #9ca3af">
+            <div style="font-size:13px;font-weight:700;color:var(--txt)">${icons[j.source]||'📅'} ${esc(j.customer_name||j.source)}</div>
+            ${j.booking_time?`<div style="font-size:12px;color:var(--muted);margin-top:2px">${j.booking_time} · ${j.duration||'Full day'}</div>`:''}
+            ${j.notes?`<div style="font-size:12px;color:var(--muted);margin-top:4px">${esc(j.notes)}</div>`:''}
+          </div>`;
+        }
+        return buildTechCard(j);
+      }).join('')}`;
   }).join('');
 }
 
@@ -5574,6 +5597,16 @@ async function addPartFromEdit() {
     }
     await loadJobs();
   } catch(e) { alert('Failed: ' + e.message); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// BOOK JOB FROM DIARY NAV
+// ═══════════════════════════════════════════════════════════
+function openBookModalFromDiary() {
+  // Switch to jobs tab, filter to quoted/pending so Chloe can pick a job to book
+  switchTab('jobs');
+  setFilter('quoted', document.getElementById('fp-quot'));
+  showToast('Select a job to book in');
 }
 
 // ═══════════════════════════════════════════════════════════
