@@ -1618,8 +1618,10 @@ let diaryAllJobs = []; // includes diary entries (holidays etc) — for diary di
 
 async function loadDiaryJobs() {
   try {
+    // Select only columns the diary needs — much faster than select=*
+    const cols = 'id,customer_name,vehicle,panels,booking_date,booking_time,duration,duration_days,assigned_tech,job_location,customer_address,quote_price,invoice_amount,status,source,notes,cd_required,signed_off_at,invoiced_at';
     const data = await sbRaw('GET', 'jobs', null,
-      `?select=*&archived=eq.false&status=neq.declined&order=booking_date.asc`);
+      `?select=${cols}&archived=eq.false&status=neq.declined&order=booking_date.asc`);
     diaryAllJobs = data || [];
   } catch(e) { diaryAllJobs = allJobs; }
 }
@@ -1901,7 +1903,13 @@ function switchTab(t) {
 
   if (t === 'jobs') { renderJobs(); renderDeclined(); }
   if (t === 'home') { updateHomeStats(); renderHome(); }
-  if (t === 'diary') { loadDiaryJobs().then(() => { renderDiary(); renderRevBar(); }); }
+  if (t === 'diary') {
+    // Render immediately from whatever we have (allJobs as fallback)
+    if (!diaryAllJobs.length) diaryAllJobs = allJobs;
+    renderDiary(); renderRevBar();
+    // Then silently refresh in the background
+    loadDiaryJobs().then(() => { renderDiary(); renderRevBar(); });
+  }
   if (t === 'tech') { loadTclockState(); if (currentProfile?.role === 'tech') loadHolidays(); }
   if (t === 'tech') { renderTechPortal(); }
   if (t === 'settings') { checkApiKey(); checkXeroStatus(); }
@@ -1919,6 +1927,9 @@ async function loadJobs() {
     if (_notifsReady) checkForNewNotifs(freshJobs);
     allJobs = freshJobs;
   } catch(e) { allJobs = []; }
+  // Seed diaryAllJobs from allJobs so diary renders instantly on first open
+  // (diary entries not included but gives an instant skeleton)
+  if (!diaryAllJobs.length) diaryAllJobs = allJobs;
   renderJobs();
   updateHomeStats();
   renderHome();
@@ -2864,6 +2875,19 @@ function renderRevBar() {
   }
   const el = document.getElementById('revBarBreakdown');
   if (el) el.innerHTML = breakdown;
+}
+
+function showDiaryLoading(show) {
+  let el = document.getElementById('diaryLoading');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'diaryLoading';
+    el.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13px;color:var(--muted);pointer-events:none;transition:opacity .3s';
+    el.textContent = 'Loading diary...';
+    const cal = document.getElementById('calGrid');
+    if (cal) { cal.style.position = 'relative'; cal.appendChild(el); }
+  }
+  el.style.opacity = show ? '1' : '0';
 }
 
 function renderDiary() {
