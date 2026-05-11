@@ -5819,13 +5819,27 @@ function newQuoteForCustomer(cStr) {
     set('q_custName', c.name);
     set('q_custPhone', c.phone);
     set('q_custEmail', c.email);
-    set('q_custAddr', c.address);
+    // Split address into the 3 quote form fields
+    if (c.address) {
+      const parts = c.address.split(',').map(s => s.trim());
+      const pcIdx = parts.findIndex(p => /^[A-Z]{1,2}\d/.test(p.toUpperCase()));
+      if (pcIdx > -1) {
+        set('q_postcode', parts[pcIdx]);
+        const rem = parts.filter((_,i) => i !== pcIdx);
+        set('q_addr1', rem[0] || '');
+        set('q_addr2', rem.slice(1).join(', ') || '');
+      } else {
+        set('q_addr1', parts[0] || '');
+        set('q_addr2', parts.slice(1,-1).join(', ') || '');
+        set('q_postcode', parts[parts.length-1] || '');
+      }
+    }
     // Pre-fill make/model if available
     if (c.vehicle) {
-      const parts = c.vehicle.split(' ');
-      set('q_make', parts[0] || '');
-      set('q_model', parts.slice(1,-1).join(' ') || '');
-      set('q_year', parts[parts.length-1] || '');
+      const vparts = c.vehicle.split(' ');
+      set('q_make', vparts[0] || '');
+      set('q_model', vparts.slice(1,-1).join(' ') || '');
+      set('q_year', vparts[vparts.length-1] || '');
     }
     updateCustomerPreview?.();
   }, 200);
@@ -5886,12 +5900,37 @@ function selectCustomerSuggestion(inputId, suggestionsId, cStr) {
   // Fill in related fields based on which form we're in
   if (inputId === 'q_custName') {
     const set = (id, val) => { const el = document.getElementById(id); if (el && val && !el.value) el.value = val; };
-    set('q_custPhone', c.phone); set('q_custEmail', c.email); set('q_custAddr', c.address);
-    if (c.vehicle) { const parts = c.vehicle.split(' '); set('q_make', parts[0]||''); set('q_model', parts.slice(1,-1).join(' ')||''); set('q_year', parts[parts.length-1]||''); }
+    set('q_custPhone', c.phone);
+    set('q_custEmail', c.email);
+    // Split stored address into the 3 quote form fields
+    if (c.address) {
+      const parts = c.address.split(',').map(s => s.trim());
+      // Try to detect postcode (last part matching postcode pattern)
+      const pcIdx = parts.findIndex(p => /^[A-Z]{1,2}\d/.test(p.toUpperCase()));
+      if (pcIdx > -1) {
+        set('q_postcode', parts[pcIdx]);
+        const remaining = parts.filter((_,i) => i !== pcIdx);
+        set('q_addr1', remaining[0] || '');
+        set('q_addr2', remaining.slice(1).join(', ') || '');
+      } else {
+        set('q_addr1', parts[0] || '');
+        set('q_addr2', parts.slice(1,-1).join(', ') || '');
+        set('q_postcode', parts[parts.length-1] || '');
+      }
+    }
+    if (c.vehicle) {
+      const vparts = c.vehicle.split(' ');
+      set('q_make', vparts[0]||'');
+      set('q_model', vparts.slice(1,-1).join(' ')||'');
+      set('q_year', vparts[vparts.length-1]||'');
+    }
     updateCustomerPreview?.();
   } else if (inputId === 'm_name') {
     const set = (id, val) => { const el = document.getElementById(id); if (el && val && !el.value) el.value = val; };
-    set('m_phone', c.phone); set('m_email', c.email); set('m_addr2', c.address); set('m_vehicle', c.vehicle);
+    set('m_phone', c.phone);
+    set('m_email', c.email);
+    set('m_addr2', c.address);
+    set('m_vehicle', c.vehicle);
   }
 }
 
