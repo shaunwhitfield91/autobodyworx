@@ -1078,6 +1078,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <button class="btn-danger" id="xeroDisconBtn" style="display:none" onclick="disconnectXero()">Disconnect</button>
       </div>
       <div class="settings-card">
+        <div class="settings-card-hd">Bank Holidays</div>
+        <div class="settings-card-sub">Add UK bank holidays (England & Wales) to the diary as blocked days. They count against the 28-day tech holiday allowance and show in each tech's holiday list.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+          <button class="btn-primary" onclick="populateBankHolidays(2025)" style="font-size:12px">Add 2025 bank holidays</button>
+          <button class="btn-primary" onclick="populateBankHolidays(2026)" style="font-size:12px">Add 2026 bank holidays</button>
+          <button class="btn-primary" onclick="populateBankHolidays(2027)" style="font-size:12px">Add 2027 bank holidays</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted)">Safe to click multiple times — won't add duplicates</div>
+      </div>
+      <div class="settings-card">
         <div class="settings-card-hd">SMS Reminders</div>
         <div class="settings-card-sub">Automatic SMS reminders sent 3 days before each appointment. Review requests sent 2 days after job completion. Runs daily at 8am via Twilio.</div>
         <div style="font-size:12px;color:var(--teal);font-weight:600">✓ Active — configured via Netlify environment variables</div>
@@ -2940,7 +2950,7 @@ function renderDiary() {
 }
 
 function isDiaryEntry(j) {
-  return ['Holiday','Appointment','Van day','Diary entry'].includes(j?.source);
+  return ['Holiday','Appointment','Van day','Diary entry','Bank Holiday'].includes(j?.source);
 }
 
 function getJobsForDate(dateStr) {
@@ -3017,7 +3027,9 @@ function renderMonthView() {
 
       const onclick = cell.cur ? `onclick="selectDiaryDay('${ds}','${cell.d} ${months[diaryMonth]}')"` : '';
       html += `<div class="${cls}" ${onclick}>`;
-      html += `<div class="cal-dn">${cell.d}</div>`;
+      const bhName = cell.cur ? UK_BANK_HOLIDAYS[ds] : null;
+      html += `<div class="cal-dn">${cell.d}${bhName ? '<span style="font-size:7px;background:#fde68a;color:#92400e;padding:0 3px;border-radius:2px;margin-left:2px;font-weight:700">BH</span>' : ''}</div>`;
+      if (bhName) html += `<div style="font-size:9px;color:#92400e;font-weight:600;padding:0 2px 2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${bhName}</div>`;
 
       // Apply tech filter
       const filteredEvts = evts.filter(e => {
@@ -4794,13 +4806,15 @@ async function loadHolidays() {
   } catch(e) { console.warn('Holiday load failed', e); }
 }
 
-function countWorkingDays(from, to) {
+function countWorkingDays(from, to, excludeBankHols = true) {
   let count = 0;
   const d = localDate(from);
   const end = localDate(to);
   while (d <= end) {
     const day = d.getDay();
-    if (day !== 0 && day !== 6) count++;
+    const dateStr = dateToStr(d);
+    const isBH = excludeBankHols && isBankHoliday(dateStr);
+    if (day !== 0 && day !== 6 && !isBH) count++;
     d.setDate(d.getDate() + 1);
   }
   return count;
@@ -4808,21 +4822,50 @@ function countWorkingDays(from, to) {
 
 function renderHolidayCard() {
   const approved = _holRequests.filter(r => r.status === 'approved');
-  const used = approved.reduce((s, r) => s + (r.days_count || 0), 0);
-  const left = HOL_ENTITLEMENT - used;
+  const holUsedDays = approved.reduce((s, r) => s + (r.days_count || 0), 0);
+
+  // Bank holidays for current holiday year (April to March)
+  const now = new Date();
+  const holYearStart = now.getMonth() >= 3
+    ? now.getFullYear() + '-04-01'
+    : (now.getFullYear() - 1) + '-04-01';
+  const holYearEnd = now.getMonth() >= 3
+    ? (now.getFullYear() + 1) + '-03-31'
+    : now.getFullYear() + '-03-31';
+  const bhThisYear = getBankHolidaysBetween(holYearStart, holYearEnd);
+  const bhCount = bhThisYear.length;
+
+  const totalUsed = holUsedDays + bhCount;
+  const left = HOL_ENTITLEMENT - totalUsed;
   const el = id => document.getElementById(id);
-  if (el('holUsed')) el('holUsed').textContent = used;
+  if (el('holUsed')) el('holUsed').textContent = totalUsed;
   if (el('holLeft')) el('holLeft').textContent = Math.max(0, left);
-  if (el('holSummary')) el('holSummary').textContent = used + ' used · ' + Math.max(0,left) + ' remaining of 28 days';
+  if (el('holSummary')) el('holSummary').textContent =
+    holUsedDays + ' booked + ' + bhCount + ' bank hols = ' + totalUsed + ' used · ' + Math.max(0,left) + ' remaining';
 
   // List of requests
   const list = el('holList');
   if (list) {
-    if (!_holRequests.length) {
-      list.innerHTML = '<div style="padding:12px 14px;font-size:12px;color:var(--muted)">No holiday requests yet</div>';
+    // Build combined list: holiday requests + bank holidays
+    const bhItems = bhThisYear.map(bh => ({
+      _isBankHol: true,
+      from_date: bh.date,
+      to_date: bh.date,
+      days_count: 1,
+      reason: bh.name,
+      status: 'approved'
+    }));
+    const allItems = [..._holRequests, ...bhItems]
+      .sort((a, b) => a.from_date.localeCompare(b.from_date));
+
+    if (!allItems.length) {
+      list.innerHTML = '<div style="padding:12px 14px;font-size:12px;color:var(--muted)">No holiday or bank holiday records yet</div>';
     } else {
-      list.innerHTML = _holRequests.map(r => {
-        const badge = r.status === 'approved'
+      list.innerHTML = allItems.map(r => {
+        const isBH = r._isBankHol;
+        const badge = isBH
+          ? '<span style="background:#fef9c3;color:#92400e;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700">🏛 Bank holiday</span>'
+          : r.status === 'approved'
           ? '<span class="hol-approved">Approved</span>'
           : r.status === 'rejected'
           ? '<span class="hol-rejected">Declined</span>'
@@ -4830,12 +4873,12 @@ function renderHolidayCard() {
         const dateStr = r.from_date === r.to_date
           ? fmtDate(r.from_date)
           : fmtDate(r.from_date) + ' – ' + fmtDate(r.to_date);
-        // Can amend/cancel if pending or approved (approved needs Shaun re-notified)
-        const canAmend = r.status !== 'rejected';
+        const label = isBH ? r.reason : (r.days_count || 0) + ' day' + (r.days_count!==1?'s':'');
+        const canAmend = !isBH && r.status !== 'rejected';
         return `<div class="hol-row" style="flex-wrap:wrap;gap:6px">
           <div style="flex:1">
             <div style="font-weight:600;color:var(--txt)">${dateStr}</div>
-            <div style="font-size:11px;color:var(--muted)">${r.days_count || 0} day${r.days_count!==1?'s':''}</div>
+            <div style="font-size:11px;color:var(--muted)">${label}</div>
           </div>
           <div style="display:flex;align-items:center;gap:6px">
             ${badge}
@@ -5932,6 +5975,93 @@ function selectCustomerSuggestion(inputId, suggestionsId, cStr) {
     set('m_addr2', c.address);
     set('m_vehicle', c.vehicle);
   }
+}
+
+// ═══════════════════════════════════════════════════════════
+// UK BANK HOLIDAYS (England & Wales)
+// ═══════════════════════════════════════════════════════════
+const UK_BANK_HOLIDAYS = {
+  '2025-01-01': "New Year's Day",
+  '2025-04-18': 'Good Friday',
+  '2025-04-21': 'Easter Monday',
+  '2025-05-05': 'Early May Bank Holiday',
+  '2025-05-26': 'Spring Bank Holiday',
+  '2025-08-25': 'Summer Bank Holiday',
+  '2025-12-25': 'Christmas Day',
+  '2025-12-26': 'Boxing Day',
+  '2026-01-01': "New Year's Day",
+  '2026-04-03': 'Good Friday',
+  '2026-04-06': 'Easter Monday',
+  '2026-05-04': 'Early May Bank Holiday',
+  '2026-05-25': 'Spring Bank Holiday',
+  '2026-08-31': 'Summer Bank Holiday',
+  '2026-12-25': 'Christmas Day',
+  '2026-12-28': 'Boxing Day (substitute)',
+  '2027-01-01': "New Year's Day",
+  '2027-03-26': 'Good Friday',
+  '2027-03-29': 'Easter Monday',
+  '2027-05-03': 'Early May Bank Holiday',
+  '2027-05-31': 'Spring Bank Holiday',
+  '2027-08-30': 'Summer Bank Holiday',
+  '2027-12-27': 'Christmas Day (substitute)',
+  '2027-12-28': 'Boxing Day (substitute)'
+};
+
+function isBankHoliday(dateStr) {
+  return !!UK_BANK_HOLIDAYS[dateStr];
+}
+
+function getBankHolidaysForYear(year) {
+  return Object.entries(UK_BANK_HOLIDAYS)
+    .filter(([d]) => d.startsWith(year + ''))
+    .map(([date, name]) => ({ date, name }));
+}
+
+// Get bank holidays between two dates
+function getBankHolidaysBetween(from, to) {
+  return Object.entries(UK_BANK_HOLIDAYS)
+    .filter(([d]) => d >= from && d <= to)
+    .map(([date, name]) => ({ date, name }));
+}
+
+// ═══════════════════════════════════════════════════════════
+// BANK HOLIDAY DIARY POPULATION
+// ═══════════════════════════════════════════════════════════
+async function populateBankHolidays(year) {
+  year = year || new Date().getFullYear();
+  const bhs = getBankHolidaysForYear(year);
+  if (!bhs.length) { showToast('No bank holidays defined for ' + year); return; }
+
+  // Check which ones are already in the diary
+  const existing = diaryAllJobs.filter(j =>
+    j.source === 'Bank Holiday' &&
+    j.booking_date &&
+    j.booking_date.startsWith(year + '')
+  ).map(j => j.booking_date);
+
+  const toAdd = bhs.filter(bh => !existing.includes(bh.date));
+  if (!toAdd.length) { showToast('Bank holidays for ' + year + ' already in diary'); return; }
+
+  let added = 0;
+  for (const bh of toAdd) {
+    try {
+      await sbRaw('POST', 'jobs', {
+        customer_name: '🏛 ' + bh.name,
+        status: 'booked',
+        booking_date: bh.date,
+        assigned_tech: 'Both',
+        job_location: 'workshop',
+        duration: 'Full day',
+        notes: 'UK Bank Holiday — England & Wales',
+        source: 'Bank Holiday',
+        archived: false
+      });
+      added++;
+    } catch(e) { console.warn('Failed to add BH:', bh.name, e.message); }
+  }
+  showToast('✓ Added ' + added + ' bank holidays for ' + year + ' to diary');
+  await loadDiaryJobs();
+  if (document.getElementById('pg-diary').classList.contains('on')) renderDiary();
 }
 
 // ═══════════════════════════════════════════════════════════
