@@ -381,6 +381,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tchrs-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;border-top:1px solid var(--border);user-select:none}
 .tchrs-stat{background:var(--bg);border-radius:var(--radius);padding:10px 12px}
 .tchrs-sl{font-size:11px;color:var(--muted);margin-bottom:4px}
+.cust-suggestions{position:absolute;z-index:999;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-lg);box-shadow:0 4px 16px rgba(0,0,0,.12);max-height:220px;overflow-y:auto;width:100%;left:0;top:100%;margin-top:2px;display:none}
+.cust-sug-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;transition:background .1s}
+.cust-sug-item:last-child{border-bottom:none}
+.cust-sug-item:hover{background:var(--blue-bg)}
+.cust-sug-name{font-weight:600;color:var(--txt)}
+.cust-sug-detail{font-size:11px;color:var(--muted);margin-top:2px}
+.cust-sug-badge{display:inline-block;background:var(--amber-bg);color:var(--amber-txt);font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px}
+.cust-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px}
+.cust-card-name{font-size:15px;font-weight:700;color:var(--txt);margin-bottom:4px}
+.cust-card-detail{font-size:12px;color:var(--muted);margin-bottom:8px}
+.cust-hist-item{font-size:12px;padding:5px 0;border-bottom:1px solid var(--border);color:var(--muted)}
+.cust-hist-item:last-child{border-bottom:none}
 .hol-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:12px}
 .hol-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;user-select:none}
 .hol-hd:hover{background:var(--bg)}
@@ -552,6 +564,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="ttab" id="t-quote" onclick="switchTab('quote')">New quote</div>
       <div class="ttab" id="t-tech" onclick="switchTab('tech')">My jobs</div>
       <div class="ttab role-admin role-admin_staff" id="t-timesheet" onclick="switchTab('timesheet');initAdminTs()">Timesheets</div>
+      <div class="ttab" id="t-customers" onclick="switchTab('customers')">Customers</div>
       <div class="ttab role-admin" id="t-settings" onclick="switchTab('settings')">Settings</div>
     </div>
     <div class="tbar-right">
@@ -570,13 +583,36 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <div style="font-size:13px;color:var(--muted)">Hours worked by all technicians</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <select class="msel" id="ts-month-sel" onchange="loadAdminTs()" style="width:180px"></select>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:12px;color:var(--muted);white-space:nowrap">From</span>
+            <input autocomplete="off" type="date" id="ts-from" class="msel" style="width:140px" onchange="loadAdminTs()">
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:12px;color:var(--muted);white-space:nowrap">To</span>
+            <input autocomplete="off" type="date" id="ts-to" class="msel" style="width:140px" onchange="loadAdminTs()">
+          </div>
+          <button class="btn-secondary" onclick="setTsQuickRange('week')" style="font-size:11px">This week</button>
+          <button class="btn-secondary" onclick="setTsQuickRange('last4weeks')" style="font-size:11px">Last 4 weeks</button>
+          <button class="btn-secondary" onclick="setTsQuickRange('month')" style="font-size:11px">This month</button>
           <button class="btn-primary" onclick="exportTsPdf()" style="font-size:12px">Export PDF</button>
         </div>
       </div>
       <div id="ts-admin-content">
         <div style="text-align:center;color:var(--muted);padding:40px">Select a month above to view timesheets</div>
       </div>
+    </div>
+  </div>
+
+  <!-- CUSTOMERS PAGE -->
+  <div class="page" id="pg-customers">
+    <div class="page-wrap">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:20px;font-weight:800;color:var(--txt)">Customers</div>
+        <div style="display:flex;gap:8px">
+          <input autocomplete="off" type="text" id="cust-search" class="minp" placeholder="Search name, phone, email..." style="width:220px" oninput="renderCustomers()">
+        </div>
+      </div>
+      <div id="cust-list"></div>
     </div>
   </div>
 
@@ -745,7 +781,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <!-- Left: form -->
         <div class="quote-form-card">
           <div class="q-section-hd">Customer</div>
-          <span class="qlbl">Name</span><input autocomplete="off" class="qinp" id="q_custName" placeholder="Full name">
+          <span class="qlbl">Name</span>
+          <div style="position:relative">
+            <input autocomplete="off" class="qinp" id="q_custName" placeholder="Full name" oninput="onCustNameInput('q_custName','q_cust_suggestions');updateCustomerPreview()">
+            <div id="q_cust_suggestions" class="cust-suggestions"></div>
+          </div>
           <div class="qgrid2">
             <div><span class="qlbl">Phone</span><input autocomplete="off" class="qinp" id="q_custPhone" placeholder="07700..."></div>
             <div><span class="qlbl">Email</span><input autocomplete="off" class="qinp" id="q_custEmail" placeholder="email@..."></div>
@@ -1067,7 +1107,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="modal-box">
     <div class="modal-hd">Add job manually</div>
     <div class="modal-grid2">
-      <div><span class="qlbl">Customer name</span><input autocomplete="off" class="minp" id="m_name" placeholder="Full name"></div>
+      <div><span class="qlbl">Customer name</span>
+        <div style="position:relative">
+          <input autocomplete="off" class="minp" id="m_name" placeholder="Full name" oninput="onCustNameInput('m_name','m_cust_suggestions')">
+          <div id="m_cust_suggestions" class="cust-suggestions"></div>
+        </div>
+      </div>
       <div><span class="qlbl">Phone</span><input autocomplete="off" class="minp" id="m_phone" placeholder="07700..."></div>
     </div>
     <div class="modal-grid2">
@@ -1275,9 +1320,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <option value="mobile">Mobile — customer site</option>
       <option value="workshop">Workshop</option>
     </select>
-    <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
-      <input autocomplete="off" type="checkbox" id="bk_cd" style="width:16px;height:16px;cursor:pointer">
-      <label for="bk_cd" style="font-size:13px;color:var(--txt);cursor:pointer">Collection &amp; Delivery required</label>
+    <div style="display:flex;gap:8px;margin-top:10px;align-items:center;background:var(--blue-bg);border:1px solid var(--blue-bdr);border-radius:var(--radius);padding:10px 12px">
+      <input autocomplete="off" type="checkbox" id="bk_cd" style="width:18px;height:18px;cursor:pointer;accent-color:var(--blue);flex-shrink:0">
+      <label for="bk_cd" style="font-size:13px;font-weight:600;color:var(--blue-txt);cursor:pointer">🚗 Collection &amp; Delivery required</label>
     </div>
     <span class="qlbl" style="margin-top:12px">Customer address (if mobile / C&amp;D)</span>
     <input autocomplete="off" class="minp" id="bk_addr" placeholder="Full address">
@@ -1913,6 +1958,7 @@ function switchTab(t) {
   if (t === 'tech') { renderTechPortal(); }
   if (t === 'settings') { checkApiKey(); checkXeroStatus(); }
   if (t === 'timesheet') { initAdminTs(); }
+  if (t === 'customers') { renderCustomers(); }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3572,6 +3618,11 @@ function manualQuote() {
   document.getElementById('loadingDiv').classList.remove('show');
   document.getElementById('approvedMsg').classList.remove('show');
   document.getElementById('manualWrap').style.display = 'block';
+  // Scroll manualWrap into view on mobile where panels stack
+  setTimeout(() => {
+    const el = document.getElementById('manualWrap');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 50);
 }
 
 function cancelManual() {
@@ -5203,32 +5254,42 @@ async function deleteTsEntry() {
 // ═══════════════════════════════════════════════════════════
 // ADMIN TIMESHEET VIEW
 // ═══════════════════════════════════════════════════════════
-function initAdminTs() {
-  const sel = document.getElementById('ts-month-sel');
-  if (!sel || sel.options.length > 0) return;
+function setTsQuickRange(range) {
   const now = new Date();
-  for (let i = 0; i < 12; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const val = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
-    const lbl = d.toLocaleString('en-GB',{month:'long',year:'numeric'});
-    const opt = document.createElement('option');
-    opt.value = val; opt.textContent = lbl;
-    if (i === 0) opt.selected = true;
-    sel.appendChild(opt);
+  let from, to;
+  if (range === 'week') {
+    const mon = new Date(now); mon.setDate(now.getDate() - (now.getDay()||7) + 1);
+    from = mon.toISOString().split('T')[0];
+    to = now.toISOString().split('T')[0];
+  } else if (range === 'last4weeks') {
+    const f = new Date(now); f.setDate(now.getDate() - 27);
+    from = f.toISOString().split('T')[0];
+    to = now.toISOString().split('T')[0];
+  } else if (range === 'month') {
+    from = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-01';
+    to = now.toISOString().split('T')[0];
   }
+  document.getElementById('ts-from').value = from;
+  document.getElementById('ts-to').value = to;
   loadAdminTs();
 }
 
+function initAdminTs() {
+  // Set default range to last 4 weeks if not already set
+  const fromEl = document.getElementById('ts-from');
+  if (fromEl && !fromEl.value) setTsQuickRange('last4weeks');
+  else loadAdminTs();
+}
+
 async function loadAdminTs() {
-  const sel = document.getElementById('ts-month-sel');
-  const month = sel?.value;
-  if (!month) return;
+  const from = document.getElementById('ts-from')?.value;
+  const to = document.getElementById('ts-to')?.value;
+  if (!from || !to) return;
   const content = document.getElementById('ts-admin-content');
   content.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">Loading...</div>';
   try {
-    const nextMonth = month.slice(0,4) + '-' + String(parseInt(month.slice(5)) + 1).padStart(2,'0');
     const rows = await sbRaw('GET','time_entries',null,
-      `?date=gte.${month}-01&date=lt.${nextMonth}-01&order=tech_name.asc,date.asc`);
+      `?date=gte.${from}&date=lte.${to}&order=tech_name.asc,date.asc`);
     if (!rows || !rows.length) {
       content.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">No entries for this month</div>';
       return;
@@ -5239,7 +5300,7 @@ async function loadAdminTs() {
       if (!byTech[r.tech_name]) byTech[r.tech_name] = [];
       byTech[r.tech_name].push(r);
     });
-    const monthLabel = new Date(month + '-01').toLocaleString('en-GB',{month:'long',year:'numeric'});
+    const monthLabel = fmtDate(from) + ' – ' + fmtDate(to);
     let html = '';
     const techDots = {Shaun:'#1e40af', Charles:'#b45309'};
     Object.entries(byTech).forEach(([tech, entries]) => {
@@ -5287,7 +5348,7 @@ async function loadAdminTs() {
     });
     content.innerHTML = html;
     // Store for PDF
-    window._tsAdminData = { month: monthLabel, byTech, rows };
+    window._tsAdminData = { month: monthLabel, byTech, rows, from, to };
   } catch(e) { content.innerHTML = `<div style="color:var(--red);padding:20px">${e.message}</div>`; }
 }
 
@@ -5666,6 +5727,172 @@ function pickJobToBook(jobId) {
   const picker = document.getElementById('diaryBookPicker');
   if (picker) picker.remove();
   openBookModal(jobId);
+}
+
+// ═══════════════════════════════════════════════════════════
+// CUSTOMER ADDRESS BOOK
+// ═══════════════════════════════════════════════════════════
+
+// Build customer list from allJobs — deduplicated by name
+function buildCustomerList() {
+  const custMap = {};
+  allJobs.forEach(j => {
+    if (!j.customer_name || j.customer_name === 'Unknown') return;
+    const key = j.customer_name.toLowerCase().trim();
+    if (!custMap[key]) {
+      custMap[key] = {
+        name: j.customer_name,
+        phone: j.customer_phone || '',
+        email: j.customer_email || '',
+        address: j.customer_address || '',
+        vehicle: j.vehicle || '',
+        jobs: [],
+        lastJob: null
+      };
+    }
+    custMap[key].jobs.push(j);
+    if (!custMap[key].phone && j.customer_phone) custMap[key].phone = j.customer_phone;
+    if (!custMap[key].email && j.customer_email) custMap[key].email = j.customer_email;
+    if (!custMap[key].address && j.customer_address) custMap[key].address = j.customer_address;
+    if (!custMap[key].lastJob || j.booking_date > custMap[key].lastJob) custMap[key].lastJob = j.booking_date;
+  });
+  return Object.values(custMap).sort((a,b) => a.name.localeCompare(b.name));
+}
+
+function renderCustomers() {
+  const el = document.getElementById('cust-list');
+  if (!el) return;
+  const q = (document.getElementById('cust-search')?.value || '').toLowerCase().trim();
+  let customers = buildCustomerList();
+  if (q) customers = customers.filter(c =>
+    c.name.toLowerCase().includes(q) ||
+    c.phone.includes(q) ||
+    c.email.toLowerCase().includes(q)
+  );
+  // Highlight potential duplicates
+  const nameCounts = {};
+  buildCustomerList().forEach(c => {
+    const first = c.name.split(' ')[0].toLowerCase();
+    nameCounts[first] = (nameCounts[first] || 0) + 1;
+  });
+
+  if (!customers.length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">No customers found</div>';
+    return;
+  }
+  el.innerHTML = customers.map(c => {
+    const isDup = nameCounts[c.name.split(' ')[0].toLowerCase()] > 1;
+    const jobCount = c.jobs.length;
+    const totalSpend = c.jobs.reduce((s,j) => s + (parseFloat((j.quote_price||'0').replace(/[^0-9.]/g,''))||0), 0);
+    return `<div class="cust-card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:6px">
+        <div>
+          <div class="cust-card-name">${esc(c.name)}
+            ${isDup ? '<span class="cust-sug-badge">⚠ Possible duplicate</span>' : ''}
+          </div>
+          <div class="cust-card-detail">
+            ${c.phone ? '📞 ' + esc(c.phone) + ' &nbsp;' : ''}
+            ${c.email ? '✉ ' + esc(c.email) + ' &nbsp;' : ''}
+            ${c.address ? '📍 ' + esc(c.address) : ''}
+          </div>
+          ${c.vehicle ? `<div style="font-size:12px;color:var(--muted)">🚗 Last vehicle: ${esc(c.vehicle)}</div>` : ''}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:13px;font-weight:700;color:var(--txt)">${jobCount} job${jobCount!==1?'s':''}</div>
+          ${totalSpend > 0 ? `<div style="font-size:12px;color:var(--teal);font-weight:600">£${Math.round(totalSpend).toLocaleString('en-GB')} total</div>` : ''}
+          ${c.lastJob ? `<div style="font-size:11px;color:var(--muted)">Last: ${fmtDate(c.lastJob)}</div>` : ''}
+        </div>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+        <button onclick="newQuoteForCustomer(${JSON.stringify(c).split('"').join('&quot;')})" class="btn-primary" style="font-size:11px;padding:5px 10px">+ New quote</button>
+        <button onclick="newJobForCustomer(${JSON.stringify(c).split('"').join('&quot;')})" class="btn-secondary" style="font-size:11px;padding:5px 10px">+ Book job</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function newQuoteForCustomer(cStr) {
+  const c = typeof cStr === 'string' ? JSON.parse(cStr.replace(/&quot;/g,'"')) : cStr;
+  switchTab('quote');
+  setTimeout(() => {
+    const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+    set('q_custName', c.name);
+    set('q_custPhone', c.phone);
+    set('q_custEmail', c.email);
+    set('q_custAddr', c.address);
+    // Pre-fill make/model if available
+    if (c.vehicle) {
+      const parts = c.vehicle.split(' ');
+      set('q_make', parts[0] || '');
+      set('q_model', parts.slice(1,-1).join(' ') || '');
+      set('q_year', parts[parts.length-1] || '');
+    }
+    updateCustomerPreview?.();
+  }, 200);
+}
+
+function newJobForCustomer(cStr) {
+  const c = typeof cStr === 'string' ? JSON.parse(cStr.replace(/&quot;/g,'"')) : cStr;
+  openAddModal();
+  setTimeout(() => {
+    const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+    set('m_name', c.name);
+    set('m_phone', c.phone);
+    set('m_email', c.email);
+    set('m_addr2', c.address);
+    set('m_vehicle', c.vehicle);
+  }, 100);
+}
+
+// Autocomplete suggestion dropdown
+function onCustNameInput(inputId, suggestionsId) {
+  const input = document.getElementById(inputId);
+  const sugEl = document.getElementById(suggestionsId);
+  if (!input || !sugEl) return;
+  const q = input.value.toLowerCase().trim();
+  if (q.length < 2) { sugEl.style.display = 'none'; return; }
+  const customers = buildCustomerList();
+  const matches = customers.filter(c => c.name.toLowerCase().includes(q)).slice(0, 8);
+  // Warn about potential duplicates in same session
+  const exactFirst = q.split(' ')[0];
+  const sameFirstName = customers.filter(c => c.name.toLowerCase().startsWith(exactFirst) && !c.name.toLowerCase().includes(q));
+
+  if (!matches.length) { sugEl.style.display = 'none'; return; }
+  sugEl.innerHTML = matches.map(c => {
+    const jobCount = c.jobs.length;
+    const lastVeh = c.vehicle ? ` · ${c.vehicle}` : '';
+    const lastDate = c.lastJob ? ` · Last: ${fmtDate(c.lastJob)}` : '';
+    const isDup = customers.filter(x => x.name.toLowerCase().startsWith(exactFirst)).length > 1;
+    return `<div class="cust-sug-item" onclick="selectCustomerSuggestion('${inputId}','${suggestionsId}',${JSON.stringify(c).split('"').join('&quot;')})">
+      <div class="cust-sug-name">${esc(c.name)}${isDup&&sameFirstName.length?'<span class="cust-sug-badge">⚠ check for duplicates</span>':''}</div>
+      <div class="cust-sug-detail">${c.phone?'📞 '+esc(c.phone)+' ':''}${jobCount} previous job${jobCount!==1?'s':''}${lastVeh}${lastDate}</div>
+    </div>`;
+  }).join('');
+  sugEl.style.display = 'block';
+
+  // Close on click outside
+  setTimeout(() => {
+    const close = e => { if (!sugEl.contains(e.target) && e.target !== input) { sugEl.style.display = 'none'; document.removeEventListener('click', close); }};
+    document.addEventListener('click', close);
+  }, 100);
+}
+
+function selectCustomerSuggestion(inputId, suggestionsId, cStr) {
+  const c = typeof cStr === 'string' ? JSON.parse(cStr.replace(/&quot;/g,'"')) : cStr;
+  const input = document.getElementById(inputId);
+  if (input) input.value = c.name;
+  document.getElementById(suggestionsId).style.display = 'none';
+
+  // Fill in related fields based on which form we're in
+  if (inputId === 'q_custName') {
+    const set = (id, val) => { const el = document.getElementById(id); if (el && val && !el.value) el.value = val; };
+    set('q_custPhone', c.phone); set('q_custEmail', c.email); set('q_custAddr', c.address);
+    if (c.vehicle) { const parts = c.vehicle.split(' '); set('q_make', parts[0]||''); set('q_model', parts.slice(1,-1).join(' ')||''); set('q_year', parts[parts.length-1]||''); }
+    updateCustomerPreview?.();
+  } else if (inputId === 'm_name') {
+    const set = (id, val) => { const el = document.getElementById(id); if (el && val && !el.value) el.value = val; };
+    set('m_phone', c.phone); set('m_email', c.email); set('m_addr2', c.address); set('m_vehicle', c.vehicle);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
