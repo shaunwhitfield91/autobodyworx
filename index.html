@@ -588,6 +588,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <span id="ts-section-chev" style="font-size:12px;color:var(--muted);transition:transform .2s">▲</span>
         </div>
         <div id="ts-section" style="border-top:1px solid var(--border);padding:14px 16px">
+          <!-- Tech filter pills -->
+          <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+            <button class="fpill on" id="ts-tech-all" onclick="setTsTechFilter('all',this)">All staff</button>
+            <button class="fpill" id="ts-tech-charles" onclick="setTsTechFilter('Charles',this)" style="border-color:var(--amber-bdr);color:var(--amber-txt)">&#9632; Charles</button>
+            <button class="fpill" id="ts-tech-tony" onclick="setTsTechFilter('Tony',this)" style="border-color:var(--tony-bdr);color:var(--tony-txt)">&#9632; Tony</button>
+          </div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
             <div style="display:flex;align-items:center;gap:6px">
               <span style="font-size:12px;color:var(--muted);white-space:nowrap">From</span>
@@ -5350,8 +5356,9 @@ async function loadAdminTs() {
   const content = document.getElementById('ts-admin-content');
   content.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">Loading...</div>';
   try {
+    const techQ = _tsTechFilter !== 'all' ? `&tech_name=eq.${encodeURIComponent(_tsTechFilter)}` : '';
     const rows = await sbRaw('GET','time_entries',null,
-      `?date=gte.${from}&date=lte.${to}&order=tech_name.asc,date.asc`);
+      `?date=gte.${from}&date=lte.${to}${techQ}&order=tech_name.asc,date.asc`);
     if (!rows || !rows.length) {
       content.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">No entries for this month</div>';
       return;
@@ -6087,9 +6094,31 @@ async function populateBankHolidays(year) {
 // STAFF PORTAL
 // ═══════════════════════════════════════════════════════════
 const STAFF_MEMBERS = [
-  { name: 'Charles', col: 'C', color: 'var(--amber)', bg: 'var(--amber-bg)', txt: 'var(--amber-txt)' },
-  { name: 'Tony',    col: 'T', color: 'var(--tony)',  bg: 'var(--tony-bg)',   txt: 'var(--tony-txt)' }
+  { name: 'Charles', col: 'C', color: 'var(--amber)', bg: 'var(--amber-bg)', txt: 'var(--amber-txt)', entitlement: 28, startDate: null },
+  { name: 'Tony',    col: 'T', color: 'var(--tony)',  bg: 'var(--tony-bg)',   txt: 'var(--tony-txt)',  entitlement: 28, startDate: null,
+    firstYearEntitlement: 13, firstYearStart: '2026-05-05', firstYearEnd: '2026-12-31' }
 ];
+
+// Get entitlement for a staff member in the current calendar year
+function getStaffEntitlement(staff) {
+  const year = new Date().getFullYear();
+  // If staff has a first year override and we're in that year, use it
+  if (staff.firstYearStart) {
+    const firstYear = parseInt(staff.firstYearStart.split('-')[0]);
+    if (year === firstYear) return staff.firstYearEntitlement;
+  }
+  return staff.entitlement;
+}
+
+// Get bank holiday start date for a staff member in current year
+function getStaffBhStart(staff) {
+  const year = new Date().getFullYear();
+  if (staff.firstYearStart) {
+    const firstYear = parseInt(staff.firstYearStart.split('-')[0]);
+    if (year === firstYear) return staff.firstYearStart;
+  }
+  return year + '-01-01';
+}
 
 async function renderStaffPortal() {
   const el = document.getElementById('staff-portal-content');
@@ -6103,12 +6132,8 @@ async function renderStaffPortal() {
     const timeEntries = await sbRaw('GET','time_entries',null,`?order=date.desc`).catch(()=>[]);
 
     const now = new Date();
-    // Use calendar year for bank holiday counting (simpler, always exactly 8)
+    // Use calendar year for bank holiday counting
     const calYear = now.getFullYear();
-    const bhThisYear = getBankHolidaysForYear(calYear);
-    const bhCount = bhThisYear.length;
-    const holYearStart = calYear + '-01-01';
-    const holYearEnd = calYear + '-12-31';
 
     const thisMonth = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
     const lastMonthDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
@@ -6123,8 +6148,14 @@ async function renderStaffPortal() {
       const approved = myHols.filter(r => r.status === 'approved');
       const pending = myHols.filter(r => r.status === 'pending');
       const holDays = approved.reduce((s,r) => s + (r.days_count||0), 0);
+      // Bank holidays — count from start date (pro-rata first year, full year after)
+      const bhFrom = getStaffBhStart(staff);
+      const bhTo = calYear + '-12-31';
+      const staffBh = getBankHolidaysBetween(bhFrom, bhTo);
+      const bhCount = staffBh.length;
+      const annualEntitlement = getStaffEntitlement(staff);
       const totalUsed = holDays + bhCount;
-      const remaining = Math.max(0, 28 - totalUsed);
+      const remaining = Math.max(0, annualEntitlement - totalUsed);
 
       // Time entries
       const myTime = (timeEntries||[]).filter(r => r.tech_name === staff.name);
@@ -6161,7 +6192,7 @@ async function renderStaffPortal() {
         <!-- Stats row -->
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
           <div style="background:var(--bg);border-radius:var(--radius);padding:10px;text-align:center">
-            <div style="font-size:22px;font-weight:800;color:${remaining<=5?'var(--red)':'var(--teal)'}">${remaining}</div>
+            <div style="font-size:22px;font-weight:800;color:${remaining<=(annualEntitlement*0.2)?'var(--red)':'var(--teal)'}">${remaining}</div>
             <div style="font-size:10px;color:var(--muted);margin-top:2px">Days left</div>
           </div>
           <div style="background:var(--bg);border-radius:var(--radius);padding:10px;text-align:center">
@@ -6187,7 +6218,8 @@ async function renderStaffPortal() {
         <div style="font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.4px">Holiday allowance 2025/26</div>
         <div style="background:var(--bg);border-radius:var(--radius);padding:10px;margin-bottom:10px">
           <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
-            <span>Total entitlement</span><span style="font-weight:700">28 days</span>
+            <span>Total entitlement ${staff.firstYearStart && calYear===parseInt(staff.firstYearStart.split('-')[0]) ? '(pro-rata from ' + fmtDate(staff.firstYearStart) + ')' : '('+calYear+')'}</span>
+            <span style="font-weight:700">${annualEntitlement} days</span>
           </div>
           <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;color:var(--muted)">
             <span>Bank holidays</span><span>−${bhCount} days</span>
@@ -6197,7 +6229,7 @@ async function renderStaffPortal() {
           </div>
           <div style="border-top:1px solid var(--border);padding-top:6px;margin-top:4px;display:flex;justify-content:space-between;font-size:13px">
             <span style="font-weight:700">Remaining</span>
-            <span style="font-weight:800;color:${remaining<=5?'var(--red)':'var(--teal)'}">${remaining} days</span>
+            <span style="font-weight:800;color:${remaining<=(annualEntitlement*0.2)?'var(--red)':'var(--teal)'}">${remaining} days</span>
           </div>
           ${pending.length ? `<div style="margin-top:6px;font-size:11px;color:var(--amber-txt);background:var(--amber-bg);padding:4px 8px;border-radius:4px">⏳ ${pending.length} pending request${pending.length>1?'s':''} (not yet deducted)</div>` : ''}
         </div>
@@ -6255,6 +6287,18 @@ function toggleStaffSection(id) {
   const open = el.style.display !== 'none';
   el.style.display = open ? 'none' : 'block';
   if (chev) chev.style.transform = open ? 'rotate(180deg)' : '';
+}
+
+// ═══════════════════════════════════════════════════════════
+// TIMESHEET TECH FILTER
+// ═══════════════════════════════════════════════════════════
+let _tsTechFilter = 'all';
+
+function setTsTechFilter(tech, btn) {
+  _tsTechFilter = tech;
+  document.querySelectorAll('[id^="ts-tech-"]').forEach(b => b.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  loadAdminTs();
 }
 
 // ═══════════════════════════════════════════════════════════
