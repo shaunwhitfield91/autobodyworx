@@ -3963,6 +3963,15 @@ function renderTechPortal() {
     byDate[dk].push(j);
   });
 
+  // Sort each day's jobs by booking_time
+  Object.keys(byDate).forEach(dk => {
+    byDate[dk].sort((a, b) => {
+      const ta = a.booking_time || '00:00';
+      const tb = b.booking_time || '00:00';
+      return ta.localeCompare(tb);
+    });
+  });
+
   const todayStr = now.toISOString().split('T')[0];
   const sortedDates = Object.keys(byDate).sort();
 
