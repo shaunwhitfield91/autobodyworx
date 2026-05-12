@@ -563,7 +563,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="ttab" id="t-diary" onclick="switchTab('diary')">Diary</div>
       <div class="ttab" id="t-quote" onclick="switchTab('quote')">New quote</div>
       <div class="ttab" id="t-tech" onclick="switchTab('tech')">My jobs</div>
-      <div class="ttab role-admin role-admin_staff" id="t-timesheet" onclick="switchTab('timesheet');initAdminTs()">Timesheets</div>
       <div class="ttab role-admin" id="t-staff" onclick="switchTab('staff')">Staff</div>
       <div class="ttab" id="t-customers" onclick="switchTab('customers')">Customers</div>
       <div class="ttab role-admin" id="t-settings" onclick="switchTab('settings')">Settings</div>
@@ -576,38 +575,38 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 
   <!-- TIMESHEET PAGE -->
-  <div class="page role-admin role-admin_staff" id="pg-timesheet">
-    <div class="page-wrap">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
-        <div>
-          <div style="font-size:20px;font-weight:700;color:var(--txt)">Tech timesheets</div>
-          <div style="font-size:13px;color:var(--muted)">Hours worked by all technicians</div>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <div style="display:flex;align-items:center;gap:6px">
-            <span style="font-size:12px;color:var(--muted);white-space:nowrap">From</span>
-            <input autocomplete="off" type="date" id="ts-from" class="msel" style="width:140px" onchange="loadAdminTs()">
-          </div>
-          <div style="display:flex;align-items:center;gap:6px">
-            <span style="font-size:12px;color:var(--muted);white-space:nowrap">To</span>
-            <input autocomplete="off" type="date" id="ts-to" class="msel" style="width:140px" onchange="loadAdminTs()">
-          </div>
-          <button class="btn-secondary" onclick="setTsQuickRange('week')" style="font-size:11px">This week</button>
-          <button class="btn-secondary" onclick="setTsQuickRange('last4weeks')" style="font-size:11px">Last 4 weeks</button>
-          <button class="btn-secondary" onclick="setTsQuickRange('month')" style="font-size:11px">This month</button>
-          <button class="btn-primary" onclick="exportTsPdf()" style="font-size:12px">Export PDF</button>
-        </div>
-      </div>
-      <div id="ts-admin-content">
-        <div style="text-align:center;color:var(--muted);padding:40px">Select a month above to view timesheets</div>
-      </div>
-    </div>
-  </div>
+
 
   <!-- STAFF PORTAL PAGE -->
   <div class="page role-admin" id="pg-staff">
     <div class="page-wrap">
       <div style="font-size:20px;font-weight:800;color:var(--txt);margin-bottom:16px">Staff Portal</div>
+      <!-- Timesheets section embedded in staff tab -->
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:16px">
+        <div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none" onclick="toggleStaffSection('ts-section')">
+          <div style="font-size:15px;font-weight:700;color:var(--txt)">📋 Timesheets</div>
+          <span id="ts-section-chev" style="font-size:12px;color:var(--muted);transition:transform .2s">▲</span>
+        </div>
+        <div id="ts-section" style="border-top:1px solid var(--border);padding:14px 16px">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:12px;color:var(--muted);white-space:nowrap">From</span>
+              <input autocomplete="off" type="date" id="ts-from" class="msel" style="width:140px" onchange="loadAdminTs()">
+            </div>
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:12px;color:var(--muted);white-space:nowrap">To</span>
+              <input autocomplete="off" type="date" id="ts-to" class="msel" style="width:140px" onchange="loadAdminTs()">
+            </div>
+            <button class="btn-secondary" onclick="setTsQuickRange('week')" style="font-size:11px">This week</button>
+            <button class="btn-secondary" onclick="setTsQuickRange('last4weeks')" style="font-size:11px">Last 4 weeks</button>
+            <button class="btn-secondary" onclick="setTsQuickRange('month')" style="font-size:11px">This month</button>
+            <button class="btn-primary" onclick="exportTsPdf()" style="font-size:12px">Export PDF</button>
+          </div>
+          <div id="ts-admin-content">
+            <div style="text-align:center;color:var(--muted);padding:20px">Select a date range to view timesheets</div>
+          </div>
+        </div>
+      </div>
       <div id="staff-portal-content"></div>
     </div>
   </div>
@@ -1976,7 +1975,7 @@ function switchTab(t) {
   if (t === 'tech') { loadTclockState(); if (currentProfile?.role === 'tech') loadHolidays(); }
   if (t === 'tech') { renderTechPortal(); }
   if (t === 'settings') { checkApiKey(); checkXeroStatus(); }
-  if (t === 'timesheet') { initAdminTs(); }
+  // timesheets now embedded in staff tab
   if (t === 'customers') { renderCustomers(); }
   if (t === 'staff') { renderStaffPortal(); }
 }
@@ -4635,8 +4634,9 @@ function startAutoRefresh() {
     // Silent background refresh — no toast, no spinners
     try {
       await loadJobs();
+      if (diaryAllJobs.length) loadDiaryJobs().catch(()=>{});
     } catch(e) { console.warn('Auto-refresh failed', e); }
-  }, 60000); // every 60 seconds
+  }, 10000); // every 10 seconds
 }
 
 async function manualRefresh() {
@@ -4646,7 +4646,11 @@ async function manualRefresh() {
     btn.style.transition = 'transform .5s ease';
     setTimeout(() => { btn.style.transform = ''; btn.style.transition = ''; }, 500);
   }
-  await loadJobs();
+  await Promise.all([loadJobs(), loadDiaryJobs()]);
+  // Re-render current active tab
+  const activePage = document.querySelector('.page.on');
+  if (activePage?.id === 'pg-diary') { renderDiary(); renderRevBar(); }
+  if (activePage?.id === 'pg-staff') { renderStaffPortal(); }
   showToast('✓ Refreshed');
 }
 
@@ -4845,13 +4849,9 @@ function renderHolidayCard() {
 
   // Bank holidays for current holiday year (April to March)
   const now = new Date();
-  const holYearStart = now.getMonth() >= 3
-    ? now.getFullYear() + '-04-01'
-    : (now.getFullYear() - 1) + '-04-01';
-  const holYearEnd = now.getMonth() >= 3
-    ? (now.getFullYear() + 1) + '-03-31'
-    : now.getFullYear() + '-03-31';
-  const bhThisYear = getBankHolidaysBetween(holYearStart, holYearEnd);
+  // Calendar year bank holidays (always exactly 8 for England & Wales)
+  const calYear2 = now.getFullYear();
+  const bhThisYear = getBankHolidaysForYear(calYear2);
   const bhCount = bhThisYear.length;
 
   const totalUsed = holUsedDays + bhCount;
@@ -6103,14 +6103,12 @@ async function renderStaffPortal() {
     const timeEntries = await sbRaw('GET','time_entries',null,`?order=date.desc`).catch(()=>[]);
 
     const now = new Date();
-    const holYearStart = now.getMonth() >= 3
-      ? now.getFullYear() + '-04-01'
-      : (now.getFullYear()-1) + '-04-01';
-    const holYearEnd = now.getMonth() >= 3
-      ? (now.getFullYear()+1) + '-03-31'
-      : now.getFullYear() + '-03-31';
-    const bhThisYear = getBankHolidaysBetween(holYearStart, holYearEnd);
+    // Use calendar year for bank holiday counting (simpler, always exactly 8)
+    const calYear = now.getFullYear();
+    const bhThisYear = getBankHolidaysForYear(calYear);
     const bhCount = bhThisYear.length;
+    const holYearStart = calYear + '-01-01';
+    const holYearEnd = calYear + '-12-31';
 
     const thisMonth = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
     const lastMonthDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
@@ -6245,6 +6243,18 @@ function staffViewHours(name) {
   document.getElementById('ts-from').value = from.toISOString().split('T')[0];
   document.getElementById('ts-to').value = now.toISOString().split('T')[0];
   loadAdminTs();
+}
+
+// ═══════════════════════════════════════════════════════════
+// STAFF SECTION TOGGLE
+// ═══════════════════════════════════════════════════════════
+function toggleStaffSection(id) {
+  const el = document.getElementById(id);
+  const chev = document.getElementById(id + '-chev');
+  if (!el) return;
+  const open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  if (chev) chev.style.transform = open ? 'rotate(180deg)' : '';
 }
 
 // ═══════════════════════════════════════════════════════════
