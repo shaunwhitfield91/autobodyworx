@@ -133,6 +133,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .js-done{background:#ede9fe;color:#4c1d95}
 .js-await{background:#e0f2fe;color:#0369a1}
 .js-inv{background:#fef3c7;color:#92400e}
+.js-overdue{background:#fee2e2;color:#991b1b}
 .js-decl{background:var(--red-bg);color:var(--red)}
 
 /* ── Badges ── */
@@ -1471,6 +1472,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <option value="completed">Completed</option>
         </select>
       </div>
+      <div>
+        <span class="qlbl">Payment method</span>
+        <select class="msel" id="edit_payment_method">
+          <option value="">— Not set —</option>
+          <option value="card">Card</option>
+          <option value="bacs">BACS</option>
+          <option value="cash">Cash</option>
+          <option value="none">Invoice later</option>
+        </select>
+      </div>
     </div>
     <div class="modal-grid2">
       <div>
@@ -2102,6 +2113,19 @@ async function renderHomeAttention() {
       <span class="badge" style="background:#fff7ed;color:#9a3412">Follow up</span>
     </div>`);
 
+  const todayAttn = new Date().toISOString().split('T')[0];
+  const overdueJobs = allJobs.filter(j =>
+    j.status === 'booked' && j.booking_date && j.booking_date < todayAttn
+  );
+  if (overdueJobs.length) items.push(`
+    <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:var(--radius-lg);padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:8px" onclick="switchTab('jobs');setFilter('booked',document.getElementById('fp-book'))">
+      <div style="width:28px;height:28px;background:#fee2e2;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">⚠</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:#991b1b">${overdueJobs.length} job${overdueJobs.length>1?'s':''} not completed — date has passed</div>
+        <div style="font-size:11px;color:#b91c1c">${overdueJobs.map(j=>j.customer_name||'Unknown').slice(0,3).join(' · ')}${overdueJobs.length>3?' +more':''}</div>
+      </div>
+      <span class="badge" style="background:#fee2e2;color:#991b1b;flex-shrink:0">Action needed</span>
+    </div>`);
   const needsInvoice = allJobs.filter(j => j.status === 'completed' && !j.invoiced_at);
   if (needsInvoice.length) items.push(`
     <div style="background:#fefce8;border:1px solid #fde047;border-radius:var(--radius-lg);padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:8px" onclick="switchTab('jobs');setFilter('invoice')">
@@ -2312,8 +2336,13 @@ function buildJobCard(j) {
   const s = statusMap[j.status] || 'pend';
   const quotedLabel = j.quote_sent_to_customer ? 'Awaiting customer' : 'Approved — send quote';
   const completedLabel = (j.status === 'completed' && !j.invoiced_at) ? 'Needs invoice' : 'Completed ✓';
-  const statusLabel = { pending:'Pending approval', quoted:quotedLabel, booked:'Booked', completed:completedLabel, declined:'Declined' }[j.status] || j.status;
-  const statusExtra = j.status === 'quoted' && j.quote_sent_to_customer ? ' js-await' : (j.status === 'completed' && !j.invoiced_at ? ' js-inv' : '');
+  const todayD = new Date().toISOString().split('T')[0];
+  const isOverdue = j.status === 'booked' && j.booking_date && j.booking_date < todayD;
+  const overdueLabel = isOverdue ? '⚠ Overdue — not completed' : 'Booked';
+  const statusLabel = { pending:'Pending approval', quoted:quotedLabel, booked:overdueLabel, completed:completedLabel, declined:'Declined' }[j.status] || j.status;
+  const statusExtra = j.status === 'quoted' && j.quote_sent_to_customer ? ' js-await'
+    : j.status === 'completed' && !j.invoiced_at ? ' js-inv'
+    : isOverdue ? ' js-overdue' : '';
   const photos = j.job_photos || [];
   const parts = j.job_parts || [];
   const prog = statusToProgress(j.status, j);
@@ -3175,9 +3204,10 @@ function selectDiaryDay(ds, label) {
   warn.className = 'det-warn' + (hasMix ? ' show' : '');
 
   // Build Shaun, Tony and Charles rows
-  const shaunJobs = evts.filter(j => jobBelongsTo(j.assigned_tech, 'S'));
-  const tonyJobs  = evts.filter(j => jobBelongsTo(j.assigned_tech, 'T'));
-  const charlesJobs = evts.filter(j => jobBelongsTo(j.assigned_tech, 'C'));
+  const sortByTime = arr => arr.sort((a,b) => (a.booking_time||'00:00').localeCompare(b.booking_time||'00:00'));
+  const shaunJobs = sortByTime(evts.filter(j => jobBelongsTo(j.assigned_tech, 'S')));
+  const tonyJobs  = sortByTime(evts.filter(j => jobBelongsTo(j.assigned_tech, 'T')));
+  const charlesJobs = sortByTime(evts.filter(j => jobBelongsTo(j.assigned_tech, 'C')));
   // Dim columns based on filter
   const sHd2 = document.getElementById('dchd-shaun');
   const tHd = document.getElementById('dchd-tony');
@@ -3209,8 +3239,12 @@ function selectDiaryDay(ds, label) {
 }
 
 function detJobCard(j, side) {
-  return `<div class="djob djob-${side}" onclick="selectDiaryJob(${j.id})" style="cursor:pointer">
-    <div class="djob-name">${esc(j.customer_name||'')}</div>
+  const isDone = j.status === 'completed';
+  const isOverdueD = j.status === 'booked' && j.booking_date && j.booking_date < new Date().toISOString().split('T')[0];
+  const borderCol = isDone ? '#6ee7b7' : isOverdueD ? '#fca5a5' : '';
+  const styleExtra = (isDone ? 'opacity:.65;' : '') + (borderCol ? `border-left:3px solid ${borderCol};` : '');
+  return `<div class="djob djob-${side}" onclick="selectDiaryJob(${j.id})" style="cursor:pointer;${styleExtra}">
+    <div class="djob-name">${isDone?'✓ ':isOverdueD?'⚠ ':''}${esc(j.customer_name||'')}</div>
     <div class="djob-veh">${esc(j.vehicle||'')} · ${esc(j.panels||'')}</div>
     <div class="djob-tags">${buildDetTags(j)}</div>
   </div>`;
@@ -4432,6 +4466,8 @@ async function openEditModal(jobId) {
   document.getElementById('edit_status').value = j.status === 'completed' ? 'completed' : j.status;
   setTechCheckboxes('edit_tech', j.assigned_tech || 'Shaun');
   document.getElementById('edit_addr').value = j.customer_address || '';
+  const pmEl = document.getElementById('edit_payment_method');
+  if (pmEl) pmEl.value = j.payment_method || '';
   document.getElementById('edit_loc').value = j.job_location || 'workshop';
   document.getElementById('edit_source').value = j.source || 'other';
   document.getElementById('edit_cd').checked = !!j.cd_required;
@@ -4481,7 +4517,8 @@ async function saveEditJob() {
     job_location: document.getElementById('edit_loc').value,
     source: document.getElementById('edit_source').value,
     cd_required: document.getElementById('edit_cd').checked,
-    customer_address: document.getElementById('edit_addr').value.trim() || null
+    customer_address: document.getElementById('edit_addr').value.trim() || null,
+    payment_method: document.getElementById('edit_payment_method')?.value || null
   };
   try {
     await sbRaw('PATCH', 'jobs', updates, '?id=eq.' + _editJobId);
@@ -4634,15 +4671,27 @@ function initPriceInputs() {
 // ═══════════════════════════════════════════════════════════
 let autoRefreshTimer = null;
 
+function isUserTyping() {
+  const active = document.activeElement;
+  if (!active) return false;
+  const tag = active.tagName.toLowerCase();
+  // Pause if user is in any input, textarea, or contenteditable
+  return tag === 'input' || tag === 'textarea' || tag === 'select' ||
+    active.isContentEditable ||
+    // Also pause if any modal is open
+    document.querySelector('.modal-overlay.show') !== null;
+}
+
 function startAutoRefresh() {
   if (autoRefreshTimer) clearInterval(autoRefreshTimer);
   autoRefreshTimer = setInterval(async () => {
-    // Silent background refresh — no toast, no spinners
+    // Pause refresh if user is actively typing or a modal is open
+    if (isUserTyping()) return;
     try {
       await loadJobs();
       if (diaryAllJobs.length) loadDiaryJobs().catch(()=>{});
     } catch(e) { console.warn('Auto-refresh failed', e); }
-  }, 10000); // every 10 seconds
+  }, 10000);
 }
 
 async function manualRefresh() {
