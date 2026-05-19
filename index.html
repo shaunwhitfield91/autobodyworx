@@ -559,7 +559,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="topbar">
     <div class="tbar-logo">Panel<span>Pro</span></div>
     <div class="tbar-tabs">
-      <div class="ttab on" id="t-home" onclick="switchTab('home')">Home</div>
+      <div class="ttab on" id="t-home" onclick="switchTab('home')">Home<span id="declinedBadge" style="display:none;background:var(--red);color:#fff;border-radius:50%;font-size:9px;padding:1px 5px;margin-left:4px;vertical-align:middle;font-weight:700"></span></div>
       <div class="ttab" id="t-jobs" onclick="switchTab('jobs')">Jobs <span class="ttab-badge tb-warn" id="tb-jobs" style="display:none">0</span></div>
       <div class="ttab" id="t-diary" onclick="switchTab('diary')">Diary</div>
       <div class="ttab" id="t-quote" onclick="switchTab('quote')">New quote</div>
@@ -671,6 +671,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="stat-card" onclick="setFilter('booked')"><div class="stat-lbl">Booked</div><div class="stat-num sn-book" id="sB">0</div></div>
         <div class="stat-card" onclick="setFilter('done')"><div class="stat-lbl">Completed</div><div class="stat-num sn-comp" id="sC">0</div></div>
         <div class="stat-card" onclick="setFilter('invoice',null)" style="border:1px solid #fde047"><div class="stat-lbl" style="color:#92400e">Needs invoice</div><div class="stat-num" style="color:#713f12" id="sI">0</div></div>
+        <div class="stat-card" onclick="setFilter('archive',null)" style="background:var(--surface2)"><div class="stat-lbl" style="color:var(--muted)">📦 Archive</div><div class="stat-num" style="color:var(--muted)" id="sArch">0</div></div>
       </div>
       <!-- Revenue toggle -->
       <div class="rev-toggle" onclick="toggleRevenue()">
@@ -709,6 +710,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <button class="fpill" id="fp-book" onclick="setFilter('booked',this)">Booked</button>
         <button class="fpill" id="fp-done" onclick="setFilter('done',this)">Completed</button>
         <button class="fpill" id="fp-inv" onclick="setFilter('invoice',this)" style="border-color:#fde047;color:#92400e">Needs invoice</button>
+          <button class="fpill" id="fp-archive" onclick="setFilter('archive',this)" style="border-color:var(--border2);color:var(--muted)">📦 Archive</button>
       </div>
       <div class="job-list" id="jobList"></div>
       <!-- Declined section -->
@@ -1735,7 +1737,20 @@ async function sbRaw(method, table, body, query = '') {
     },
     ...(body ? { body: JSON.stringify(body) } : {})
   });
-  let res = await fetch(url, makeOpts());
+  // Add timeout to prevent hanging requests
+  const fetchWithTimeout = (opts, ms=12000) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+    return fetch(url, { ...opts, signal: controller.signal })
+      .finally(() => clearTimeout(timer));
+  };
+  let res;
+  try {
+    res = await fetchWithTimeout(makeOpts());
+  } catch(e) {
+    if (e.name === 'AbortError') throw new Error('Request timed out — please check your connection and try again');
+    throw e;
+  }
   // If JWT expired, try refreshing once then retry
   if (res.status === 401 || res.status === 403 || res.status === 400) {
     const errBody = await res.json().catch(() => ({}));
@@ -2023,6 +2038,7 @@ async function loadJobs() {
 async function loadDeclinedJobs() {
   try {
     const data = await sbRaw('GET', 'jobs', null, `?archived=eq.false&status=eq.declined&order=created_at.desc`);
+  window._lastDeclinedJobs = data || [];
     declinedJobs = data || [];
   } catch(e) { declinedJobs = []; }
   renderDeclined();
@@ -2065,6 +2081,18 @@ function updatePendingBadge() {
   const badge = document.getElementById('tb-jobs');
   badge.textContent = pending;
   badge.style.display = pending > 0 ? 'inline-flex' : 'none';
+
+  // Notify Chloe of new declines (last 48 hours)
+  if (currentProfile?.role === 'admin_staff') {
+    const newDeclines = (window._lastDeclinedJobs || []).filter(j => {
+      const updated = new Date(j.updated_at || j.created_at);
+      return (Date.now() - updated.getTime()) < 48 * 60 * 60 * 1000;
+    }).length;
+    const decBadge = document.getElementById('declinedBadge');
+    if (decBadge) { decBadge.textContent = newDeclines || ''; decBadge.style.display = newDeclines ? 'inline' : 'none'; }
+    const homeTab = document.getElementById('t-home');
+    if (homeTab) homeTab.style.outline = newDeclines ? '2px solid var(--red)' : '';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2167,6 +2195,31 @@ async function renderHomeAttention() {
     } catch(e) {}
   }
 
+  // Recently declined jobs — so Chloe knows not to re-enter them
+  const recentlyDeclined = allJobs.filter ? [] : []; // allJobs excludes declined — load from declinedJobs
+  // Use the last known declinedJobs list
+  const decl = (window._lastDeclinedJobs || []).filter(j => {
+    if (!j.updated_at && !j.created_at) return false;
+    const updated = new Date(j.updated_at || j.created_at);
+    return (Date.now() - updated.getTime()) < 7 * 24 * 60 * 60 * 1000; // last 7 days
+  });
+  const newDeclines48h = decl.filter(j => {
+    const updated = new Date(j.updated_at || j.created_at);
+    return (Date.now() - updated.getTime()) < 48 * 60 * 60 * 1000;
+  }).length;
+  if (decl.length && currentProfile?.role !== 'admin') {
+    items.push(`<div style="background:${newDeclines48h?'#fef2f2':'var(--surface)'};border:1px solid ${newDeclines48h?'#fca5a5':'var(--border)'};border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:8px">
+      <div style="font-size:12px;font-weight:700;color:${newDeclines48h?'#991b1b':'var(--muted)'};text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">${newDeclines48h?'🔴 ':''}✗ Declined jobs${newDeclines48h?' — '+newDeclines48h+' new':' (last 7 days)'}</div>
+      ${decl.map(j => `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);gap:8px">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--txt)">${esc(j.customer_name||'Unknown')}</div>
+          <div style="font-size:11px;color:var(--red)">${esc(j.decline_reason||'No reason given')}</div>
+        </div>
+        <span style="font-size:10px;color:var(--muted);white-space:nowrap">${j.booking_date ? fmtDate(j.booking_date) : ''}</span>
+      </div>`).join('')}
+    </div>`);
+  }
+
   if (!items.length) items.push(`<div style="font-size:13px;color:var(--muted);padding:8px 0">All clear — nothing needs attention right now ✓</div>`);
   el.innerHTML = items.join('');
 }
@@ -2207,7 +2260,7 @@ function setFilter(f, btn) {
   document.querySelectorAll('.fpill').forEach(b => b.classList.remove('on'));
   if (btn) btn.classList.add('on');
   else {
-    const map = { all:'fp-all', mine:'fp-mine', pending:'fp-pend', quoted:'fp-quot', booked:'fp-book', done:'fp-done', invoice:'fp-inv' };
+    const map = { all:'fp-all', mine:'fp-mine', pending:'fp-pend', quoted:'fp-quot', booked:'fp-book', done:'fp-done', invoice:'fp-inv', archive:'fp-archive' };
     const el = document.getElementById(map[f]);
     if (el) el.classList.add('on');
   }
@@ -2288,6 +2341,9 @@ function renderJobs() {
     if (currentFilter === 'quoted') return j.status === 'quoted';
     if (currentFilter === 'booked') return j.status === 'booked';
     if (currentFilter === 'done') return j.status === 'completed';
+    if (currentFilter === 'archive') return j.status === 'completed' && isOldCompleted(j);
+    // By default hide completed jobs older than 7 days (they go to archive)
+    if (j.status === 'completed' && isOldCompleted(j) && currentFilter === 'all') return false;
     if (currentFilter === 'invoice') return j.status === 'completed' && !j.invoiced_at;
     if (currentFilter === 'mine') return j.assigned_tech === (currentProfile?.full_name||'');
     return true;
@@ -2315,6 +2371,7 @@ function renderJobs() {
   document.getElementById('sB').textContent = allJobs.filter(j=>j.status==='booked').length;
   document.getElementById('sC').textContent = allJobs.filter(j=>j.status==='completed').length;
   document.getElementById('sI').textContent = invCount;
+  document.getElementById('sArch').textContent = allJobs.filter(j => j.status==='completed' && isOldCompleted(j)).length;
 
   const el = document.getElementById('jobList');
   if (!jobs.length) {
@@ -2550,21 +2607,73 @@ async function approveJob(id) {
   } catch(e) { alert('Failed: ' + e.message); }
 }
 
-async function declineJob(id) {
-  const reason = prompt('Reason for declining? (optional — Chloe will see this)');
-  if (reason === null) return;
+function declineJob(id) {
+  const j = allJobs.find(x => x.id === id);
+  if (!j) return;
+  // Build decline modal
+  let existing = document.getElementById('declineModal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'declineModal';
+  modal.className = 'modal-overlay show';
+  modal.innerHTML = `
+    <div class="modal-box" style="max-width:420px">
+      <div class="modal-hd">Decline job</div>
+      <div style="background:var(--bg);border-radius:var(--radius);padding:10px 12px;margin-bottom:12px;font-size:13px;font-weight:600;color:var(--txt)">${esc(j.customer_name||'Unknown')} — ${esc(j.vehicle||'')}</div>
+      <span class="qlbl">Reason for declining</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
+        <button class="tech-pay-btn" onclick="setDeclineReason(this,'Not competitive on price')">Not competitive on price</button>
+        <button class="tech-pay-btn" onclick="setDeclineReason(this,'Too far away')">Too far away</button>
+        <button class="tech-pay-btn" onclick="setDeclineReason(this,'Not our type of work')">Not our type of work</button>
+        <button class="tech-pay-btn" onclick="setDeclineReason(this,'Customer went elsewhere')">Customer went elsewhere</button>
+        <button class="tech-pay-btn" onclick="setDeclineReason(this,'No response from customer')">No response from customer</button>
+        <button class="tech-pay-btn" onclick="setDeclineReason(this,'Other')">Other</button>
+      </div>
+      <span class="qlbl">Additional notes (optional)</span>
+      <textarea autocomplete="off" class="minp" id="declineNotes" rows="2" placeholder="Extra detail for Chloe..." style="resize:vertical;margin-bottom:12px"></textarea>
+      <div style="background:#fef9c3;border:1px solid #fde047;border-radius:var(--radius);padding:8px 12px;font-size:12px;color:#854d0e;margin-bottom:12px">
+        📢 Chloe will see this as a declined job with your reason — she won't need to chase it up
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-danger" id="confirmDeclineBtn" onclick="confirmDecline(${id})" style="flex:1;padding:10px" disabled>Confirm decline</button>
+        <button class="btn-secondary" onclick="document.getElementById('declineModal').remove()" style="flex:1;padding:10px">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+}
+
+let _selectedDeclineReason = '';
+function setDeclineReason(btn, reason) {
+  _selectedDeclineReason = reason;
+  document.querySelectorAll('#declineModal .tech-pay-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('confirmDeclineBtn').disabled = false;
+}
+
+async function confirmDecline(id) {
+  const btn = document.getElementById('confirmDeclineBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Declining...'; }
+  const notes = document.getElementById('declineNotes')?.value.trim() || '';
+  const reason = _selectedDeclineReason + (notes ? ' — ' + notes : '');
   try {
     window._suppressReload = true;
-    const updates = { status: 'declined', archived: false };
-    if (reason.trim()) updates.notes = reason.trim();
-    await sbRaw('PATCH', 'jobs', updates, `?id=eq.${id}`);
+    await sbRaw('PATCH', 'jobs', {
+      status: 'declined',
+      decline_reason: reason,
+      archived: false
+    }, `?id=eq.${id}`);
+    document.getElementById('declineModal')?.remove();
     allJobs = allJobs.filter(j => j.id !== id);
-    showToast('Job declined');
+    showToast('✓ Job declined — Chloe can see the reason in Declined Jobs');
     renderJobs();
     loadDeclinedJobs();
+    // Notify Chloe via in-app badge
+    updatePendingBadge();
     setTimeout(() => { window._suppressReload = false; }, 3000);
   } catch(e) {
     window._suppressReload = false;
+    if (btn) { btn.disabled = false; btn.textContent = 'Confirm decline'; }
     alert('Failed: ' + e.message);
   }
 }
@@ -4499,6 +4608,9 @@ function handleEditPhotos(input) {
 
 async function saveEditJob() {
   if (!_editJobId) return;
+  const saveBtn = document.querySelector('#editModal .btn-primary');
+  const origText = saveBtn?.textContent || 'Save changes';
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '⏳ Saving...'; }
   const editDate = document.getElementById('edit_date').value || null;
   const updates = {
     customer_name: document.getElementById('edit_name').value.trim(),
@@ -4544,7 +4656,10 @@ async function saveEditJob() {
       const el = document.getElementById('jc-' + prevOpen);
       if (el) { el.classList.add('open'); el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
     }, 150);
-  } catch(e) { alert('Failed: ' + e.message); }
+  } catch(e) {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = origText; }
+    alert('Save failed: ' + e.message);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -5049,6 +5164,10 @@ function closeHolApproveModal() {
 
 async function respondHol(status) {
   if (!_holApproveId) return;
+  // Disable buttons to prevent double-tap
+  document.querySelectorAll('#holApproveModal .btn-approve, #holApproveModal .btn-danger').forEach(b => {
+    b.disabled = true; b.style.opacity = '.5';
+  });
   try {
     await sbRaw('PATCH','holiday_requests',{
       status,
@@ -6348,6 +6467,33 @@ function setTsTechFilter(tech, btn) {
   document.querySelectorAll('[id^="ts-tech-"]').forEach(b => b.classList.remove('on'));
   if (btn) btn.classList.add('on');
   loadAdminTs();
+}
+
+// ═══════════════════════════════════════════════════════════
+// SAVE FEEDBACK — prevent double-tap, show progress
+// ═══════════════════════════════════════════════════════════
+function withSaving(btn, asyncFn) {
+  if (btn._saving) return;
+  btn._saving = true;
+  const orig = btn.textContent;
+  btn.textContent = '⏳ ' + orig;
+  btn.disabled = true;
+  asyncFn().finally(() => {
+    btn._saving = false;
+    btn.disabled = false;
+    btn.textContent = orig;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// ARCHIVE HELPERS
+// ═══════════════════════════════════════════════════════════
+function isOldCompleted(j) {
+  if (j.status !== 'completed') return false;
+  const ref = j.signed_off_at || j.invoiced_at || j.updated_at || j.created_at;
+  if (!ref) return false;
+  const d = new Date(ref);
+  return (Date.now() - d.getTime()) > 7 * 24 * 60 * 60 * 1000;
 }
 
 // ═══════════════════════════════════════════════════════════
