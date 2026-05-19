@@ -6490,7 +6490,9 @@ function withSaving(btn, asyncFn) {
 // ═══════════════════════════════════════════════════════════
 function isOldCompleted(j) {
   if (j.status !== 'completed') return false;
-  const ref = j.signed_off_at || j.invoiced_at || j.updated_at || j.created_at;
+  // Use signed_off_at first (when tech marked complete), then booking_date, then created_at
+  // DO NOT use created_at alone — Setmore imports have old created_at dates
+  const ref = j.signed_off_at || j.invoiced_at || j.booking_date;
   if (!ref) return false;
   const d = new Date(ref);
   return (Date.now() - d.getTime()) > 7 * 24 * 60 * 60 * 1000;
