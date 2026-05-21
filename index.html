@@ -2658,11 +2658,18 @@ async function confirmDecline(id) {
   const reason = _selectedDeclineReason + (notes ? ' — ' + notes : '');
   try {
     window._suppressReload = true;
-    await sbRaw('PATCH', 'jobs', {
-      status: 'declined',
-      decline_reason: reason,
-      archived: false
-    }, `?id=eq.${id}`);
+    // Try with decline_reason first, fall back to notes if column doesn't exist
+    let updates = { status: 'declined', archived: false };
+    try {
+      await sbRaw('PATCH', 'jobs', { ...updates, decline_reason: reason }, `?id=eq.${id}`);
+    } catch(e) {
+      if (e.message.includes('decline_reason') || e.message.includes('schema cache')) {
+        // Column doesn't exist yet — save to notes field instead
+        await sbRaw('PATCH', 'jobs', { ...updates, notes: reason }, `?id=eq.${id}`);
+      } else {
+        throw e;
+      }
+    }
     document.getElementById('declineModal')?.remove();
     allJobs = allJobs.filter(j => j.id !== id);
     showToast('✓ Job declined — Chloe can see the reason in Declined Jobs');
@@ -4554,6 +4561,9 @@ let _editPhotos = [];
 
 async function openEditModal(jobId) {
   setTimeout(initPriceInputs, 50);
+  // Reset save button state in case it got stuck
+  const saveBtn = document.querySelector('#editModal .btn-primary');
+  if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save changes'; }
   _editJobId = jobId;
   _editPhotos = [];
   const j = allJobs.find(x => x.id === jobId) || declinedJobs.find(x => x.id === jobId);
