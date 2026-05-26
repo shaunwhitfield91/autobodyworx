@@ -655,6 +655,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div style="margin-bottom:16px">
         <div class="sec-hd">Monthly revenue</div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <button onclick="shiftRevBar(-1)" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);padding:0 4px;font-family:inherit">‹</button>
+            <div style="font-size:13px;font-weight:600;color:var(--muted)" id="h-rev-month-lbl">Next month</div>
+            <button onclick="shiftRevBar(1)" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);padding:0 4px;font-family:inherit">›</button>
+          </div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
             <div style="font-size:22px;font-weight:800;color:var(--txt)" id="h-rev-amount">£0</div>
             <div style="font-size:12px;color:var(--muted)">Target: £20,000</div>
@@ -6580,19 +6585,29 @@ function isOldCompleted(j) {
 // ═══════════════════════════════════════════════════════════
 const MONTHLY_TARGET = 20000;
 
+let _revBarOffset = 1; // 1 = next month (default), 0 = this month, -1 = last month
+
 function updateRevTarget() {
   const now = new Date();
-  const thisMonth = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+
+  // Build the display month based on offset
+  const displayDate = new Date(now.getFullYear(), now.getMonth() + _revBarOffset, 1);
+  const displayMonth = displayDate.getFullYear() + '-' + String(displayDate.getMonth()+1).padStart(2,'0');
+  const displayMonthName = displayDate.toLocaleString('en-GB',{month:'long',year:'numeric'});
+
   const lastMonthDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
   const lastMonth = lastMonthDate.getFullYear() + '-' + String(lastMonthDate.getMonth()+1).padStart(2,'0');
+  const thisMonth = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
   const thisYear = now.getFullYear() + '';
 
   const diaryExclude = ['Holiday','Appointment','Van day','Diary entry','Bank Holiday'];
   function getPrice(j) {
     return parseFloat((j.quote_price||j.invoice_amount||'0').toString().replace(/[^0-9.]/g,''))||0;
   }
-  const realJobs = allJobs.filter(j => !diaryExclude.includes(j.source));
+  const realJobs = allJobs.filter(j => !diaryExclude.includes(j.source) && j.status !== 'declined');
 
+  const displayRev = realJobs.filter(j=>j.booking_date&&j.booking_date.startsWith(displayMonth))
+    .reduce((s,j)=>s+getPrice(j),0);
   const thisMonthRev = realJobs.filter(j=>j.booking_date&&j.booking_date.startsWith(thisMonth))
     .reduce((s,j)=>s+getPrice(j),0);
   const lastMonthRev = realJobs.filter(j=>j.booking_date&&j.booking_date.startsWith(lastMonth))
@@ -6600,24 +6615,38 @@ function updateRevTarget() {
   const yearRev = realJobs.filter(j=>j.booking_date&&j.booking_date.startsWith(thisYear))
     .reduce((s,j)=>s+getPrice(j),0);
 
-  const pct = Math.min(100, Math.round((thisMonthRev/MONTHLY_TARGET)*100));
-  const remaining = Math.max(0, MONTHLY_TARGET - thisMonthRev);
+  const pct = Math.min(100, Math.round((displayRev/MONTHLY_TARGET)*100));
+  const remaining = Math.max(0, MONTHLY_TARGET - displayRev);
 
-  // Bar colour: green if on track, amber if behind, red if very behind
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-  const daysPassed = now.getDate();
-  const expectedPct = Math.round((daysPassed/daysInMonth)*100);
-  const barCol = pct >= expectedPct ? '#1D9E75' : pct >= expectedPct*0.7 ? '#EF9F27' : '#E24B4A';
+  // Bar colour — for next month, just show progress vs target (no pace check)
+  let barCol = '#1D9E75';
+  if (_revBarOffset === 0) {
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+    const expectedPct = Math.round((now.getDate()/daysInMonth)*100);
+    barCol = pct >= expectedPct ? '#1D9E75' : pct >= expectedPct*0.7 ? '#EF9F27' : '#E24B4A';
+  } else if (pct >= 100) {
+    barCol = '#1D9E75';
+  } else if (pct >= 75) {
+    barCol = '#EF9F27';
+  } else {
+    barCol = '#E24B4A';
+  }
 
   const fmt = n => '£' + Math.round(n).toLocaleString('en-GB');
   const el = id => document.getElementById(id);
-  if (el('h-rev-amount')) el('h-rev-amount').textContent = fmt(thisMonthRev);
+  if (el('h-rev-month-lbl')) el('h-rev-month-lbl').textContent = displayMonthName;
+  if (el('h-rev-amount')) el('h-rev-amount').textContent = fmt(displayRev);
   if (el('h-rev-bar')) { el('h-rev-bar').style.width = pct+'%'; el('h-rev-bar').style.background = barCol; }
   if (el('h-rev-pct')) el('h-rev-pct').textContent = pct+'% of target';
   if (el('h-rev-remaining')) el('h-rev-remaining').textContent = remaining > 0 ? fmt(remaining)+' to go' : '✓ Target reached!';
   if (el('h-rev-this')) el('h-rev-this').textContent = fmt(thisMonthRev);
   if (el('h-rev-last')) el('h-rev-last').textContent = fmt(lastMonthRev);
   if (el('h-rev-year')) el('h-rev-year').textContent = fmt(yearRev);
+}
+
+function shiftRevBar(dir) {
+  _revBarOffset = Math.max(-2, Math.min(2, _revBarOffset + dir));
+  updateRevTarget();
 }
 
 // ═══════════════════════════════════════════════════════════
