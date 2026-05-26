@@ -133,6 +133,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .js-done{background:#ede9fe;color:#4c1d95}
 .js-await{background:#e0f2fe;color:#0369a1}
 .js-inv{background:#fef3c7;color:#92400e}
+.js-expired{background:#fee2e2;color:#991b1b}
 .js-overdue{background:#fee2e2;color:#991b1b}
 .js-decl{background:var(--red-bg);color:var(--red)}
 
@@ -563,7 +564,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="ttab" id="t-jobs" onclick="switchTab('jobs')">Jobs <span class="ttab-badge tb-warn" id="tb-jobs" style="display:none">0</span></div>
       <div class="ttab" id="t-diary" onclick="switchTab('diary')">Diary</div>
       <div class="ttab" id="t-quote" onclick="switchTab('quote')">New quote</div>
-      <div class="ttab" id="t-tech" onclick="switchTab('tech')">My jobs</div>
+      <div class="ttab" id="t-tech" onclick="switchTab('tech')">My repairs</div>
       <div class="ttab role-admin" id="t-staff" onclick="switchTab('staff')">Staff</div>
       <div class="ttab" id="t-customers" onclick="switchTab('customers')">Customers</div>
       <div class="ttab role-admin" id="t-settings" onclick="switchTab('settings')">Settings</div>
@@ -649,6 +650,39 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       </div>
       <div class="sec-hd" id="h-att-hd">Needs attention</div>
       <div id="h-attention"></div>
+
+      <!-- REVENUE TARGET BAR -->
+      <div style="margin-bottom:16px">
+        <div class="sec-hd">Monthly revenue</div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+            <div style="font-size:22px;font-weight:800;color:var(--txt)" id="h-rev-amount">£0</div>
+            <div style="font-size:12px;color:var(--muted)">Target: £20,000</div>
+          </div>
+          <div style="background:var(--bg);border-radius:99px;height:10px;overflow:hidden;margin-bottom:6px">
+            <div id="h-rev-bar" style="height:100%;border-radius:99px;width:0%;transition:width .6s ease;background:#1D9E75"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted)">
+            <span id="h-rev-pct">0% of target</span>
+            <span id="h-rev-remaining">£20,000 to go</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px">
+            <div style="background:var(--bg);border-radius:var(--radius);padding:8px;text-align:center">
+              <div style="font-size:16px;font-weight:700;color:var(--txt)" id="h-rev-this">£0</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">This month</div>
+            </div>
+            <div style="background:var(--bg);border-radius:var(--radius);padding:8px;text-align:center">
+              <div style="font-size:16px;font-weight:700;color:var(--txt)" id="h-rev-last">£0</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">Last month</div>
+            </div>
+            <div style="background:var(--bg);border-radius:var(--radius);padding:8px;text-align:center">
+              <div style="font-size:16px;font-weight:700;color:var(--txt)" id="h-rev-year">£0</div>
+              <div style="font-size:10px;color:var(--muted);margin-top:2px">This year</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="sec-hd">Today's jobs</div>
       <div id="h-today"></div>
     </div>
@@ -704,7 +738,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="toolbar">
         <input autocomplete="off" class="t-srch" id="jobSearch" placeholder="Search name, vehicle, phone..." oninput="renderJobs()">
         <button class="fpill on" id="fp-all" onclick="setFilter('all',this)">All</button>
-        <button class="fpill" id="fp-mine" onclick="setFilter('mine',this)">My jobs</button>
+        <button class="fpill" id="fp-mine" onclick="setFilter('mine',this)">My repairs</button>
         <button class="fpill" id="fp-pend" onclick="setFilter('pending',this)">Pending</button>
         <button class="fpill" id="fp-quot" onclick="setFilter('quoted',this)">Quoted</button>
         <button class="fpill" id="fp-book" onclick="setFilter('booked',this)">Booked</button>
@@ -2141,6 +2175,21 @@ async function renderHomeAttention() {
       <span class="badge" style="background:#fff7ed;color:#9a3412">Follow up</span>
     </div>`);
 
+  // Expired quotes (45+ days old)
+  const expiredQuotes = allJobs.filter(j => {
+    if (j.status !== 'quoted') return false;
+    const age = j.created_at ? Math.floor((Date.now()-new Date(j.created_at).getTime())/86400000) : 0;
+    return age > 45;
+  });
+  if (expiredQuotes.length) items.push(`
+    <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:var(--radius-lg);padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:8px" onclick="setFilter('quoted',document.getElementById('fp-quot'))">
+      <div style="width:28px;height:28px;background:#fee2e2;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">⏰</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:#991b1b">${expiredQuotes.length} quote${expiredQuotes.length>1?'s':''} expired (45+ days old)</div>
+        <div style="font-size:11px;color:#b91c1c">${expiredQuotes.map(j=>j.customer_name||'Unknown').slice(0,3).join(' · ')}</div>
+      </div>
+      <span class="badge" style="background:#fee2e2;color:#991b1b;flex-shrink:0">Review</span>
+    </div>`);
   const todayAttn = new Date().toISOString().split('T')[0];
   const overdueJobs = allJobs.filter(j =>
     j.status === 'booked' && j.booking_date && j.booking_date < todayAttn
@@ -2153,6 +2202,17 @@ async function renderHomeAttention() {
         <div style="font-size:11px;color:#b91c1c">${overdueJobs.map(j=>j.customer_name||'Unknown').slice(0,3).join(' · ')}${overdueJobs.length>3?' +more':''}</div>
       </div>
       <span class="badge" style="background:#fee2e2;color:#991b1b;flex-shrink:0">Action needed</span>
+    </div>`);
+  // Unread SMS replies
+  const unreadSms = allJobs.filter(j => j.sms_unread);
+  if (unreadSms.length) items.push(`
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--radius-lg);padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:8px" onclick="switchTab('jobs')">
+      <div style="width:28px;height:28px;background:#d1fae5;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">💬</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600;color:#065f46">${unreadSms.length} unread SMS repl${unreadSms.length>1?'ies':'y'}</div>
+        <div style="font-size:11px;color:#15803d">${unreadSms.map(j=>j.customer_name||'Unknown').slice(0,3).join(' · ')}</div>
+      </div>
+      <span class="badge" style="background:#d1fae5;color:#065f46;flex-shrink:0">View</span>
     </div>`);
   const needsInvoice = allJobs.filter(j => j.status === 'completed' && !j.invoiced_at);
   if (needsInvoice.length) items.push(`
@@ -2391,7 +2451,9 @@ function renderJobs() {
 function buildJobCard(j) {
   const statusMap = { pending:'pend', quoted:'quot', booked:'book', completed:'done', declined:'decl' };
   const s = statusMap[j.status] || 'pend';
-  const quotedLabel = j.quote_sent_to_customer ? 'Awaiting customer' : 'Approved — send quote';
+  const quoteAge = j.created_at ? Math.floor((Date.now()-new Date(j.created_at).getTime())/(86400000)) : 0;
+  const isExpired = j.status === 'quoted' && quoteAge > 45;
+  const quotedLabel = isExpired ? '⚠ Quote expired ('+quoteAge+'d)' : j.quote_sent_to_customer ? 'Awaiting customer' : 'Approved — send quote';
   const completedLabel = (j.status === 'completed' && !j.invoiced_at) ? 'Needs invoice' : 'Completed ✓';
   const todayD = new Date().toISOString().split('T')[0];
   const isOverdue = j.status === 'booked' && j.booking_date && j.booking_date < todayD;
@@ -2534,9 +2596,14 @@ function buildJobCard(j) {
             <div style="font-size:13px;color:#713f12;line-height:1.5;white-space:pre-wrap">${esc(j.notes)}</div>
           </div>
         </div>`:''}
-        ${(j.sms_reminder_sent||j.sms_review_sent)?`<div style="grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap">
+        ${(j.sms_reminder_sent||j.sms_review_sent||j.sms_inbox)?`<div style="grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
           ${j.sms_reminder_sent?'<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">📱 Reminder sent</span>':''}
           ${j.sms_review_sent?'<span style="background:#dbeafe;color:#1e3a8a;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">⭐ Review sent</span>':''}
+          ${j.sms_unread?'<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">💬 New reply</span>':''}
+          ${j.sms_inbox?`<div style="grid-column:1/-1;width:100%;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:7px 10px;margin-top:4px">
+            <div style="font-size:10px;font-weight:700;color:#065f46;margin-bottom:4px">💬 SMS replies</div>
+            <div style="font-size:12px;color:#14532d;white-space:pre-wrap">${esc(j.sms_inbox)}</div>
+          </div>`:''}
         </div>`:''}
         ${j.internal_breakdown&&currentProfile?.role==='admin'?`<div style="grid-column:1/-1"><div class="jbf" style="color:var(--muted)">Internal breakdown (admin only)</div><div class="jbv" style="font-size:11px;line-height:1.5;color:var(--muted)">${esc(j.internal_breakdown)}</div></div>`:''}
       </div>
@@ -4055,7 +4122,7 @@ function toggleTchrsBody() {
 function renderTechPortal() {
   const el = document.getElementById('techPortal');
   const name = currentProfile?.full_name || 'Tech';
-  document.getElementById('techGreeting').textContent = `Your jobs, ${name}`;
+  document.getElementById('techGreeting').textContent = `Your repairs, ${name}`;
 
   // Date window: yesterday through 7 days ahead
   const now = new Date();
@@ -6506,6 +6573,51 @@ function isOldCompleted(j) {
   if (!ref) return false;
   const d = new Date(ref);
   return (Date.now() - d.getTime()) > 7 * 24 * 60 * 60 * 1000;
+}
+
+// ═══════════════════════════════════════════════════════════
+// REVENUE TARGET
+// ═══════════════════════════════════════════════════════════
+const MONTHLY_TARGET = 20000;
+
+function updateRevTarget() {
+  const now = new Date();
+  const thisMonth = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  const lastMonthDate = new Date(now.getFullYear(), now.getMonth()-1, 1);
+  const lastMonth = lastMonthDate.getFullYear() + '-' + String(lastMonthDate.getMonth()+1).padStart(2,'0');
+  const thisYear = now.getFullYear() + '';
+
+  const diaryExclude = ['Holiday','Appointment','Van day','Diary entry','Bank Holiday'];
+  function getPrice(j) {
+    return parseFloat((j.quote_price||j.invoice_amount||'0').toString().replace(/[^0-9.]/g,''))||0;
+  }
+  const realJobs = allJobs.filter(j => !diaryExclude.includes(j.source));
+
+  const thisMonthRev = realJobs.filter(j=>j.booking_date&&j.booking_date.startsWith(thisMonth))
+    .reduce((s,j)=>s+getPrice(j),0);
+  const lastMonthRev = realJobs.filter(j=>j.booking_date&&j.booking_date.startsWith(lastMonth))
+    .reduce((s,j)=>s+getPrice(j),0);
+  const yearRev = realJobs.filter(j=>j.booking_date&&j.booking_date.startsWith(thisYear))
+    .reduce((s,j)=>s+getPrice(j),0);
+
+  const pct = Math.min(100, Math.round((thisMonthRev/MONTHLY_TARGET)*100));
+  const remaining = Math.max(0, MONTHLY_TARGET - thisMonthRev);
+
+  // Bar colour: green if on track, amber if behind, red if very behind
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const daysPassed = now.getDate();
+  const expectedPct = Math.round((daysPassed/daysInMonth)*100);
+  const barCol = pct >= expectedPct ? '#1D9E75' : pct >= expectedPct*0.7 ? '#EF9F27' : '#E24B4A';
+
+  const fmt = n => '£' + Math.round(n).toLocaleString('en-GB');
+  const el = id => document.getElementById(id);
+  if (el('h-rev-amount')) el('h-rev-amount').textContent = fmt(thisMonthRev);
+  if (el('h-rev-bar')) { el('h-rev-bar').style.width = pct+'%'; el('h-rev-bar').style.background = barCol; }
+  if (el('h-rev-pct')) el('h-rev-pct').textContent = pct+'% of target';
+  if (el('h-rev-remaining')) el('h-rev-remaining').textContent = remaining > 0 ? fmt(remaining)+' to go' : '✓ Target reached!';
+  if (el('h-rev-this')) el('h-rev-this').textContent = fmt(thisMonthRev);
+  if (el('h-rev-last')) el('h-rev-last').textContent = fmt(lastMonthRev);
+  if (el('h-rev-year')) el('h-rev-year').textContent = fmt(yearRev);
 }
 
 // ═══════════════════════════════════════════════════════════
