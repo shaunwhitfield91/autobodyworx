@@ -1584,6 +1584,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <input autocomplete="off" type="checkbox" id="edit_cd" style="width:16px;height:16px;cursor:pointer">
       <label for="edit_cd" style="font-size:13px;color:var(--txt);cursor:pointer">Collection &amp; Delivery required</label>
     </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;background:#fef2f2;border:1px solid #fca5a5;border-radius:var(--radius);padding:8px 12px">
+      <input autocomplete="off" type="checkbox" id="edit_rework" style="width:16px;height:16px;accent-color:var(--red);cursor:pointer">
+      <label for="edit_rework" style="font-size:13px;font-weight:600;color:#991b1b;cursor:pointer">🔄 This is a rework job</label>
+    </div>
     <span class="qlbl">Add photos</span>
     <label class="upzone" for="editPhotoInput" style="display:block;cursor:pointer;padding:14px;margin-bottom:10px">
       <div style="font-size:12px;color:var(--muted);font-weight:600" id="editUpLbl">Tap to add photos</div>
@@ -4352,6 +4356,7 @@ function buildTechCard(j) {
             : j.duration?`<span class="badge bdg-dur">${esc(j.duration)}</span>`:''
           }
           ${j.cd_required?'<span class="badge bdg-cd">C&D</span>':''}
+          ${j.is_rework?'<span class="badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5">🔄 Rework</span>':''}
         </div>
       </div>
       <div class="tech-job-badges">
@@ -4712,6 +4717,8 @@ async function openEditModal(jobId) {
   document.getElementById('edit_addr').value = j.customer_address || '';
   const pmEl = document.getElementById('edit_payment_method');
   if (pmEl) pmEl.value = j.payment_method || '';
+  const rwEl = document.getElementById('edit_rework');
+  if (rwEl) rwEl.checked = j.is_rework || false;
   document.getElementById('edit_loc').value = j.job_location || 'workshop';
   document.getElementById('edit_source').value = j.source || 'other';
   document.getElementById('edit_cd').checked = !!j.cd_required;
@@ -4764,6 +4771,7 @@ async function saveEditJob() {
     job_location: document.getElementById('edit_loc').value,
     source: document.getElementById('edit_source').value,
     cd_required: document.getElementById('edit_cd').checked,
+    is_rework: document.getElementById('edit_rework')?.checked || false,
     customer_address: document.getElementById('edit_addr').value.trim() || null,
     payment_method: document.getElementById('edit_payment_method')?.value || null
   };
@@ -6825,6 +6833,22 @@ function renderAnalytics() {
   const paid = invoiced.filter(j => j.paid_at);
   const cashRate = invoiced.length > 0 ? Math.round((paid.length/invoiced.length)*100) : 0;
 
+  // ── REPEAT CUSTOMER RATE ─────────────────────────────────
+  // How many customers have come back for more than one job (all time)
+  const allRealJobs = allJobs.filter(j => !diaryExclude.includes(j.source));
+  const customerJobCount = {};
+  allRealJobs.forEach(j => {
+    const name = (j.customer_name||'').toLowerCase().trim();
+    if (name && name !== 'unknown') customerJobCount[name] = (customerJobCount[name]||0) + 1;
+  });
+  const uniqueCustomers = Object.keys(customerJobCount).length;
+  const repeatCustomers = Object.values(customerJobCount).filter(c => c > 1).length;
+  const repeatRate = uniqueCustomers > 0 ? Math.round((repeatCustomers/uniqueCustomers)*100) : 0;
+
+  // ── REWORK RATE ───────────────────────────────────────────
+  const reworkJobs = rangeJobs.filter(j => j.is_rework).length;
+  const reworkRate = completedJobs.length > 0 ? Math.round((reworkJobs/completedJobs.length)*100) : 0;
+
   // ── REVENUE ───────────────────────────────────────────────
   const totalRev = completedJobs.reduce((s,j) => s + getPrice(j), 0);
   const avgJobVal = completedJobs.length > 0 ? Math.round(totalRev/completedJobs.length) : 0;
@@ -6889,6 +6913,27 @@ function renderAnalytics() {
         cashRate>=90?'#1D9E75':cashRate>=70?'#EF9F27':'#E24B4A',
         pctBar(cashRate, cashRate>=90?'#1D9E75':cashRate>=70?'#EF9F27':'#E24B4A') +
         '<div style="margin-top:4px">'+paid.length+' paid · '+invoiced.filter(j=>!j.paid_at).length+' outstanding</div>'
+      )}
+
+    </div>
+
+    <!-- Churn & Rework row -->
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:10px">
+
+      ${kpiCard('Repeat customers',
+        repeatRate+'%',
+        repeatCustomers+' of '+uniqueCustomers+' customers returned for more',
+        repeatRate>=30?'#1D9E75':repeatRate>=15?'#EF9F27':'#E24B4A',
+        pctBar(repeatRate, repeatRate>=30?'#1D9E75':repeatRate>=15?'#EF9F27':'#E24B4A') +
+        '<div style="margin-top:4px">Customers with 2+ jobs ÷ all unique customers (all time)</div>'
+      )}
+
+      ${kpiCard('Rework rate',
+        reworkRate+'%',
+        reworkJobs+' rework job'+( reworkJobs!==1?'s':'')+' in period',
+        reworkRate<=5?'#1D9E75':reworkRate<=10?'#EF9F27':'#E24B4A',
+        pctBar(reworkRate, reworkRate<=5?'#1D9E75':reworkRate<=10?'#EF9F27':'#E24B4A') +
+        '<div style="margin-top:4px">Flag jobs as rework via Edit Job ↗</div>'
       )}
 
     </div>
