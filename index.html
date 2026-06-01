@@ -2550,11 +2550,11 @@ function buildJobCard(j) {
     </div>`;
   } else if (j.status === 'completed' && j.invoiced_at) {
     // Invoiced — show paid status and mark as paid if not yet paid
-    const paidBadge = j.paid ? `<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:6px">✓ Paid — ${esc(j.payment_method||'')}</span>` : '';
+    const paidBadge = j.paid_at ? `<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:6px">✓ Paid — ${esc(j.payment_method||'')}</span>` : '';
     actions = `<div style="width:100%">
       ${paidBadge}
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${!j.paid ? `<button class="btn-approve" onclick="event.stopPropagation();markAsPaid(${j.id})" style="background:var(--teal);font-size:11px">✓ Mark as paid</button>` : ''}
+        ${!j.paid_at ? `<button class="btn-approve" onclick="event.stopPropagation();markAsPaid(${j.id})" style="background:var(--teal);font-size:11px">✓ Mark as paid</button>` : ''}
         <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>
       </div>
     </div>`;
@@ -2653,7 +2653,7 @@ function buildJobCard(j) {
       <!-- Actions -->
       ${actions?`<div class="jcard-actions">${actions}</div>`:''}
       <!-- Invoice/sign-off for completed -->
-      ${j.status==='completed'&&j.paid?`<div class="signoff-done" style="margin-top:12px">✓ Paid — ${esc(j.payment_method||'')} · ${j.signed_off_at?fmtDate(j.signed_off_at.split('T')[0]):''}</div>`:''}
+      ${j.status==='completed'&&j.paid_at?`<div class="signoff-done" style="margin-top:12px">✓ Paid — ${esc(j.payment_method||'')} · ${j.signed_off_at?fmtDate(j.signed_off_at.split('T')[0]):''}</div>`:''}
     </div>
   </div>`;
 }
@@ -6802,14 +6802,14 @@ function renderAnalytics() {
 
   // ── CASH COLLECTION ───────────────────────────────────────
   const invoiced = rangeJobs.filter(j => j.invoiced_at);
-  const paid = invoiced.filter(j => j.paid);
+  const paid = invoiced.filter(j => j.paid_at);
   const cashRate = invoiced.length > 0 ? Math.round((paid.length/invoiced.length)*100) : 0;
 
   // ── REVENUE ───────────────────────────────────────────────
   const totalRev = completedJobs.reduce((s,j) => s + getPrice(j), 0);
   const avgJobVal = completedJobs.length > 0 ? Math.round(totalRev/completedJobs.length) : 0;
   const paidRev = paid.reduce((s,j) => s + getPrice(j), 0);
-  const outstandingRev = invoiced.filter(j=>!j.paid).reduce((s,j) => s + getPrice(j), 0);
+  const outstandingRev = invoiced.filter(j=>!j.paid_at).reduce((s,j) => s + getPrice(j), 0);
 
   // ── CONTACT RATE ──────────────────────────────────────────
   const contacted = rangeJobs.filter(j => j.customer_contacted || ['booked','completed'].includes(j.status));
@@ -6868,7 +6868,7 @@ function renderAnalytics() {
         fmt(paidRev)+' collected of '+fmt(paidRev+outstandingRev)+' invoiced',
         cashRate>=90?'#1D9E75':cashRate>=70?'#EF9F27':'#E24B4A',
         pctBar(cashRate, cashRate>=90?'#1D9E75':cashRate>=70?'#EF9F27':'#E24B4A') +
-        '<div style="margin-top:4px">'+paid.length+' paid · '+invoiced.filter(j=>!j.paid).length+' outstanding</div>'
+        '<div style="margin-top:4px">'+paid.length+' paid · '+invoiced.filter(j=>!j.paid_at).length+' outstanding</div>'
       )}
 
     </div>
@@ -6888,7 +6888,7 @@ function renderAnalytics() {
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px">
         <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Outstanding</div>
         <div style="font-size:24px;font-weight:800;color:${outstandingRev>0?'var(--amber)':'var(--teal)'}">${fmt(outstandingRev)}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">${invoiced.filter(j=>!j.paid).length} unpaid invoices</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${invoiced.filter(j=>!j.paid_at).length} unpaid invoices</div>
       </div>
     </div>
 
@@ -6961,9 +6961,9 @@ async function confirmMarkPaid(id) {
   const btn = document.getElementById('confirmPaidBtn');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Saving...'; }
   try {
-    await sbRaw('PATCH','jobs',{ paid: true, payment_method: method, paid_at: new Date().toISOString() }, `?id=eq.${id}`);
+    await sbRaw('PATCH','jobs',{ payment_method: method, paid_at: new Date().toISOString() }, `?id=eq.${id}`);
     const j = allJobs.find(x => x.id === id);
-    if (j) { j.paid = true; j.payment_method = method; }
+    if (j) { j.paid_at = new Date().toISOString(); j.payment_method = method; }
     document.getElementById('markPaidModal')?.remove();
     showToast('✓ Marked as paid — ' + method);
     renderJobs();
