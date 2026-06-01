@@ -627,8 +627,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div style="font-size:20px;font-weight:800;color:var(--txt)">Analytics</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap" id="analytics-range-btns">
           <button class="fpill on" id="ar-30" onclick="setAnalyticsRange(30,this)">30 days</button>
-          <button class="fpill" id="ar-90" onclick="setAnalyticsRange(90,this)">1 quarter</button>
-          <button class="fpill" id="ar-180" onclick="setAnalyticsRange(180,this)">2 quarters</button>
+          <button class="fpill" id="ar-90" onclick="setAnalyticsRange(90,this)">90 days</button>
+          <button class="fpill" id="ar-180" onclick="setAnalyticsRange(180,this)">180 days</button>
           <button class="fpill" id="ar-365" onclick="setAnalyticsRange(365,this)">1 year</button>
           <button class="fpill" id="ar-all" onclick="setAnalyticsRange(0,this)">All time</button>
         </div>
@@ -6806,25 +6806,19 @@ function renderAnalytics() {
   const closeRate = totalLeads > 0 ? Math.round((converted/totalLeads)*100) : 0;
 
   // ── SHOW RATE ─────────────────────────────────────────────
-  // Only count jobs where the booking date has already passed (past jobs only)
+  // Only completed jobs and customer cancellations count (not future/current bookings)
   const todayStr = new Date().toISOString().split('T')[0];
-  const pastBooked = rangeJobs.filter(j =>
-    ['booked','completed'].includes(j.status) &&
-    j.booking_date && j.booking_date <= todayStr
-  );
   const completedJobs = rangeJobs.filter(j => j.status === 'completed');
-  // Cancelled jobs that were booked (count as no-shows in the denominator)
   const cancelledBooked = rangeDeclined.filter(j =>
-    (j.decline_reason === 'Cancelled by customer' || (j.notes && j.notes.includes('Cancelled by customer'))) &&
-    j.booking_date && j.booking_date <= todayStr
+    (j.decline_reason === 'Cancelled by customer' || (j.notes && j.notes.includes('Cancelled by customer')))
   );
-  const totalPastBookings = pastBooked.length + cancelledBooked.length;
-  const showRate = totalPastBookings > 0 ? Math.round((completedJobs.length/totalPastBookings)*100) : 0;
+  // Show rate = completed ÷ (completed + cancelled) — booked but not yet done excluded
+  const totalShowDenom = completedJobs.length + cancelledBooked.length;
+  const showRate = totalShowDenom > 0 ? Math.round((completedJobs.length/totalShowDenom)*100) : 0;
 
   // ── CANCELLATION RATE ─────────────────────────────────────
-  // Only jobs that were booked then cancelled by customer (past bookings only)
   const cancelled = cancelledBooked;
-  const cancelRate = totalPastBookings > 0 ? Math.round((cancelled.length/totalPastBookings)*100) : 0;
+  const cancelRate = totalShowDenom > 0 ? Math.round((cancelled.length/totalShowDenom)*100) : 0;
 
   // ── CASH COLLECTION ───────────────────────────────────────
   const invoiced = rangeJobs.filter(j => j.invoiced_at);
@@ -6875,7 +6869,7 @@ function renderAnalytics() {
 
       ${kpiCard('Show rate',
         showRate+'%',
-        completedJobs.length+' of '+totalPastBookings+' past bookings completed',
+        completedJobs.length+' of '+totalShowDenom+' resolved bookings',
         showRate>=80?'#1D9E75':showRate>=60?'#EF9F27':'#E24B4A',
         pctBar(showRate, showRate>=80?'#1D9E75':showRate>=60?'#EF9F27':'#E24B4A') +
         '<div style="margin-top:4px">Booked → Completed</div>'
@@ -6883,7 +6877,7 @@ function renderAnalytics() {
 
       ${kpiCard('Cancellation rate',
         cancelRate+'%',
-        cancelled.length+' cancellations from past bookings',
+        cancelled.length+' cancellations out of '+totalShowDenom+' resolved',
         cancelRate<=10?'#1D9E75':cancelRate<=20?'#EF9F27':'#E24B4A',
         pctBar(cancelRate, cancelRate<=10?'#1D9E75':cancelRate<=20?'#EF9F27':'#E24B4A') +
         '<div style="margin-top:4px">Cancelled by customer after booking</div>'
