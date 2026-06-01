@@ -2476,14 +2476,18 @@ function buildJobCard(j) {
   if (j.status === 'pending') {
     actions = `<button class="btn-approve" onclick="event.stopPropagation();approveJob(${j.id})">Approve quote</button>
                <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit</button>
-               <button class="btn-danger" onclick="event.stopPropagation();declineJob(${j.id})">Decline</button>`;
+               <button class="btn-danger" onclick="event.stopPropagation();declineJob(${j.id})">Decline</button>
+               <div style="width:100%;height:1px;background:var(--border);margin:4px 0"></div>
+               <button class="btn-secondary" onclick="event.stopPropagation();deleteJob(${j.id})" style="font-size:10px;color:var(--muted);border-color:var(--border)">🗑 Delete job</button>`;
   } else if (j.status === 'quoted') {
     if (!j.quote_sent_to_customer) {
       actions = `
         <button class="btn-primary" onclick="event.stopPropagation();markQuoteSent(${j.id})" style="background:#0ea5e9;font-size:11px;padding:7px 12px">&#10003; Quote sent to customer</button>
         <button class="btn-book" onclick="event.stopPropagation();openBookModal(${j.id})" style="font-size:11px">Book in</button>
         <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit</button>
-        <button class="btn-danger" onclick="event.stopPropagation();declineJob(${j.id})" style="font-size:11px">Decline</button>`;
+        <button class="btn-danger" onclick="event.stopPropagation();declineJob(${j.id})" style="font-size:11px">Decline</button>
+        <div style="width:100%;height:1px;background:var(--border);margin:4px 0"></div>
+        <button class="btn-secondary" onclick="event.stopPropagation();deleteJob(${j.id})" style="font-size:10px;color:var(--muted);border-color:var(--border)">🗑 Delete job</button>`;
     } else {
       const sentDate = j.quote_sent_at ? new Date(j.quote_sent_at) : null;
       const ageDays = sentDate ? Math.floor((Date.now() - sentDate.getTime()) / 86400000) : 0;
@@ -2509,7 +2513,9 @@ function buildJobCard(j) {
     actions = `<button class="btn-approve" onclick="event.stopPropagation();openCompleteModal(${j.id})" style="background:var(--teal);font-size:11px">Mark as complete</button>
                <button class="btn-primary" onclick="event.stopPropagation();sendXeroInvoice(${j.id},'deposit')" style="font-size:11px">Parts deposit</button>
                <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>
-               <button class="btn-danger" onclick="event.stopPropagation();customerCancelled(${j.id})" style="font-size:11px">Customer cancelled</button>`;
+               <button class="btn-danger" onclick="event.stopPropagation();customerCancelled(${j.id})" style="font-size:11px">Customer cancelled</button>
+               <div style="width:100%;height:1px;background:var(--border);margin:4px 0"></div>
+               <button class="btn-secondary" onclick="event.stopPropagation();deleteJob(${j.id})" style="font-size:10px;color:var(--muted);border-color:var(--border)">🗑 Delete job</button>`;
   } else if (j.status === 'completed' && !j.invoiced_at) {
     const payHint = j.payment_method ? `Customer paying by ${j.payment_method}` : '';
     actions = `<div style="width:100%">
@@ -6658,6 +6664,60 @@ function updateRevTarget() {
 function shiftRevBar(dir) {
   _revBarOffset = Math.max(-2, Math.min(2, _revBarOffset + dir));
   updateRevTarget();
+}
+
+// ═══════════════════════════════════════════════════════════
+// DELETE JOB
+// ═══════════════════════════════════════════════════════════
+function deleteJob(id) {
+  const j = allJobs.find(x => x.id === id);
+  if (!j) return;
+
+  // Build a deliberate confirmation modal — not just confirm()
+  let existing = document.getElementById('deleteJobModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'deleteJobModal';
+  modal.className = 'modal-overlay show';
+  modal.innerHTML = `
+    <div class="modal-box" style="max-width:380px">
+      <div class="modal-hd" style="color:var(--red)">🗑 Delete job?</div>
+      <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:var(--radius);padding:12px;margin-bottom:14px">
+        <div style="font-size:14px;font-weight:700;color:var(--txt)">${esc(j.customer_name||'Unknown')}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(j.vehicle||'')} · ${esc(j.panels||'')}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">Status: ${j.status}</div>
+      </div>
+      <div style="font-size:13px;color:var(--txt);margin-bottom:6px;font-weight:600">⚠ This will permanently delete the job and all its photos.</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px">This cannot be undone. If the customer cancels, use <strong>Customer cancelled</strong> instead to keep the record.</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-danger" id="confirmDeleteBtn" onclick="confirmDeleteJob(${id})" style="flex:1;padding:10px">Yes, delete permanently</button>
+        <button class="btn-secondary" onclick="document.getElementById('deleteJobModal').remove()" style="flex:1;padding:10px">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+}
+
+async function confirmDeleteJob(id) {
+  const btn = document.getElementById('confirmDeleteBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Deleting...'; }
+  try {
+    // Delete photos first
+    await sbRaw('DELETE', 'job_photos', null, `?job_id=eq.${id}`).catch(()=>{});
+    // Delete parts
+    await sbRaw('DELETE', 'job_parts', null, `?job_id=eq.${id}`).catch(()=>{});
+    // Delete job
+    await sbRaw('DELETE', 'jobs', null, `?id=eq.${id}`);
+    document.getElementById('deleteJobModal')?.remove();
+    allJobs = allJobs.filter(j => j.id !== id);
+    showToast('✓ Job deleted');
+    renderJobs();
+    updateHomeStats();
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Delete permanently'; }
+    alert('Delete failed: ' + e.message);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
