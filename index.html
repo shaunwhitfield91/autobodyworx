@@ -657,7 +657,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
             <button onclick="shiftRevBar(-1)" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);padding:0 4px;font-family:inherit">‹</button>
-            <div style="font-size:13px;font-weight:600;color:var(--muted)" id="h-rev-month-lbl">Next month</div>
+            <div style="font-size:13px;font-weight:600;color:var(--txt)" id="h-rev-month-lbl">This month</div>
             <button onclick="shiftRevBar(1)" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);padding:0 4px;font-family:inherit">›</button>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
@@ -2069,6 +2069,7 @@ async function loadJobs() {
   renderHome();
   renderDeclined();
   updatePendingBadge();
+  updateRevTarget();  // Called here so jobs data is definitely loaded
   if (currentProfile?.role === 'tech') renderTechPortal();
   // Update revenue bar if diary is visible
   if (document.getElementById('pg-diary')?.classList.contains('on')) renderRevBar();
@@ -4381,6 +4382,7 @@ async function handleTechPhotos(jobId, input) {
     reader.readAsDataURL(f);
   });
   let uploaded = 0;
+  _uploadInProgress = true;
   for (const f of files) {
     try {
       const compressed = await compressForStorage(f);
@@ -4411,10 +4413,13 @@ async function handleTechPhotos(jobId, input) {
     showToast('✓ ' + uploaded + ' photo' + (uploaded > 1 ? 's' : '') + ' uploaded');
     // Reload jobs so photos appear from DB and complete button enables properly
     await loadJobs();
+    _uploadInProgress = false;
     // Re-open the tech card
     const body = document.getElementById('tjb-' + jobId);
     if (body) { body.classList.add('open'); }
     checkTechCanComplete(jobId);
+  } else {
+    _uploadInProgress = false;
   }
 }
 
@@ -4718,6 +4723,7 @@ async function saveEditJob() {
     await sbRaw('PATCH', 'jobs', updates, '?id=eq.' + _editJobId);
     // Upload any new photos
     if (_editPhotos.length) {
+      _uploadInProgress = true;
       for (const f of _editPhotos) {
         const compEdit = await compressForStorage(f);
         const storagePath = 'job-' + _editJobId + '/edit-' + Date.now() + '.jpg';
@@ -4729,6 +4735,7 @@ async function saveEditJob() {
         await sbRaw('POST', 'job_photos', { job_id: _editJobId, storage_path: storagePath, photo_type: 'damage' });
       }
     }
+    _uploadInProgress = false;
     showToast('✓ Job updated');
     closeEditModal();
     const prevOpen = _editJobId;
@@ -4868,27 +4875,31 @@ function initPriceInputs() {
 // ═══════════════════════════════════════════════════════════
 let autoRefreshTimer = null;
 
+let _uploadInProgress = false; // Set true during any photo upload
+
 function isUserTyping() {
   const active = document.activeElement;
   if (!active) return false;
   const tag = active.tagName.toLowerCase();
-  // Pause if user is in any input, textarea, or contenteditable
-  return tag === 'input' || tag === 'textarea' || tag === 'select' ||
-    active.isContentEditable ||
-    // Also pause if any modal is open
-    document.querySelector('.modal-overlay.show') !== null;
+  // Pause if user is in any input, textarea, or select
+  if (tag === 'input' || tag === 'textarea' || tag === 'select' || active.isContentEditable) return true;
+  // Pause if any modal is open
+  if (document.querySelector('.modal-overlay.show') !== null) return true;
+  // Pause if a photo upload is in progress
+  if (_uploadInProgress) return true;
+  return false;
 }
 
 function startAutoRefresh() {
   if (autoRefreshTimer) clearInterval(autoRefreshTimer);
   autoRefreshTimer = setInterval(async () => {
-    // Pause refresh if user is actively typing or a modal is open
+    // Skip refresh if user is active, typing, modal open, or uploading
     if (isUserTyping()) return;
     try {
       await loadJobs();
       if (diaryAllJobs.length) loadDiaryJobs().catch(()=>{});
     } catch(e) { console.warn('Auto-refresh failed', e); }
-  }, 10000);
+  }, 30000); // 30 seconds — less aggressive, safer for poor connections
 }
 
 async function manualRefresh() {
@@ -6585,7 +6596,7 @@ function isOldCompleted(j) {
 // ═══════════════════════════════════════════════════════════
 const MONTHLY_TARGET = 20000;
 
-let _revBarOffset = 1; // 1 = next month (default), 0 = this month, -1 = last month
+let _revBarOffset = 0; // 0 = this month (default), 1 = next month, -1 = last month
 
 function updateRevTarget() {
   const now = new Date();
