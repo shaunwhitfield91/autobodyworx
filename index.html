@@ -566,6 +566,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="ttab" id="t-quote" onclick="switchTab('quote')">New quote</div>
       <div class="ttab" id="t-tech" onclick="switchTab('tech')">My repairs</div>
       <div class="ttab role-admin" id="t-staff" onclick="switchTab('staff')">Staff</div>
+      <div class="ttab role-admin role-admin_staff" id="t-analytics" onclick="switchTab('analytics')">Analytics</div>
       <div class="ttab" id="t-customers" onclick="switchTab('customers')">Customers</div>
       <div class="ttab role-admin" id="t-settings" onclick="switchTab('settings')">Settings</div>
     </div>
@@ -616,6 +617,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         </div>
       </div>
       <div id="staff-portal-content"></div>
+    </div>
+  </div>
+
+  <!-- ANALYTICS PAGE -->
+  <div class="page role-admin role-admin_staff" id="pg-analytics">
+    <div class="page-wrap">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:20px;font-weight:800;color:var(--txt)">Analytics</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap" id="analytics-range-btns">
+          <button class="fpill on" id="ar-30" onclick="setAnalyticsRange(30,this)">30 days</button>
+          <button class="fpill" id="ar-90" onclick="setAnalyticsRange(90,this)">1 quarter</button>
+          <button class="fpill" id="ar-180" onclick="setAnalyticsRange(180,this)">2 quarters</button>
+          <button class="fpill" id="ar-365" onclick="setAnalyticsRange(365,this)">1 year</button>
+          <button class="fpill" id="ar-all" onclick="setAnalyticsRange(0,this)">All time</button>
+        </div>
+      </div>
+      <div id="analytics-content"></div>
     </div>
   </div>
 
@@ -2049,6 +2067,7 @@ function switchTab(t) {
   // timesheets now embedded in staff tab
   if (t === 'customers') { renderCustomers(); }
   if (t === 'staff') { renderStaffPortal(); }
+  if (t === 'analytics') { renderAnalytics(); }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -2530,8 +2549,15 @@ function buildJobCard(j) {
       </div>
     </div>`;
   } else if (j.status === 'completed' && j.invoiced_at) {
-    // Fully done — edit only
-    actions = `<button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>`;
+    // Invoiced — show paid status and mark as paid if not yet paid
+    const paidBadge = j.paid ? `<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;display:inline-block;margin-bottom:6px">✓ Paid — ${esc(j.payment_method||'')}</span>` : '';
+    actions = `<div style="width:100%">
+      ${paidBadge}
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${!j.paid ? `<button class="btn-approve" onclick="event.stopPropagation();markAsPaid(${j.id})" style="background:var(--teal);font-size:11px">✓ Mark as paid</button>` : ''}
+        <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>
+      </div>
+    </div>`;
   }
 
   // Parts summary
@@ -6717,6 +6743,233 @@ async function confirmDeleteJob(id) {
   } catch(e) {
     if (btn) { btn.disabled = false; btn.textContent = 'Delete permanently'; }
     alert('Delete failed: ' + e.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// ANALYTICS
+// ═══════════════════════════════════════════════════════════
+let _analyticsRangeDays = 30;
+
+function setAnalyticsRange(days, btn) {
+  _analyticsRangeDays = days;
+  document.querySelectorAll('#analytics-range-btns .fpill').forEach(b => b.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  renderAnalytics();
+}
+
+function renderAnalytics() {
+  const el = document.getElementById('analytics-content');
+  if (!el) return;
+
+  const now = new Date();
+  const cutoff = _analyticsRangeDays > 0
+    ? new Date(now.getTime() - _analyticsRangeDays * 86400000).toISOString().split('T')[0]
+    : '2000-01-01';
+
+  const diaryExclude = ['Holiday','Appointment','Van day','Diary entry','Bank Holiday'];
+  function getPrice(j) {
+    return parseFloat((j.quote_price||j.invoice_amount||'0').toString().replace(/[^0-9.]/g,''))||0;
+  }
+
+  // Get all real jobs in range
+  const allDeclined = window._lastDeclinedJobs || [];
+  const inRange = j => {
+    const ref = j.booking_date || j.created_at || '';
+    return ref >= cutoff;
+  };
+
+  const realJobs = allJobs.filter(j => !diaryExclude.includes(j.source));
+  const rangeJobs = realJobs.filter(inRange);
+  const rangeDeclined = allDeclined.filter(j => !diaryExclude.includes(j.source) && inRange(j));
+
+  // ── CLOSE RATE ────────────────────────────────────────────
+  // All quotes (pending + quoted + booked + completed + declined)
+  const totalLeads = rangeJobs.length + rangeDeclined.length;
+  const converted = rangeJobs.filter(j => ['booked','completed'].includes(j.status)).length;
+  const closeRate = totalLeads > 0 ? Math.round((converted/totalLeads)*100) : 0;
+
+  // ── SHOW RATE ─────────────────────────────────────────────
+  const booked = rangeJobs.filter(j => ['booked','completed'].includes(j.status));
+  const completedJobs = rangeJobs.filter(j => j.status === 'completed');
+  const showRate = booked.length > 0 ? Math.round((completedJobs.length/booked.length)*100) : 0;
+
+  // ── CANCELLATION RATE ─────────────────────────────────────
+  // Only jobs that were booked then cancelled by customer
+  const cancelled = rangeDeclined.filter(j => j.decline_reason === 'Cancelled by customer' ||
+    (j.notes && j.notes.includes('Cancelled by customer')));
+  const cancelRate = booked.length > 0 ? Math.round((cancelled.length/booked.length)*100) : 0;
+
+  // ── CASH COLLECTION ───────────────────────────────────────
+  const invoiced = rangeJobs.filter(j => j.invoiced_at);
+  const paid = invoiced.filter(j => j.paid);
+  const cashRate = invoiced.length > 0 ? Math.round((paid.length/invoiced.length)*100) : 0;
+
+  // ── REVENUE ───────────────────────────────────────────────
+  const totalRev = completedJobs.reduce((s,j) => s + getPrice(j), 0);
+  const avgJobVal = completedJobs.length > 0 ? Math.round(totalRev/completedJobs.length) : 0;
+  const paidRev = paid.reduce((s,j) => s + getPrice(j), 0);
+  const outstandingRev = invoiced.filter(j=>!j.paid).reduce((s,j) => s + getPrice(j), 0);
+
+  // ── CONTACT RATE ──────────────────────────────────────────
+  const contacted = rangeJobs.filter(j => j.customer_contacted || ['booked','completed'].includes(j.status));
+  const contactRate = rangeJobs.length > 0 ? Math.round((contacted.length/rangeJobs.length)*100) : 0;
+
+  const fmt = n => '£' + Math.round(n).toLocaleString('en-GB');
+  const rangeLabel = _analyticsRangeDays > 0 ? 'Last ' + _analyticsRangeDays + ' days' : 'All time';
+
+  function kpiCard(label, value, sub, col, detail) {
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;border-top:3px solid ${col}">
+      <div style="font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">${label}</div>
+      <div style="font-size:32px;font-weight:800;color:var(--txt);margin-bottom:2px">${value}</div>
+      <div style="font-size:12px;color:var(--muted)">${sub}</div>
+      ${detail ? `<div style="font-size:11px;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--border)">${detail}</div>` : ''}
+    </div>`;
+  }
+
+  function pctBar(pct, col) {
+    return `<div style="background:var(--bg);border-radius:99px;height:6px;margin-top:8px;overflow:hidden">
+      <div style="width:${pct}%;height:100%;background:${col};border-radius:99px"></div>
+    </div>`;
+  }
+
+  el.innerHTML = `
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">${rangeLabel} · ${totalLeads} total leads</div>
+
+    <!-- KPI Grid -->
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px">
+
+      ${kpiCard('Close rate',
+        closeRate+'%',
+        converted+' of '+totalLeads+' leads converted',
+        closeRate>=50?'#1D9E75':'#EF9F27',
+        pctBar(closeRate, closeRate>=50?'#1D9E75':'#EF9F27') +
+        '<div style="margin-top:4px">Quoted → Booked or Completed</div>'
+      )}
+
+      ${kpiCard('Show rate',
+        showRate+'%',
+        completedJobs.length+' of '+booked.length+' booked jobs completed',
+        showRate>=80?'#1D9E75':showRate>=60?'#EF9F27':'#E24B4A',
+        pctBar(showRate, showRate>=80?'#1D9E75':showRate>=60?'#EF9F27':'#E24B4A') +
+        '<div style="margin-top:4px">Booked → Completed</div>'
+      )}
+
+      ${kpiCard('Cancellation rate',
+        cancelRate+'%',
+        cancelled.length+' customer cancellations',
+        cancelRate<=10?'#1D9E75':cancelRate<=20?'#EF9F27':'#E24B4A',
+        pctBar(cancelRate, cancelRate<=10?'#1D9E75':cancelRate<=20?'#EF9F27':'#E24B4A') +
+        '<div style="margin-top:4px">Cancelled by customer after booking</div>'
+      )}
+
+      ${kpiCard('Cash collection',
+        cashRate+'%',
+        fmt(paidRev)+' collected of '+fmt(paidRev+outstandingRev)+' invoiced',
+        cashRate>=90?'#1D9E75':cashRate>=70?'#EF9F27':'#E24B4A',
+        pctBar(cashRate, cashRate>=90?'#1D9E75':cashRate>=70?'#EF9F27':'#E24B4A') +
+        '<div style="margin-top:4px">'+paid.length+' paid · '+invoiced.filter(j=>!j.paid).length+' outstanding</div>'
+      )}
+
+    </div>
+
+    <!-- Revenue row -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px">
+        <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Total revenue</div>
+        <div style="font-size:24px;font-weight:800;color:var(--txt)">${fmt(totalRev)}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${completedJobs.length} completed jobs</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px">
+        <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Avg job value</div>
+        <div style="font-size:24px;font-weight:800;color:var(--txt)">${fmt(avgJobVal)}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">per completed job</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px">
+        <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Outstanding</div>
+        <div style="font-size:24px;font-weight:800;color:${outstandingRev>0?'var(--amber)':'var(--teal)'}">${fmt(outstandingRev)}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${invoiced.filter(j=>!j.paid).length} unpaid invoices</div>
+      </div>
+    </div>
+
+    <!-- Decline breakdown -->
+    ${rangeDeclined.length ? `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Why jobs were lost (${rangeDeclined.length} total)</div>
+      ${Object.entries(rangeDeclined.reduce((acc,j) => {
+        const r = j.decline_reason||j.notes||'No reason given';
+        acc[r] = (acc[r]||0)+1; return acc;
+      },{})).sort((a,b)=>b[1]-a[1]).map(([reason,count]) =>
+        `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border)">
+          <div style="flex:1;font-size:12px;color:var(--txt)">${esc(reason)}</div>
+          <div style="font-size:13px;font-weight:700;color:var(--txt)">${count}</div>
+          <div style="width:80px;background:var(--bg);border-radius:99px;height:6px;overflow:hidden">
+            <div style="width:${Math.round(count/rangeDeclined.length*100)}%;height:100%;background:var(--red);border-radius:99px"></div>
+          </div>
+        </div>`
+      ).join('')}
+    </div>` : ''}
+  `;
+}
+
+// ── Mark as Paid ──────────────────────────────────────────────────────────────
+async function markAsPaid(id) {
+  const j = allJobs.find(x => x.id === id);
+  if (!j) return;
+  // Show a quick modal to confirm payment method
+  let existing = document.getElementById('markPaidModal');
+  if (existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.id = 'markPaidModal';
+  modal.className = 'modal-overlay show';
+  modal.innerHTML = `
+    <div class="modal-box" style="max-width:360px">
+      <div class="modal-hd">Mark as paid</div>
+      <div style="font-size:13px;font-weight:600;color:var(--txt);margin-bottom:12px">${esc(j.customer_name||'')} — ${esc(j.vehicle||'')}</div>
+      <span class="qlbl">Payment method</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px">
+        <button class="tech-pay-btn" onclick="selectPaidMethod(this,'card')">💳 Card</button>
+        <button class="tech-pay-btn" onclick="selectPaidMethod(this,'bacs')">🏦 BACS</button>
+        <button class="tech-pay-btn" onclick="selectPaidMethod(this,'cash')">💵 Cash</button>
+        <button class="tech-pay-btn" onclick="selectPaidMethod(this,'cheque')">📝 Cheque</button>
+      </div>
+      <input type="hidden" id="paidMethodVal" value="">
+      <div style="display:flex;gap:8px">
+        <button class="btn-approve" id="confirmPaidBtn" onclick="confirmMarkPaid(${id})" style="flex:1;padding:10px;background:var(--teal)" disabled>Confirm payment</button>
+        <button class="btn-secondary" onclick="document.getElementById('markPaidModal').remove()" style="flex:1;padding:10px">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
+
+  // Pre-select if payment method already set
+  if (j.payment_method) {
+    const btn = modal.querySelector(`[onclick*="${j.payment_method}"]`);
+    if (btn) { btn.classList.add('on'); document.getElementById('paidMethodVal').value = j.payment_method; document.getElementById('confirmPaidBtn').disabled = false; }
+  }
+}
+
+function selectPaidMethod(btn, method) {
+  document.querySelectorAll('#markPaidModal .tech-pay-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('paidMethodVal').value = method;
+  document.getElementById('confirmPaidBtn').disabled = false;
+}
+
+async function confirmMarkPaid(id) {
+  const method = document.getElementById('paidMethodVal').value;
+  const btn = document.getElementById('confirmPaidBtn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Saving...'; }
+  try {
+    await sbRaw('PATCH','jobs',{ paid: true, payment_method: method, paid_at: new Date().toISOString() }, `?id=eq.${id}`);
+    const j = allJobs.find(x => x.id === id);
+    if (j) { j.paid = true; j.payment_method = method; }
+    document.getElementById('markPaidModal')?.remove();
+    showToast('✓ Marked as paid — ' + method);
+    renderJobs();
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Confirm payment'; }
+    alert('Failed: ' + e.message);
   }
 }
 
