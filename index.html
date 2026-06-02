@@ -2827,11 +2827,29 @@ function renderDeclined() {
   if (!declinedJobs.length) { el.innerHTML = `<div class="empty-state" style="padding:20px">No declined jobs</div>`; return; }
 
   // ── Decline reason analytics bar ─────────────────────────────────────────
+  // Normalise decline reasons into standard categories
+  const DECLINE_CATEGORIES = [
+    { label: 'Not competitive on price', match: ['price','expensive','cheap','cost','quote','too much'] },
+    { label: 'No response from customer', match: ['no response','no reply','no answer','unresponsive','not respond','didnt respond','not get back','never got back'] },
+    { label: 'Customer went elsewhere', match: ['elsewhere','another','different','other garage','other company','went to','used someone'] },
+    { label: 'Not our type of work', match: ['not our','not suitable','not the right','wrong type','cant do','cannot do','outside'] },
+    { label: 'Too far away', match: ['far','distance','location','travel','too far','area'] },
+    { label: 'Cancelled by customer', match: ['cancelled by customer','customer cancel'] },
+  ];
+
+  function normaliseReason(raw) {
+    if (!raw) return 'Other';
+    const lower = raw.toLowerCase();
+    for (const cat of DECLINE_CATEGORIES) {
+      if (cat.match.some(m => lower.includes(m))) return cat.label;
+    }
+    return 'Other';
+  }
+
   const reasonCount = {};
   declinedJobs.forEach(j => {
-    const r = j.decline_reason || j.notes || 'No reason given';
-    // Normalise — strip any trailing notes added after reason
-    const key = r.split(' — ')[0].trim() || 'No reason given';
+    const raw = j.decline_reason || j.notes || '';
+    const key = normaliseReason(raw.split(' — ')[0].trim());
     reasonCount[key] = (reasonCount[key]||0) + 1;
   });
   const total = declinedJobs.length;
