@@ -2659,7 +2659,7 @@ function buildJobCard(j) {
           ${j.sms_reminder_sent?'<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">📱 Reminder sent</span>':''}
           ${j.sms_review_sent?'<span style="background:#dbeafe;color:#1e3a8a;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">⭐ Review sent</span>':''}
           ${j.sms_unread?'<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">💬 New reply</span>':''}
-          ${j.payment_method&&!j.paid_at&&j.invoiced_at?`<span style="background:#fef9c3;color:#713f12;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">⏳ ${j.payment_method.toUpperCase()} — awaiting receipt</span>`:''}
+          ${j.payment_method&&!j.paid_at&&j.invoiced_at?`<span style="background:#fef9c3;color:#713f12;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">⏳ ${j.payment_method.toUpperCase()} — awaiting payment</span>`:''}
           ${j.paid_at?`<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">✓ Paid — ${esc(j.payment_method||'')}</span>`:''}
           ${j.sms_inbox?`<div style="grid-column:1/-1;width:100%;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:7px 10px;margin-top:4px">
             <div style="font-size:10px;font-weight:700;color:#065f46;margin-bottom:4px">💬 SMS replies</div>
