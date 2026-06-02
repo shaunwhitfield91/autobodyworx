@@ -967,8 +967,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           </div>
           <div class="q-section-hd">Photos</div>
           <label class="upzone" for="photoInput" style="display:block;cursor:pointer">
-            <div class="upzone-lbl" id="upLbl">Tap to upload damage photos</div>
-            <div class="upzone-sub">Camera or gallery · multiple allowed · stay with job</div>
+            <div class="upzone-lbl" id="upLbl">Tap to add damage photos</div>
+            <div class="upzone-sub">📷 Take photos one at a time or select multiple from gallery · tap again to add more</div>
             <div class="up-prev" id="upPrev"></div>
             <input autocomplete="off" type="file" id="photoInput" accept="image/*" multiple
               style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"
@@ -1590,8 +1590,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <span class="qlbl">Add photos</span>
     <label class="upzone" for="editPhotoInput" style="display:block;cursor:pointer;padding:14px;margin-bottom:10px">
-      <div style="font-size:12px;color:var(--muted);font-weight:600" id="editUpLbl">Tap to add photos</div>
-      <div style="font-size:10px;color:var(--hint);margin-top:2px">Camera or gallery · added to job permanently</div>
+      <div style="font-size:12px;color:var(--muted);font-weight:600" id="editUpLbl">Tap to add photos — tap again to add more</div>
+      <div style="font-size:10px;color:var(--hint);margin-top:2px">📷 Camera or gallery · multiple ok · tap again to add more</div>
+      <div id="editPhotoPreview" style="display:flex;flex-wrap:wrap;margin-top:6px"></div>
       <input autocomplete="off" type="file" id="editPhotoInput" accept="image/*" multiple
         style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"
         onchange="handleEditPhotos(this)">
@@ -2658,6 +2659,8 @@ function buildJobCard(j) {
           ${j.sms_reminder_sent?'<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">📱 Reminder sent</span>':''}
           ${j.sms_review_sent?'<span style="background:#dbeafe;color:#1e3a8a;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">⭐ Review sent</span>':''}
           ${j.sms_unread?'<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">💬 New reply</span>':''}
+          ${j.payment_method&&!j.paid_at&&j.invoiced_at?`<span style="background:#fef9c3;color:#713f12;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">⏳ ${j.payment_method.toUpperCase()} — awaiting receipt</span>`:''}
+          ${j.paid_at?`<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px">✓ Paid — ${esc(j.payment_method||'')}</span>`:''}
           ${j.sms_inbox?`<div style="grid-column:1/-1;width:100%;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:7px 10px;margin-top:4px">
             <div style="font-size:10px;font-weight:700;color:#065f46;margin-bottom:4px">💬 SMS replies</div>
             <div style="font-size:12px;color:#14532d;white-space:pre-wrap">${esc(j.sms_inbox)}</div>
@@ -3644,11 +3647,16 @@ function handlePhotos(input) {
     };
     reader.readAsDataURL(f);
   });
+  // Reset so user can tap again to add more
+  input.value = '';
 }
 
 function renderPhotoPreview() {
   const prev = document.getElementById('upPrev');
-  document.getElementById('upLbl').textContent = selectedQuotePhotos.length + ' photo' + (selectedQuotePhotos.length!==1?'s':'') + ' ready';
+  const count = selectedQuotePhotos.length;
+  document.getElementById('upLbl').textContent = count > 0
+    ? count + ' photo' + (count!==1?'s':'') + ' ready — tap to add more'
+    : 'Tap to add damage photos';
   prev.innerHTML = selectedQuotePhotos.map((p,i) => `
     <div class="up-thumb">
       <img src="${p.dataUrl}" style="width:58px;height:58px;object-fit:cover;border-radius:var(--radius)">
@@ -4419,6 +4427,8 @@ function checkTechCanComplete(jobId) {
 async function handleTechPhotos(jobId, input) {
   const files = Array.from(input.files);
   if (!files.length) return;
+  // Reset input so they can tap again to add more photos
+  input.value = '';
   // Show thumbs immediately from local data while uploading
   const thumbs = document.getElementById('taf-' + jobId);
   files.forEach(f => {
@@ -4745,7 +4755,13 @@ function closeEditModal() {
 function handleEditPhotos(input) {
   const files = Array.from(input.files);
   _editPhotos = _editPhotos.concat(files);
-  document.getElementById('editUpLbl').textContent = _editPhotos.length + ' photo' + (_editPhotos.length !== 1 ? 's' : '') + ' ready to upload';
+  const count = _editPhotos.length;
+  const lbl = document.getElementById('editUpLbl');
+  if (lbl) lbl.textContent = count > 0
+    ? count + ' photo' + (count !== 1 ? 's' : '') + ' ready — tap to add more'
+    : 'Tap to add photos';
+  // Reset so user can tap again to add more
+  input.value = '';
 }
 
 async function saveEditJob() {
@@ -6988,8 +7004,8 @@ async function markAsPaid(id) {
   modal.id = 'markPaidModal';
   modal.className = 'modal-overlay show';
   modal.innerHTML = `
-    <div class="modal-box" style="max-width:360px">
-      <div class="modal-hd">Mark as paid</div>
+    <div class="modal-box" style="max-width:380px">
+      <div class="modal-hd">Record payment</div>
       <div style="font-size:13px;font-weight:600;color:var(--txt);margin-bottom:12px">${esc(j.customer_name||'')} — ${esc(j.vehicle||'')}</div>
       <span class="qlbl">Payment method</span>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px">
@@ -6999,8 +7015,18 @@ async function markAsPaid(id) {
         <button class="tech-pay-btn" onclick="selectPaidMethod(this,'cheque')">📝 Cheque</button>
       </div>
       <input type="hidden" id="paidMethodVal" value="">
+      <!-- Money received confirmation -->
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--radius);padding:10px 12px;margin-bottom:14px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+          <input type="checkbox" id="moneyReceivedChk" style="width:18px;height:18px;accent-color:var(--teal);cursor:pointer;flex-shrink:0">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#065f46">✓ Money received in account</div>
+            <div style="font-size:11px;color:#15803d;margin-top:1px">Only tick this when the payment has actually landed — not just sent</div>
+          </div>
+        </label>
+      </div>
       <div style="display:flex;gap:8px">
-        <button class="btn-approve" id="confirmPaidBtn" onclick="confirmMarkPaid(${id})" style="flex:1;padding:10px;background:var(--teal)" disabled>Confirm payment</button>
+        <button class="btn-approve" id="confirmPaidBtn" onclick="confirmMarkPaid(${id})" style="flex:1;padding:10px;background:var(--teal)" disabled>Save payment</button>
         <button class="btn-secondary" onclick="document.getElementById('markPaidModal').remove()" style="flex:1;padding:10px">Cancel</button>
       </div>
     </div>`;
@@ -7023,17 +7049,35 @@ function selectPaidMethod(btn, method) {
 
 async function confirmMarkPaid(id) {
   const method = document.getElementById('paidMethodVal').value;
+  const moneyReceived = document.getElementById('moneyReceivedChk')?.checked || false;
   const btn = document.getElementById('confirmPaidBtn');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Saving...'; }
   try {
-    await sbRaw('PATCH','jobs',{ payment_method: method, paid_at: new Date().toISOString() }, `?id=eq.${id}`);
+    // Only set paid_at if money has actually been received
+    const updates = {
+      payment_method: method,
+      payment_recorded_at: new Date().toISOString(), // always record when payment was logged
+    };
+    if (moneyReceived) {
+      updates.paid_at = new Date().toISOString(); // marks as fully paid
+    }
+    await sbRaw('PATCH','jobs', updates, `?id=eq.${id}`);
     const j = allJobs.find(x => x.id === id);
-    if (j) { j.paid_at = new Date().toISOString(); j.payment_method = method; }
+    if (j) {
+      j.payment_method = method;
+      j.payment_recorded_at = updates.payment_recorded_at;
+      if (moneyReceived) j.paid_at = updates.paid_at;
+    }
     document.getElementById('markPaidModal')?.remove();
-    showToast('✓ Marked as paid — ' + method);
+    if (moneyReceived) {
+      showToast('✓ Payment received — ' + method);
+    } else {
+      showToast('✓ Payment method recorded — awaiting receipt confirmation');
+    }
     renderJobs();
+    updateHomeStats();
   } catch(e) {
-    if (btn) { btn.disabled = false; btn.textContent = 'Confirm payment'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Save payment'; }
     alert('Failed: ' + e.message);
   }
 }
