@@ -6858,6 +6858,24 @@ function renderAnalytics() {
   const el = document.getElementById('analytics-content');
   if (!el) return;
 
+  // Normalise decline reasons
+  const DECLINE_CATS = [
+    { label: 'Not competitive on price', match: ['price','expensive','cheap','cost','quote','too much'] },
+    { label: 'No response from customer', match: ['no response','no reply','no answer','unresponsive','not respond','didnt respond','not get back','never got back'] },
+    { label: 'Customer went elsewhere', match: ['elsewhere','another','different','other garage','other company','went to','used someone'] },
+    { label: 'Not our type of work', match: ['not our','not suitable','not the right','wrong type','cant do','cannot do','outside'] },
+    { label: 'Too far away', match: ['far','distance','location','travel','too far','area'] },
+    { label: 'Cancelled by customer', match: ['cancelled by customer','customer cancel'] },
+  ];
+  function normReason(raw) {
+    if (!raw) return 'Other';
+    const lower = raw.toLowerCase();
+    for (const cat of DECLINE_CATS) {
+      if (cat.match.some(m => lower.includes(m))) return cat.label;
+    }
+    return 'Other';
+  }
+
   const now = new Date();
   const cutoff = _analyticsRangeDays > 0
     ? new Date(now.getTime() - _analyticsRangeDays * 86400000).toISOString().split('T')[0]
@@ -7034,7 +7052,8 @@ function renderAnalytics() {
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:16px">
       <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Why jobs were lost (${rangeDeclined.length} total)</div>
       ${Object.entries(rangeDeclined.reduce((acc,j) => {
-        const r = j.decline_reason||j.notes||'No reason given';
+        const raw = j.decline_reason||j.notes||'';
+        const r = normReason(raw.split(' — ')[0].trim());
         acc[r] = (acc[r]||0)+1; return acc;
       },{})).sort((a,b)=>b[1]-a[1]).map(([reason,count]) =>
         `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border)">
