@@ -2825,7 +2825,41 @@ function renderDeclined() {
   if (!el) return;
   document.getElementById('declinedCount').textContent = declinedJobs.length;
   if (!declinedJobs.length) { el.innerHTML = `<div class="empty-state" style="padding:20px">No declined jobs</div>`; return; }
-  el.innerHTML = declinedJobs.map(j => `
+
+  // ── Decline reason analytics bar ─────────────────────────────────────────
+  const reasonCount = {};
+  declinedJobs.forEach(j => {
+    const r = j.decline_reason || j.notes || 'No reason given';
+    // Normalise — strip any trailing notes added after reason
+    const key = r.split(' — ')[0].trim() || 'No reason given';
+    reasonCount[key] = (reasonCount[key]||0) + 1;
+  });
+  const total = declinedJobs.length;
+  const sorted = Object.entries(reasonCount).sort((a,b) => b[1]-a[1]);
+
+  const analyticsHtml = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Why jobs were lost — ${total} total</div>
+      ${sorted.map(([reason, count]) => {
+        const pct = Math.round((count/total)*100);
+        return `<div style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+            <span style="color:var(--txt);font-weight:500">${esc(reason)}</span>
+            <span style="color:var(--muted);font-weight:700">${count} <span style="font-weight:400">(${pct}%)</span></span>
+          </div>
+          <div style="background:var(--bg);border-radius:99px;height:6px;overflow:hidden">
+            <div style="width:${pct}%;height:100%;background:var(--red);border-radius:99px;opacity:.7"></div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  // ── Job cards with reason visible ────────────────────────────────────────
+  const cardsHtml = declinedJobs.map(j => {
+    const reason = j.decline_reason || j.notes || '';
+    const reasonDisplay = reason ? reason.split(' — ')[0].trim() : '';
+    const reasonNotes = reason.includes(' — ') ? reason.split(' — ').slice(1).join(' — ') : '';
+    return `
     <div class="jcard" style="border-left:4px solid var(--red);${j.customer_contacted?'opacity:.55':''}">
       <div class="jcard-top">
         <div class="jbar jbar-decl"></div>
@@ -2833,18 +2867,19 @@ function renderDeclined() {
           <div class="jcard-name">${esc(j.customer_name||'Unknown')}</div>
           <div class="jcard-meta">
             <span style="font-size:12px;color:var(--txt2)">${esc(j.vehicle||'—')}</span>
-            <span style="font-size:11px;color:${j.customer_contacted?'var(--teal)':'var(--red)'}">
-              ${j.decline_reason==='Cancelled by customer'
-                ? '✓ Cancelled by customer'
-                : j.customer_contacted?'✓ Customer notified':'⚠ Needs contact'}
-            </span>
           </div>
+          ${reasonDisplay ? `<div style="font-size:12px;font-weight:600;color:var(--red);margin-top:5px;background:#fef2f2;padding:4px 8px;border-radius:4px;display:inline-block">✗ ${esc(reasonDisplay)}</div>` : ''}
+          ${reasonNotes ? `<div style="font-size:11px;color:var(--muted);margin-top:3px;padding:0 2px">${esc(reasonNotes)}</div>` : ''}
           ${j.customer_address?`<div style="font-size:11px;color:var(--muted);margin-top:3px">${esc(j.customer_address)}</div>`:''}
-          ${j.notes?`<div style="font-size:11px;color:var(--amber-txt);margin-top:4px;background:var(--amber-bg);padding:4px 8px;border-radius:4px">📝 ${esc(j.notes)}</div>`:''}
         </div>
         <div class="jcard-right">
           <div class="jcard-price">${(()=>{const p=j.quote_price||'';return p?(p.startsWith('£')?esc(p):'£'+esc(p)):'—'})()}</div>
           <div class="jcard-date">${fmtDate(j.created_at?.split('T')[0])}</div>
+          <div style="font-size:10px;color:${j.customer_contacted?'var(--teal)':'var(--red)'}">
+            ${j.decline_reason==='Cancelled by customer'
+              ? '✓ Cancelled by customer'
+              : j.customer_contacted?'✓ Notified':'⚠ Needs contact'}
+          </div>
           ${j.customer_phone?`<a href="tel:${esc(j.customer_phone)}" style="font-size:11px;color:var(--blue)" onclick="event.stopPropagation()">📞 Call</a>`:''}
         </div>
       </div>
@@ -2854,7 +2889,10 @@ function renderDeclined() {
         <button class="btn-secondary" onclick="restoreJob(${j.id})">↩ Restore</button>
         <button class="btn-danger" onclick="permanentDelete(${j.id})">Delete</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+
+  el.innerHTML = analyticsHtml + cardsHtml;
 }
 
 async function markContacted(id) {
