@@ -3302,7 +3302,12 @@ function getJobsForDate(dateStr) {
   return diaryAllJobs.filter(j => {
     if (!j.booking_date) return false;
     const start = localDate(j.booking_date);
-    const days = j.duration_days || 1;
+    // Use duration_days if set, otherwise try to parse from duration text (e.g. "3 days")
+    let days = j.duration_days || 1;
+    if (days <= 1 && j.duration) {
+      const match = j.duration.match(/(\d+)\s*day/i);
+      if (match) days = parseInt(match[1]);
+    }
     if (days <= 1) return j.booking_date.startsWith(dateStr);
     const check = localDate(dateStr);
     const end = new Date(start);
@@ -3390,7 +3395,12 @@ function renderMonthView() {
         const tc = techClass(e.assigned_tech);
         const firstName = esc((e.customer_name||'Unknown').split(' ')[0]);
         const lastName = esc((e.customer_name||'').split(' ')[1] || '');
-        const days = e.duration_days || 1;
+        // Parse duration_days OR extract from duration text (e.g. "3 days")
+        let days = e.duration_days || 1;
+        if (days <= 1 && e.duration) {
+          const dm = e.duration.match(/(\d+)\s*day/i);
+          if (dm) days = parseInt(dm[1]);
+        }
         const durShort = days > 1 ? ` · ${days}d` : (e.duration ? ' · ' + esc(e.duration) : '');
         const locLabel = e.job_location === 'mobile' ? 'Mobile' : 'Workshop';
         const techLabel = e.assigned_tech || '';
@@ -5031,8 +5041,17 @@ function initPriceInputs() {
 let autoRefreshTimer = null;
 
 let _uploadInProgress = false; // Set true during any photo upload
+let _userActiveUntil = 0; // Timestamp — pause refresh for X ms after any tap/interaction
+
+// Track any user interaction — pause refresh for 15 seconds after each tap
+document.addEventListener('touchstart', () => { _userActiveUntil = Date.now() + 15000; }, { passive: true });
+document.addEventListener('mousedown',  () => { _userActiveUntil = Date.now() + 15000; }, { passive: true });
+document.addEventListener('keydown',    () => { _userActiveUntil = Date.now() + 15000; }, { passive: true });
+document.addEventListener('focus',      () => { _userActiveUntil = Date.now() + 15000; }, { passive: true, capture: true });
 
 function isUserTyping() {
+  // Pause if user has interacted within the last 15 seconds
+  if (Date.now() < _userActiveUntil) return true;
   const active = document.activeElement;
   if (!active) return false;
   const tag = active.tagName.toLowerCase();
@@ -5065,10 +5084,15 @@ async function manualRefresh() {
     setTimeout(() => { btn.style.transform = ''; btn.style.transition = ''; }, 500);
   }
   await Promise.all([loadJobs(), loadDiaryJobs()]);
-  // Re-render current active tab
+  // Re-render whichever tab is currently active
   const activePage = document.querySelector('.page.on');
-  if (activePage?.id === 'pg-diary') { renderDiary(); renderRevBar(); }
-  if (activePage?.id === 'pg-staff') { renderStaffPortal(); }
+  const id = activePage?.id;
+  if (id === 'pg-diary')     { renderDiary(); renderRevBar(); }
+  if (id === 'pg-staff')     { renderStaffPortal(); }
+  if (id === 'pg-analytics') { renderAnalytics(); }
+  if (id === 'pg-customers') { renderCustomers(); }
+  if (id === 'pg-home')      { renderHome(); updateRevTarget(); }
+  if (id === 'pg-jobs')      { renderJobs(); updateHomeStats(); }
   showToast('✓ Refreshed');
 }
 
