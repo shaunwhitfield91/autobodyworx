@@ -176,6 +176,16 @@ function fmtTime(t) {
   return `${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`;
 }
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function jobSpansDate(j, dateStr) {
+  if (!j.booking_date) return false;
+  if ((j.duration_days||1) <= 1) return j.booking_date === dateStr;
+  const start = new Date(j.booking_date + 'T12:00:00');
+  const check = new Date(dateStr + 'T12:00:00');
+  const end = new Date(start);
+  end.setDate(start.getDate() + (j.duration_days||1) - 1);
+  return check >= start && check <= end;
+}
+
 function belongs(assigned, col) {
   if (!assigned) return col==='S';
   const t = assigned.toLowerCase();
@@ -230,6 +240,7 @@ function buildCard(j) {
     <div class="${j.booking_time?'jtime':'jtime notset'}">${j.booking_time?fmtTime(j.booking_time):'Time TBC'}</div>
     <div class="jname${isDone?' done':''}">${esc(j.customer_name||'Unknown')}</div>
     <div class="jveh">${esc(j.vehicle||'—')}${j.panels?' · '+esc(j.panels):''}</div>
+    ${(j.duration||j.duration_days>1)?`<div style="font-size:11px;color:#e8c547;margin-top:2px;font-weight:600">⏱ ${j.duration_days>1?(j.duration_days+'-day job'):(j.duration||'')}</div>`:''}
     ${tags.length?`<div class="jtags">${tags.join('')}</div>`:''}
   </div>`;
 }
@@ -238,8 +249,8 @@ function buildCard(j) {
 function buildCol(tech, jobs, entries) {
   const today = dateStr(0), tmrw = dateStr(1);
   const sort = arr => arr.sort((a,b)=>(a.booking_time||'99:99').localeCompare(b.booking_time||'99:99'));
-  const todayJobs = sort(jobs.filter(j=>j.booking_date===today&&belongs(j.assigned_tech,tech.col)));
-  const tmrwJobs  = sort(jobs.filter(j=>j.booking_date===tmrw &&belongs(j.assigned_tech,tech.col)));
+  const todayJobs = sort(jobs.filter(j=>jobSpansDate(j,today)&&belongs(j.assigned_tech,tech.col)));
+  const tmrwJobs  = sort(jobs.filter(j=>jobSpansDate(j,tmrw) &&belongs(j.assigned_tech,tech.col)));
 
   const entry = entries.find(e=>e.tech_name===tech.name);
   const clockIn  = entry?.clock_in;
@@ -271,7 +282,7 @@ async function refresh() {
   try {
     const today = dateStr(0), tmrw = dateStr(1);
     const [jobs, entries] = await Promise.all([
-      sbGet('jobs', `select=id,customer_name,vehicle,panels,booking_date,booking_time,assigned_tech,job_location,status,cd_required,source&archived=eq.false&status=neq.declined&booking_date=gte.${today}&booking_date=lte.${tmrw}&order=booking_date.asc,booking_time.asc`),
+      sbGet('jobs', `select=id,customer_name,vehicle,panels,booking_date,booking_time,duration,duration_days,assigned_tech,job_location,status,cd_required,source&archived=eq.false&status=neq.declined&booking_date=gte.${new Date(new Date(today).getTime()-7*86400000).toISOString().split('T')[0]}&booking_date=lte.${tmrw}&order=booking_date.asc,booking_time.asc`),
       sbGet('time_entries', `date=eq.${today}&select=tech_name,clock_in,clock_out`)
     ]);
     document.getElementById('mainGrid').innerHTML = TECHS.map(t=>buildCol(t,jobs,entries)).join('');

@@ -3410,10 +3410,37 @@ function renderMonthView() {
         const isMobile = e.job_location === 'mobile';
         const evtClass = isDiaryEnt ? 'cal-evt-diary' : `cal-evt-${tc}${isDone?' cal-evt-done':''}`;
         const evtIcon = isDiaryEnt ? '📅 ' : isDone ? '✓ ' : isMobile ? '🚐 ' : '';
-        html += `<div class="cal-evt ${evtClass}"
+
+        // Multi-day span indicator
+        let spanStyle = '';
+        let spanLabel = '';
+        if (days > 1) {
+          const jobStart = localDate(e.booking_date);
+          const cellDate = localDate(ds);
+          const dayNum = Math.round((cellDate - jobStart) / 86400000) + 1;
+          const isFirst = dayNum === 1;
+          const isLast = dayNum === days;
+          // Style: extend pill to show continuation
+          spanStyle = isFirst
+            ? 'border-radius:4px 0 0 4px;margin-right:-2px;padding-right:4px'
+            : isLast
+            ? 'border-radius:0 4px 4px 0;margin-left:-2px;padding-left:4px'
+            : 'border-radius:0;margin-left:-2px;margin-right:-2px;padding:2px 2px';
+          spanLabel = isFirst ? ' ▶' : isLast ? '◀ ' : '══';
+          // On middle days just show continuation bar
+          if (!isFirst && !isLast) {
+            html += `<div class="cal-evt ${evtClass}" style="${spanStyle};font-size:9px;text-align:center;letter-spacing:1px"
+              onmouseenter="showDiaryTip(event,'${tipName}','${tipVeh}','${tipAddr}','${tipPrice}','${tipLoc}','${tipDur}','${tipCd}','${tipTech}')"
+              onmouseleave="hideDiaryTip()">── Day ${dayNum}/${days}</div>`;
+            shown++;
+            return;
+          }
+        }
+
+        html += `<div class="cal-evt ${evtClass}" style="${spanStyle}"
           onmouseenter="showDiaryTip(event,'${tipName}','${tipVeh}','${tipAddr}','${tipPrice}','${tipLoc}','${tipDur}','${tipCd}','${tipTech}')"
           onmouseleave="hideDiaryTip()"
-        ><div class="cal-dot" style="background:#9ca3af;display:${isDiaryEnt?'none':'inline-block'}"></div>${evtIcon}${firstName}${durShort}</div>`;
+        ><div class="cal-dot" style="background:#9ca3af;display:${isDiaryEnt?'none':'inline-block'}"></div>${evtIcon}${firstName}${days>1?' '+spanLabel:durShort}</div>`;
         shown++;
       });
       if (filteredEvts.length > 3) html += `<div class="cal-more">+${filteredEvts.length-3} more</div>`;
