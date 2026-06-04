@@ -1,130 +1,115 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=1920">
-<title>Auto Bodyworx — Workshop Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<title>Auto Bodyworx Workshop</title>
 <style>
-  :root {
-    --bg:#0a0a0f; --surface:#12121a; --surface2:#1a1a26; --border:#2a2a3a;
-    --accent:#e8c547; --blue:#4a9eff; --teal:#2dd4bf; --tony:#a78bfa;
-    --amber:#fb923c; --red:#f87171; --green:#4ade80; --txt:#f0f0f8; --muted:#6b6b8a; --dim:#3a3a52;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; }
-  html,body { width:100%; height:100%; background:var(--bg); font-family:'DM Sans',sans-serif; color:var(--txt); overflow:hidden; }
-
-  .header { display:flex; align-items:center; justify-content:space-between; padding:16px 40px; border-bottom:1px solid var(--border); background:var(--surface); }
-  .logo { font-family:'Bebas Neue',sans-serif; font-size:30px; letter-spacing:3px; color:var(--accent); }
-  .logo span { color:var(--txt); }
-  .time-big { font-family:'Bebas Neue',sans-serif; font-size:52px; letter-spacing:4px; color:var(--accent); line-height:1; text-align:center; }
-  .date-lbl { font-size:13px; color:var(--muted); text-align:center; margin-top:2px; letter-spacing:.5px; }
-  .refresh-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--green); margin-left:6px; animation:pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
-
-  .main { display:grid; grid-template-columns:1fr 1fr 1fr; height:calc(100vh - 101px); }
-  .tech-col { border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
-  .tech-col:last-child { border-right:none; }
-
-  .tech-header { padding:16px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:14px; flex-shrink:0; background:var(--surface); }
-  .tech-avatar { width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Bebas Neue',sans-serif; font-size:22px; flex-shrink:0; }
-  .tech-name { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:2px; line-height:1; }
-  .tech-clock { font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; margin-top:4px; display:inline-block; letter-spacing:.4px; }
-  .clk-in  { background:#16532d; color:#4ade80; }
-  .clk-out { background:#1c1c2e; color:var(--muted); }
-
-  .day-hd { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:2.5px; color:var(--muted); padding:8px 24px 6px; background:var(--surface2); border-bottom:1px solid var(--border); flex-shrink:0; }
-  .day-hd.tmrw { background:var(--surface); }
-
-  .jobs-scroll { overflow-y:auto; flex:1; }
-  .jobs-scroll::-webkit-scrollbar { width:2px; }
-  .jobs-scroll::-webkit-scrollbar-thumb { background:var(--dim); }
-
-  .jcard { padding:12px 24px 10px 27px; border-bottom:1px solid var(--border); position:relative; }
-  .jcard::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; }
-  .jcard.mobile::before   { background:var(--blue); }
-  .jcard.workshop::before { background:var(--amber); }
-  .jcard.done::before     { background:var(--green); }
-  .jcard.done             { opacity:.4; }
-  .jcard.overdue::before  { background:var(--red); }
-  .jcard.diary::before    { background:var(--dim); }
-  .jcard.multiday::before { background:var(--teal); }
-
-  .jtime { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:1px; color:var(--accent); }
-  .jtime.tbc { font-size:11px; color:var(--muted); font-family:'DM Sans',sans-serif; font-style:italic; letter-spacing:0; line-height:2; }
-  .jname { font-size:16px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .jname.done { text-decoration:line-through; color:var(--muted); }
-  .jveh { font-size:12px; color:var(--muted); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .jdur { font-size:11px; color:var(--accent); margin-top:3px; font-weight:600; }
-  .jtags { display:flex; gap:4px; margin-top:5px; flex-wrap:wrap; }
-  .tag { font-size:9px; font-weight:700; padding:2px 7px; border-radius:3px; text-transform:uppercase; letter-spacing:.5px; }
-  .tag-mob    { background:#1e3a5f; color:var(--blue); }
-  .tag-ws     { background:#3a2200; color:var(--amber); }
-  .tag-done   { background:#14532d; color:var(--green); }
-  .tag-late   { background:#3a1212; color:var(--red); }
-  .tag-cd     { background:#2a1a3a; color:var(--tony); }
-  .tag-diary  { background:#1a1a2e; color:var(--muted); }
-  .tag-multi  { background:#0d2a2a; color:var(--teal); }
-
-  .empty { padding:24px; font-size:13px; color:var(--muted); font-style:italic; }
-  .tmrw-wrap { border-top:2px solid var(--dim); flex-shrink:0; }
-  .tmrw-scroll { overflow-y:auto; max-height:210px; }
-
-  .err-banner { position:fixed; bottom:20px; right:20px; background:#3a1212; border:1px solid var(--red); color:var(--red); padding:10px 16px; border-radius:8px; font-size:13px; display:none; }
+body { margin:0; padding:0; background:#0a0a0f; color:#f0f0f8; font-family:Arial,sans-serif; overflow:hidden; height:100vh; }
+.header { display:flex; align-items:center; justify-content:space-between; padding:14px 36px; border-bottom:1px solid #2a2a3a; background:#12121a; }
+.logo { font-size:26px; font-weight:900; color:#e8c547; letter-spacing:3px; }
+.logo span { color:#f0f0f8; }
+.clock-wrap { text-align:center; }
+.time { font-size:52px; font-weight:900; color:#e8c547; letter-spacing:4px; line-height:1; }
+.datestr { font-size:13px; color:#6b6b8a; margin-top:3px; }
+.dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#4ade80; margin-left:6px; }
+.main { display:table; width:100%; height:calc(100vh - 97px); table-layout:fixed; }
+.col { display:table-cell; border-right:1px solid #2a2a3a; vertical-align:top; overflow:hidden; }
+.col:last-child { border-right:none; }
+.tech-hd { padding:14px 22px; border-bottom:1px solid #2a2a3a; background:#12121a; }
+.tech-name { font-size:26px; font-weight:900; letter-spacing:2px; line-height:1; }
+.tech-clk { font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; margin-top:4px; display:inline-block; }
+.clk-in { background:#16532d; color:#4ade80; }
+.clk-out { background:#1c1c2e; color:#6b6b8a; }
+.day-hd { font-size:9px; font-weight:700; letter-spacing:2px; color:#6b6b8a; padding:7px 22px 5px; background:#1a1a26; border-bottom:1px solid #2a2a3a; text-transform:uppercase; }
+.day-hd2 { background:#12121a; }
+.jobs { overflow-y:auto; }
+.tmrw { border-top:2px solid #3a3a52; }
+.tmrw .jobs { max-height:200px; overflow-y:auto; }
+.job { padding:11px 22px 9px 25px; border-bottom:1px solid #2a2a3a; position:relative; }
+.job-bar { position:absolute; left:0; top:0; bottom:0; width:3px; }
+.jtime { font-size:19px; font-weight:900; color:#e8c547; letter-spacing:1px; }
+.jtime-tbc { font-size:11px; color:#6b6b8a; font-style:italic; }
+.jname { font-size:15px; font-weight:700; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.jname-done { text-decoration:line-through; color:#6b6b8a; }
+.jveh { font-size:11px; color:#6b6b8a; margin-top:1px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.jdur { font-size:11px; color:#e8c547; font-weight:700; margin-top:3px; }
+.tags { margin-top:4px; }
+.tag { display:inline-block; font-size:9px; font-weight:700; padding:2px 6px; border-radius:3px; margin-right:3px; text-transform:uppercase; letter-spacing:.5px; }
+.tag-mob { background:#1e3a5f; color:#4a9eff; }
+.tag-ws  { background:#3a2200; color:#fb923c; }
+.tag-done{ background:#14532d; color:#4ade80; }
+.tag-late{ background:#3a1212; color:#f87171; }
+.tag-cd  { background:#2a1a3a; color:#a78bfa; }
+.tag-day { background:#0d2a2a; color:#2dd4bf; }
+.empty { padding:20px 22px; font-size:13px; color:#6b6b8a; font-style:italic; }
+.err { position:fixed; bottom:16px; right:16px; background:#3a1212; border:1px solid #f87171; color:#f87171; padding:10px 16px; border-radius:6px; font-size:13px; display:none; }
 </style>
 </head>
 <body>
 
 <div class="header">
   <div class="logo">Auto <span>Bodyworx</span></div>
-  <div>
-    <div class="time-big" id="timeLbl">--:--:--</div>
-    <div class="date-lbl" id="dateLbl"></div>
+  <div class="clock-wrap">
+    <div class="time" id="timeEl">--:--:--</div>
+    <div class="datestr" id="dateEl"></div>
   </div>
-  <div style="text-align:right">
-    <div style="font-size:12px;color:var(--muted)">Workshop Dashboard <span class="refresh-dot"></span></div>
-    <div style="font-size:11px;color:var(--muted);margin-top:4px" id="updLbl">Loading...</div>
-  </div>
-</div>
-
-<div class="main" id="mainGrid">
-  <div style="grid-column:1/-1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--muted)">
-    <div style="font-size:48px">⏳</div>
-    <div style="font-size:16px;letter-spacing:1px">Connecting to PanelPro...</div>
+  <div style="text-align:right;font-size:12px;color:#6b6b8a">
+    Workshop Dashboard<span class="dot"></span><br>
+    <span id="updEl" style="font-size:11px">Loading...</span>
   </div>
 </div>
 
-<div class="err-banner" id="errBanner"></div>
+<div class="main" id="main">
+  <div class="col" style="display:table-cell;text-align:center;vertical-align:middle;color:#6b6b8a;font-size:16px" colspan="3">
+    Connecting to PanelPro...
+  </div>
+</div>
+
+<div class="err" id="errEl"></div>
 
 <script>
-const SUPABASE_URL  = 'https://isxycoxqlummscxmdckj.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzeHljb3hxbHVtbXNjeG1kY2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTg1MTIsImV4cCI6MjA5MDg5NDUxMn0.QU_VJ-RvHa9gxOQgKG0_ywxrny4upxE5rFwG9cNMEjw';
-
-const TECHS = [
-  { name:'Shaun',   col:'S', color:'#4a9eff', bg:'#1e2d4a' },
-  { name:'Tony',    col:'T', color:'#a78bfa', bg:'#2d1f4a' },
-  { name:'Charles', col:'C', color:'#fb923c', bg:'#3a2010' },
+var TECHS = [
+  {name:'Shaun',   col:'S', color:'#4a9eff', bg:'#1e2d4a'},
+  {name:'Tony',    col:'T', color:'#a78bfa', bg:'#2d1f4a'},
+  {name:'Charles', col:'C', color:'#fb923c', bg:'#3a2010'}
 ];
-const DIARY_SRC = ['Holiday','Appointment','Van day','Diary entry','Bank Holiday'];
 
-function dateStr(offset=0) {
-  const d = new Date(); d.setDate(d.getDate()+offset);
-  return d.toISOString().split('T')[0];
+var DIARY = ['Holiday','Appointment','Van day','Diary entry','Bank Holiday'];
+
+function pad(n) { return n < 10 ? '0'+n : ''+n; }
+
+function dateStr(offset) {
+  var d = new Date();
+  d.setDate(d.getDate() + (offset || 0));
+  return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
 }
+
 function fmtDate(s) {
-  return new Date(s+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
+  if (!s) return '';
+  var d = new Date(s + 'T12:00:00');
+  var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return days[d.getDay()] + ' ' + d.getDate() + ' ' + months[d.getMonth()];
 }
+
 function fmtTime(t) {
   if (!t) return null;
-  const [h,m] = t.split(':').map(Number);
-  return `${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`;
+  var parts = t.split(':');
+  var h = parseInt(parts[0]);
+  var m = parts[1];
+  var s = h >= 12 ? 'PM' : 'AM';
+  var h12 = h % 12 || 12;
+  return h12 + ':' + m + ' ' + s;
 }
-function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function esc(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
 
 function parseDays(j) {
-  let days = j.duration_days || 1;
+  var days = j.duration_days || 1;
   if (days <= 1 && j.duration) {
-    const m = j.duration.match(/(\d+)\s*day/i);
+    var m = j.duration.match(/(\d+)\s*day/i);
     if (m) days = parseInt(m[1]);
   }
   return days;
@@ -132,131 +117,169 @@ function parseDays(j) {
 
 function jobSpansDate(j, ds) {
   if (!j.booking_date) return false;
-  const days = parseDays(j);
+  var days = parseDays(j);
   if (days <= 1) return j.booking_date === ds;
-  const start = new Date(j.booking_date + 'T12:00:00');
-  const check = new Date(ds + 'T12:00:00');
-  const end   = new Date(start); end.setDate(start.getDate() + days - 1);
+  var start = new Date(j.booking_date + 'T12:00:00').getTime();
+  var check = new Date(ds + 'T12:00:00').getTime();
+  var end = start + (days - 1) * 86400000;
   return check >= start && check <= end;
 }
 
 function belongs(assigned, col) {
-  if (!assigned) return col==='S';
-  const t = assigned.toLowerCase();
-  if (t.includes('both')) return true;
-  if (col==='S') return t.includes('shaun') || (!t.includes('tony') && !t.includes('charles'));
-  if (col==='T') return t.includes('tony');
-  if (col==='C') return t.includes('charles');
+  if (!assigned) return col === 'S';
+  var t = assigned.toLowerCase();
+  if (t.indexOf('both') > -1) return true;
+  if (col === 'S') return t.indexOf('shaun') > -1 || (t.indexOf('tony') === -1 && t.indexOf('charles') === -1);
+  if (col === 'T') return t.indexOf('tony') > -1;
+  if (col === 'C') return t.indexOf('charles') > -1;
   return false;
 }
 
-// Data fetched via /.netlify/functions/dashboard-data
+function buildCard(j, ds) {
+  var today = dateStr(0);
+  var isDone = j.status === 'completed';
+  var isDiary = DIARY.indexOf(j.source) > -1;
+  var isMobile = j.job_location === 'mobile';
+  var days = parseDays(j);
+  var isMulti = days > 1;
+  var now = new Date();
+  var nowTime = pad(now.getHours()) + ':' + pad(now.getMinutes());
+  var isOverdue = j.status === 'booked' && ds === today && j.booking_time && j.booking_time < nowTime;
 
-function buildCard(j, dateForCard) {
-  const today    = dateStr(0);
-  const isDone   = j.status === 'completed';
-  const isDiary  = DIARY_SRC.includes(j.source);
-  const isMobile = j.job_location === 'mobile';
-  const days     = parseDays(j);
-  const isMulti  = days > 1;
-  const now      = new Date().toTimeString().slice(0,5);
-  const isOverdue = j.status==='booked' && dateForCard===today && j.booking_time && j.booking_time < now;
+  var barColor = '#fb923c';
+  if (isDone) barColor = '#4ade80';
+  else if (isOverdue) barColor = '#f87171';
+  else if (isMulti) barColor = '#2dd4bf';
+  else if (isDiary) barColor = '#3a3a52';
+  else if (isMobile) barColor = '#4a9eff';
 
-  let cls = 'jcard';
-  if (isDone)      cls += ' done';
-  else if (isOverdue) cls += ' overdue';
-  else if (isDiary)   cls += ' diary';
-  else if (isMulti)   cls += ' multiday';
-  else if (isMobile)  cls += ' mobile';
-  else                cls += ' workshop';
+  var nameClass = isDone ? 'jname jname-done' : 'jname';
+  var timeHtml = j.booking_time
+    ? '<div class="jtime">' + fmtTime(j.booking_time) + '</div>'
+    : '<div class="jtime-tbc">Time TBC</div>';
 
-  // Day X of Y for multi-day
-  let dayBadge = '';
+  var dur = '';
   if (isMulti) {
-    const start   = new Date(j.booking_date + 'T12:00:00');
-    const check   = new Date(dateForCard + 'T12:00:00');
-    const dayNum  = Math.round((check - start) / 86400000) + 1;
-    dayBadge = `<span class="tag tag-multi">Day ${dayNum}/${days}</span>`;
+    var startMs = new Date(j.booking_date + 'T12:00:00').getTime();
+    var checkMs = new Date(ds + 'T12:00:00').getTime();
+    var dayNum = Math.round((checkMs - startMs) / 86400000) + 1;
+    dur = '<div class="jdur">Day ' + dayNum + ' of ' + days + '</div>';
+  } else if (j.duration) {
+    dur = '<div class="jdur">&#9201; ' + esc(j.duration) + '</div>';
   }
 
-  const tags = [];
-  if (isDone)      tags.push('<span class="tag tag-done">✓ Complete</span>');
-  if (isOverdue)   tags.push('<span class="tag tag-late">⚠ Overdue</span>');
-  if (!isDiary && !isMulti && !isDone && !isOverdue)
-    tags.push(isMobile ? '<span class="tag tag-mob">🚐 Mobile</span>' : '<span class="tag tag-ws">Workshop</span>');
-  if (j.cd_required) tags.push('<span class="tag tag-cd">C&D</span>');
-  if (isDiary) tags.push(`<span class="tag tag-diary">${esc(j.source)}</span>`);
-  if (dayBadge) tags.push(dayBadge);
+  var tags = '';
+  if (isDone) tags += '<span class="tag tag-done">Complete</span>';
+  if (isOverdue) tags += '<span class="tag tag-late">Overdue</span>';
+  if (!isDiary && !isDone && !isOverdue && !isMulti) {
+    tags += isMobile
+      ? '<span class="tag tag-mob">Mobile</span>'
+      : '<span class="tag tag-ws">Workshop</span>';
+  }
+  if (j.cd_required) tags += '<span class="tag tag-cd">C&amp;D</span>';
+  if (isMulti && !isDone) tags += '<span class="tag tag-day">' + days + '-day job</span>';
 
-  const durText = isMulti ? `${days}-day job` : (j.duration || '');
+  return '<div class="job">'
+    + '<div class="job-bar" style="background:' + barColor + '"></div>'
+    + timeHtml
+    + '<div class="' + nameClass + '">' + esc(j.customer_name || 'Unknown') + '</div>'
+    + '<div class="jveh">' + esc(j.vehicle || '&mdash;') + (j.panels ? ' &middot; ' + esc(j.panels) : '') + '</div>'
+    + dur
+    + (tags ? '<div class="tags">' + tags + '</div>' : '')
+    + '</div>';
+}
 
-  return `<div class="${cls}">
-    <div class="${j.booking_time?'jtime':'jtime tbc'}">${j.booking_time?fmtTime(j.booking_time):'Time TBC'}</div>
-    <div class="jname${isDone?' done':''}">${esc(j.customer_name||'Unknown')}</div>
-    <div class="jveh">${esc(j.vehicle||'—')}${j.panels?' · '+esc(j.panels):''}</div>
-    ${durText?`<div class="jdur">⏱ ${esc(durText)}</div>`:''}
-    ${tags.length?`<div class="jtags">${tags.join('')}</div>`:''}
-  </div>`;
+function sortJobs(arr) {
+  return arr.slice().sort(function(a, b) {
+    var ta = a.booking_time || '99:99';
+    var tb = b.booking_time || '99:99';
+    return ta < tb ? -1 : ta > tb ? 1 : 0;
+  });
 }
 
 function buildCol(tech, jobs, entries, today, tmrw) {
-  const sort = arr => [...arr].sort((a,b)=>(a.booking_time||'99:99').localeCompare(b.booking_time||'99:99'));
-  const todayJobs = sort(jobs.filter(j => jobSpansDate(j,today) && belongs(j.assigned_tech,tech.col)));
-  const tmrwJobs  = sort(jobs.filter(j => jobSpansDate(j,tmrw)  && belongs(j.assigned_tech,tech.col)));
+  var todayJobs = sortJobs(jobs.filter(function(j) {
+    return jobSpansDate(j, today) && belongs(j.assigned_tech, tech.col);
+  }));
+  var tmrwJobs = sortJobs(jobs.filter(function(j) {
+    return jobSpansDate(j, tmrw) && belongs(j.assigned_tech, tech.col);
+  }));
 
-  const entry = entries.find(e => e.tech_name===tech.name);
-  const clkClass = entry?.clock_in && !entry?.clock_out ? 'clk-in' : 'clk-out';
-  const clkText  = entry?.clock_in && !entry?.clock_out
-    ? `🟢 Clocked in ${entry.clock_in}`
-    : entry?.clock_out ? `⚫ Out at ${entry.clock_out}` : '⚫ Not clocked in';
+  var entry = null;
+  for (var i = 0; i < entries.length; i++) {
+    if (entries[i].tech_name === tech.name) { entry = entries[i]; break; }
+  }
+  var clkClass = entry && entry.clock_in && !entry.clock_out ? 'tech-clk clk-in' : 'tech-clk clk-out';
+  var clkText = entry && entry.clock_in && !entry.clock_out
+    ? 'Clocked in ' + entry.clock_in
+    : entry && entry.clock_out ? 'Out at ' + entry.clock_out : 'Not clocked in';
 
-  return `<div class="tech-col">
-    <div class="tech-header">
-      <div class="tech-avatar" style="background:${tech.bg};color:${tech.color}">${tech.name[0]}</div>
-      <div>
-        <div class="tech-name" style="color:${tech.color}">${tech.name}</div>
-        <span class="tech-clock ${clkClass}">${clkText}</span>
-      </div>
-    </div>
-    <div class="day-hd">TODAY — ${fmtDate(today)}</div>
-    <div class="jobs-scroll">${todayJobs.length ? todayJobs.map(j=>buildCard(j,today)).join('') : '<div class="empty">Nothing booked today</div>'}</div>
-    <div class="tmrw-wrap">
-      <div class="day-hd tmrw">TOMORROW — ${fmtDate(tmrw)}</div>
-      <div class="tmrw-scroll">${tmrwJobs.length ? tmrwJobs.map(j=>buildCard(j,tmrw)).join('') : '<div class="empty">Nothing booked yet</div>'}</div>
-    </div>
-  </div>`;
+  var todayHtml = todayJobs.length
+    ? todayJobs.map(function(j){ return buildCard(j, today); }).join('')
+    : '<div class="empty">Nothing booked today</div>';
+
+  var tmrwHtml = tmrwJobs.length
+    ? tmrwJobs.map(function(j){ return buildCard(j, tmrw); }).join('')
+    : '<div class="empty">Nothing booked yet</div>';
+
+  var h = 'calc(100vh - 97px - 36px - 36px - 36px - 36px - 2px)';
+
+  return '<div class="col">'
+    + '<div class="tech-hd">'
+    + '<div class="tech-name" style="color:' + tech.color + '">' + tech.name + '</div>'
+    + '<span class="' + clkClass + '">' + clkText + '</span>'
+    + '</div>'
+    + '<div class="day-hd">TODAY &mdash; ' + fmtDate(today) + '</div>'
+    + '<div class="jobs" style="max-height:' + h + ';overflow-y:auto">' + todayHtml + '</div>'
+    + '<div class="tmrw">'
+    + '<div class="day-hd day-hd2">TOMORROW &mdash; ' + fmtDate(tmrw) + '</div>'
+    + '<div class="jobs" style="max-height:200px;overflow-y:auto">' + tmrwHtml + '</div>'
+    + '</div>'
+    + '</div>';
 }
 
 // Clock
 function tick() {
-  const now = new Date();
-  document.getElementById('timeLbl').textContent = now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  document.getElementById('dateLbl').textContent = now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  var now = new Date();
+  var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('timeEl').innerHTML = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+  document.getElementById('dateEl').innerHTML = days[now.getDay()] + ' ' + now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
 }
-setInterval(tick,1000); tick();
+setInterval(tick, 1000);
+tick();
 
+// Data fetch using old XMLHttpRequest
 function refresh() {
   var xhr = new XMLHttpRequest();
   xhr.open('GET', '/.netlify/functions/dashboard-data', true);
-  xhr.onload = function() {
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState !== 4) return;
     try {
-      if (xhr.status !== 200) throw new Error('Server error ' + xhr.status);
+      if (xhr.status !== 200) throw new Error('Error ' + xhr.status);
       var data = JSON.parse(xhr.responseText);
-      var jobs = data.jobs, entries = data.entries, today = data.today, tmrw = data.tmrw;
-      document.getElementById('mainGrid').innerHTML = TECHS.map(function(t){ return buildCol(t,jobs,entries,today,tmrw); }).join('');
-      document.getElementById('updLbl').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-      document.getElementById('errBanner').style.display = 'none';
+      var jobs = data.jobs || [];
+      var entries = data.entries || [];
+      var today = data.today || dateStr(0);
+      var tmrw = data.tmrw || dateStr(1);
+
+      var html = '';
+      for (var i = 0; i < TECHS.length; i++) {
+        html += buildCol(TECHS[i], jobs, entries, today, tmrw);
+      }
+      document.getElementById('main').innerHTML = html;
+
+      var now = new Date();
+      document.getElementById('updEl').innerHTML = 'Updated ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+      document.getElementById('errEl').style.display = 'none';
     } catch(e) {
-      console.error('Dashboard error:', e);
-      var b = document.getElementById('errBanner');
-      b.textContent = String.fromCharCode(9888) + ' ' + e.message;
-      b.style.display = 'block';
+      document.getElementById('errEl').innerHTML = 'Error: ' + e.message;
+      document.getElementById('errEl').style.display = 'block';
     }
   };
   xhr.onerror = function() {
-    var b = document.getElementById('errBanner');
-    b.textContent = String.fromCharCode(9888) + ' Connection failed';
-    b.style.display = 'block';
+    document.getElementById('errEl').innerHTML = 'Connection failed';
+    document.getElementById('errEl').style.display = 'block';
   };
   xhr.send();
 }
