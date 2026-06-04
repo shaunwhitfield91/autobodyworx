@@ -150,13 +150,7 @@ function belongs(assigned, col) {
   return false;
 }
 
-async function sbGet(path) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` }
-  });
-  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
-  return res.json();
-}
+// Data fetched via /.netlify/functions/dashboard-data
 
 function buildCard(j, dateForCard) {
   const today    = dateStr(0);
@@ -243,12 +237,10 @@ setInterval(tick,1000); tick();
 
 async function refresh() {
   try {
-    const today = dateStr(0), tmrw = dateStr(1);
-    const rangeStart = new Date(new Date(today).getTime()-7*86400000).toISOString().split('T')[0];
-    const [jobs, entries] = await Promise.all([
-      sbGet(`jobs?select=id,customer_name,vehicle,panels,booking_date,booking_time,duration,duration_days,assigned_tech,job_location,status,cd_required,source&archived=eq.false&status=neq.declined&booking_date=gte.${rangeStart}&booking_date=lte.${tmrw}&order=booking_date.asc,booking_time.asc`),
-      sbGet(`time_entries?date=eq.${today}&select=tech_name,clock_in,clock_out`)
-    ]);
+    // Call Netlify function — bypasses Supabase allowlist entirely
+    const res = await fetch('/.netlify/functions/dashboard-data');
+    if (!res.ok) throw new Error('Server error ' + res.status);
+    const { jobs, entries, today, tmrw } = await res.json();
     document.getElementById('mainGrid').innerHTML = TECHS.map(t => buildCol(t,jobs,entries,today,tmrw)).join('');
     document.getElementById('updLbl').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
     document.getElementById('errBanner').style.display = 'none';
