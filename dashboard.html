@@ -4,64 +4,94 @@
 <meta charset="UTF-8">
 <title>Auto Bodyworx Workshop</title>
 <style>
-body { margin:0; padding:0; background:#0a0a0f; color:#f0f0f8; font-family:Arial,sans-serif; overflow:hidden; height:100vh; }
-.header { display:flex; align-items:center; justify-content:space-between; padding:14px 36px; border-bottom:1px solid #2a2a3a; background:#12121a; }
-.logo { font-size:26px; font-weight:900; color:#e8c547; letter-spacing:3px; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0a0a0f; color:#f0f0f8; font-family:Arial,sans-serif; overflow:hidden; height:100vh; width:100vw; }
+
+/* ── HEADER ─────────────────────────────────────────────── */
+.hdr { display:table; width:100%; background:#12121a; border-bottom:2px solid #2a2a3a; height:90px; }
+.hdr-cell { display:table-cell; vertical-align:middle; padding:0 36px; }
+.hdr-center { text-align:center; }
+.logo { font-size:28px; font-weight:900; color:#e8c547; letter-spacing:4px; }
 .logo span { color:#f0f0f8; }
-.clock-wrap { text-align:center; }
-.time { font-size:52px; font-weight:900; color:#e8c547; letter-spacing:4px; line-height:1; }
-.datestr { font-size:13px; color:#6b6b8a; margin-top:3px; }
-.dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#4ade80; margin-left:6px; }
-.main { display:table; width:100%; height:calc(100vh - 97px); table-layout:fixed; }
-.col { display:table-cell; border-right:1px solid #2a2a3a; vertical-align:top; overflow:hidden; }
-.col:last-child { border-right:none; }
-.tech-hd { padding:14px 22px; border-bottom:1px solid #2a2a3a; background:#12121a; }
-.tech-name { font-size:26px; font-weight:900; letter-spacing:2px; line-height:1; }
-.tech-clk { font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px; margin-top:4px; display:inline-block; }
+.tagline { font-size:11px; color:#6b6b8a; letter-spacing:3px; margin-top:3px; text-transform:uppercase; }
+.time { font-size:56px; font-weight:900; color:#e8c547; letter-spacing:4px; line-height:1; }
+.datestr { font-size:14px; color:#9090b0; margin-top:4px; letter-spacing:1px; }
+.hdr-right { text-align:right; }
+.live-dot { display:inline-block; width:10px; height:10px; border-radius:50%; background:#4ade80; margin-right:6px; }
+.upd-lbl { font-size:12px; color:#6b6b8a; margin-top:6px; }
+
+/* ── BODY GRID ───────────────────────────────────────────── */
+/* 3 rows (day headers) × 3 cols (techs) */
+.body { display:table; width:100%; height:calc(100vh - 90px); table-layout:fixed; }
+
+/* ── DAY COLUMN (each tech) ─────────────────────────────── */
+.day-col { display:table-cell; border-right:1px solid #2a2a3a; vertical-align:top; }
+.day-col:last-child { border-right:none; }
+
+/* ── TECH HEADER ─────────────────────────────────────────── */
+.tech-hd { background:#14141e; border-bottom:2px solid #2a2a3a; padding:12px 20px; display:table; width:100%; }
+.tech-av { display:table-cell; vertical-align:middle; width:52px; }
+.tech-av-inner { width:48px; height:48px; border-radius:50%; display:table-cell; vertical-align:middle; text-align:center; font-size:22px; font-weight:900; }
+.tech-info { display:table-cell; vertical-align:middle; padding-left:12px; }
+.tech-name { font-size:26px; font-weight:900; letter-spacing:2px; line-height:1.1; }
+.tech-clk { font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; margin-top:5px; display:inline-block; }
 .clk-in { background:#16532d; color:#4ade80; }
 .clk-out { background:#1c1c2e; color:#6b6b8a; }
-.day-hd { font-size:9px; font-weight:700; letter-spacing:2px; color:#6b6b8a; padding:7px 22px 5px; background:#1a1a26; border-bottom:1px solid #2a2a3a; text-transform:uppercase; }
-.day-hd2 { background:#12121a; }
-.jobs { overflow-y:auto; }
-.tmrw { border-top:2px solid #3a3a52; }
-.tmrw .jobs { max-height:200px; overflow-y:auto; }
-.job { padding:11px 22px 9px 25px; border-bottom:1px solid #2a2a3a; position:relative; }
-.job-bar { position:absolute; left:0; top:0; bottom:0; width:3px; }
-.jtime { font-size:19px; font-weight:900; color:#e8c547; letter-spacing:1px; }
+
+/* ── DAY SECTIONS ────────────────────────────────────────── */
+.day-sections { display:table; width:100%; height:calc(100vh - 90px - 74px); table-layout:fixed; }
+.day-sec { display:table-cell; border-right:1px solid #1e1e2e; border-top:1px solid #2a2a3a; vertical-align:top; overflow:hidden; }
+.day-sec:last-child { border-right:none; }
+.day-hd-bar { background:#1a1a28; border-bottom:1px solid #2a2a3a; padding:6px 16px; }
+.day-hd-lbl { font-size:9px; font-weight:700; letter-spacing:2.5px; color:#6b6b8a; text-transform:uppercase; }
+.day-hd-date { font-size:13px; font-weight:700; color:#9090b0; margin-top:1px; }
+.day-hd-bar.today-bar { background:#1a2a1a; }
+.day-hd-bar.today-bar .day-hd-lbl { color:#4ade80; }
+.day-hd-bar.today-bar .day-hd-date { color:#4ade80; }
+
+.jobs-wrap { overflow-y:auto; height:calc(100% - 47px); }
+
+/* ── JOB CARD ────────────────────────────────────────────── */
+.job { padding:10px 16px 9px 19px; border-bottom:1px solid #1a1a28; position:relative; }
+.jbar { position:absolute; left:0; top:0; bottom:0; width:3px; }
+.jtime { font-size:18px; font-weight:900; color:#e8c547; letter-spacing:1px; line-height:1; }
 .jtime-tbc { font-size:11px; color:#6b6b8a; font-style:italic; }
-.jname { font-size:15px; font-weight:700; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.jname { font-size:15px; font-weight:700; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; margin-top:1px; }
 .jname-done { text-decoration:line-through; color:#6b6b8a; }
-.jveh { font-size:11px; color:#6b6b8a; margin-top:1px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.jveh { font-size:11px; color:#6b6b8a; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; margin-top:1px; }
 .jdur { font-size:11px; color:#e8c547; font-weight:700; margin-top:3px; }
 .tags { margin-top:4px; }
-.tag { display:inline-block; font-size:9px; font-weight:700; padding:2px 6px; border-radius:3px; margin-right:3px; text-transform:uppercase; letter-spacing:.5px; }
-.tag-mob { background:#1e3a5f; color:#4a9eff; }
-.tag-ws  { background:#3a2200; color:#fb923c; }
-.tag-done{ background:#14532d; color:#4ade80; }
-.tag-late{ background:#3a1212; color:#f87171; }
-.tag-cd  { background:#2a1a3a; color:#a78bfa; }
-.tag-day { background:#0d2a2a; color:#2dd4bf; }
-.empty { padding:20px 22px; font-size:13px; color:#6b6b8a; font-style:italic; }
-.err { position:fixed; bottom:16px; right:16px; background:#3a1212; border:1px solid #f87171; color:#f87171; padding:10px 16px; border-radius:6px; font-size:13px; display:none; }
+.tag { display:inline-block; font-size:9px; font-weight:700; padding:2px 6px; border-radius:3px; margin-right:3px; text-transform:uppercase; letter-spacing:.4px; }
+.t-mob  { background:#1e3a5f; color:#4a9eff; }
+.t-ws   { background:#3a2200; color:#fb923c; }
+.t-done { background:#14532d; color:#4ade80; }
+.t-late { background:#3a1212; color:#f87171; }
+.t-cd   { background:#2a1a3a; color:#a78bfa; }
+.t-mul  { background:#0d2a2a; color:#2dd4bf; }
+.empty  { padding:16px; font-size:12px; color:#3a3a52; font-style:italic; }
+.err { position:fixed; bottom:14px; right:14px; background:#3a1212; border:1px solid #f87171; color:#f87171; padding:8px 14px; border-radius:6px; font-size:12px; display:none; z-index:99; }
 </style>
 </head>
 <body>
 
-<div class="header">
-  <div class="logo">Auto <span>Bodyworx</span></div>
-  <div class="clock-wrap">
+<div class="hdr">
+  <div class="hdr-cell">
+    <div class="logo">Auto <span>Bodyworx</span></div>
+    <div class="tagline">Workshop Dashboard</div>
+  </div>
+  <div class="hdr-cell hdr-center">
     <div class="time" id="timeEl">--:--:--</div>
     <div class="datestr" id="dateEl"></div>
   </div>
-  <div style="text-align:right;font-size:12px;color:#6b6b8a">
-    Workshop Dashboard<span class="dot"></span><br>
-    <span id="updEl" style="font-size:11px">Loading...</span>
+  <div class="hdr-cell hdr-right">
+    <div><span class="live-dot"></span><span style="font-size:13px;color:#9090b0;font-weight:700">LIVE</span></div>
+    <div class="upd-lbl" id="updEl">Connecting...</div>
   </div>
 </div>
 
-<div class="main" id="main">
-  <div class="col" style="display:table-cell;text-align:center;vertical-align:middle;color:#6b6b8a;font-size:16px" colspan="3">
-    Connecting to PanelPro...
+<div class="body" id="bodyEl">
+  <div class="day-col" style="text-align:center;vertical-align:middle;color:#3a3a52;font-size:18px;display:table-cell" colspan="3">
+    Loading...
   </div>
 </div>
 
@@ -73,22 +103,30 @@ var TECHS = [
   {name:'Tony',    col:'T', color:'#a78bfa', bg:'#2d1f4a'},
   {name:'Charles', col:'C', color:'#fb923c', bg:'#3a2010'}
 ];
-
 var DIARY = ['Holiday','Appointment','Van day','Diary entry','Bank Holiday'];
+var DAYS_SHOWN = 3; // Today + 2 more days
 
-function pad(n) { return n < 10 ? '0'+n : ''+n; }
+function pad(n) { return n < 10 ? '0' + n : '' + n; }
 
 function dateStr(offset) {
   var d = new Date();
   d.setDate(d.getDate() + (offset || 0));
-  return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 }
 
-function fmtDate(s) {
+function fmtDateShort(s) {
+  if (!s) return '';
+  var d = new Date(s + 'T12:00:00');
+  var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return days[d.getDay()] + ' ' + d.getDate() + ' ' + months[d.getMonth()];
+}
+
+function fmtDateFull(s) {
   if (!s) return '';
   var d = new Date(s + 'T12:00:00');
   var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   return days[d.getDay()] + ' ' + d.getDate() + ' ' + months[d.getMonth()];
 }
 
@@ -97,13 +135,11 @@ function fmtTime(t) {
   var parts = t.split(':');
   var h = parseInt(parts[0]);
   var m = parts[1];
-  var s = h >= 12 ? 'PM' : 'AM';
-  var h12 = h % 12 || 12;
-  return h12 + ':' + m + ' ' + s;
+  return (h % 12 || 12) + ':' + m + ' ' + (h >= 12 ? 'PM' : 'AM');
 }
 
 function esc(s) {
-  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function parseDays(j) {
@@ -147,43 +183,39 @@ function buildCard(j, ds) {
   var isOverdue = j.status === 'booked' && ds === today && j.booking_time && j.booking_time < nowTime;
 
   var barColor = '#fb923c';
-  if (isDone) barColor = '#4ade80';
+  if (isDone)      barColor = '#4ade80';
   else if (isOverdue) barColor = '#f87171';
-  else if (isMulti) barColor = '#2dd4bf';
-  else if (isDiary) barColor = '#3a3a52';
-  else if (isMobile) barColor = '#4a9eff';
+  else if (isMulti)   barColor = '#2dd4bf';
+  else if (isDiary)   barColor = '#3a3a52';
+  else if (isMobile)  barColor = '#4a9eff';
 
-  var nameClass = isDone ? 'jname jname-done' : 'jname';
   var timeHtml = j.booking_time
     ? '<div class="jtime">' + fmtTime(j.booking_time) + '</div>'
     : '<div class="jtime-tbc">Time TBC</div>';
 
   var dur = '';
   if (isMulti) {
-    var startMs = new Date(j.booking_date + 'T12:00:00').getTime();
-    var checkMs = new Date(ds + 'T12:00:00').getTime();
-    var dayNum = Math.round((checkMs - startMs) / 86400000) + 1;
-    dur = '<div class="jdur">Day ' + dayNum + ' of ' + days + '</div>';
+    var dayNum = Math.round((new Date(ds + 'T12:00:00').getTime() - new Date(j.booking_date + 'T12:00:00').getTime()) / 86400000) + 1;
+    dur = '<div class="jdur">Day ' + dayNum + ' / ' + days + '</div>';
   } else if (j.duration) {
     dur = '<div class="jdur">&#9201; ' + esc(j.duration) + '</div>';
   }
 
   var tags = '';
-  if (isDone) tags += '<span class="tag tag-done">Complete</span>';
-  if (isOverdue) tags += '<span class="tag tag-late">Overdue</span>';
+  if (isDone)    tags += '<span class="tag t-done">&#10003; Done</span>';
+  if (isOverdue) tags += '<span class="tag t-late">&#9888; Late</span>';
   if (!isDiary && !isDone && !isOverdue && !isMulti) {
-    tags += isMobile
-      ? '<span class="tag tag-mob">Mobile</span>'
-      : '<span class="tag tag-ws">Workshop</span>';
+    tags += isMobile ? '<span class="tag t-mob">&#128658; Mobile</span>' : '<span class="tag t-ws">Workshop</span>';
   }
-  if (j.cd_required) tags += '<span class="tag tag-cd">C&amp;D</span>';
-  if (isMulti && !isDone) tags += '<span class="tag tag-day">' + days + '-day job</span>';
+  if (j.cd_required) tags += '<span class="tag t-cd">C&amp;D</span>';
+  if (isMulti && !isDone) tags += '<span class="tag t-mul">' + days + '-day</span>';
 
+  var nameClass = isDone ? 'jname jname-done' : 'jname';
   return '<div class="job">'
-    + '<div class="job-bar" style="background:' + barColor + '"></div>'
+    + '<div class="jbar" style="background:' + barColor + '"></div>'
     + timeHtml
     + '<div class="' + nameClass + '">' + esc(j.customer_name || 'Unknown') + '</div>'
-    + '<div class="jveh">' + esc(j.vehicle || '&mdash;') + (j.panels ? ' &middot; ' + esc(j.panels) : '') + '</div>'
+    + '<div class="jveh">' + esc(j.vehicle || '') + (j.panels ? ' &middot; ' + esc(j.panels) : '') + '</div>'
     + dur
     + (tags ? '<div class="tags">' + tags + '</div>' : '')
     + '</div>';
@@ -197,43 +229,51 @@ function sortJobs(arr) {
   });
 }
 
-function buildCol(tech, jobs, entries, today, tmrw) {
-  var todayJobs = sortJobs(jobs.filter(function(j) {
-    return jobSpansDate(j, today) && belongs(j.assigned_tech, tech.col);
-  }));
-  var tmrwJobs = sortJobs(jobs.filter(function(j) {
-    return jobSpansDate(j, tmrw) && belongs(j.assigned_tech, tech.col);
+function buildDaySection(j_all, ds, isToday, tech) {
+  var jobs = sortJobs(j_all.filter(function(j) {
+    return jobSpansDate(j, ds) && belongs(j.assigned_tech, tech.col);
   }));
 
+  var hdrClass = isToday ? 'day-hd-bar today-bar' : 'day-hd-bar';
+  var lbl = isToday ? 'TODAY' : (ds === dateStr(1) ? 'TOMORROW' : 'IN 2 DAYS');
+
+  var jobsHtml = jobs.length
+    ? jobs.map(function(j) { return buildCard(j, ds); }).join('')
+    : '<div class="empty">Nothing booked</div>';
+
+  return '<div class="day-sec">'
+    + '<div class="' + hdrClass + '">'
+    + '<div class="day-hd-lbl">' + lbl + '</div>'
+    + '<div class="day-hd-date">' + fmtDateShort(ds) + '</div>'
+    + '</div>'
+    + '<div class="jobs-wrap">' + jobsHtml + '</div>'
+    + '</div>';
+}
+
+function buildTechCol(jobs, entries, tech) {
   var entry = null;
   for (var i = 0; i < entries.length; i++) {
     if (entries[i].tech_name === tech.name) { entry = entries[i]; break; }
   }
   var clkClass = entry && entry.clock_in && !entry.clock_out ? 'tech-clk clk-in' : 'tech-clk clk-out';
   var clkText = entry && entry.clock_in && !entry.clock_out
-    ? 'Clocked in ' + entry.clock_in
-    : entry && entry.clock_out ? 'Out at ' + entry.clock_out : 'Not clocked in';
+    ? '&#9679; In since ' + entry.clock_in
+    : entry && entry.clock_out ? '&#9679; Out ' + entry.clock_out : '&#9675; Not clocked in';
 
-  var todayHtml = todayJobs.length
-    ? todayJobs.map(function(j){ return buildCard(j, today); }).join('')
-    : '<div class="empty">Nothing booked today</div>';
+  var daySections = '';
+  for (var d = 0; d < DAYS_SHOWN; d++) {
+    var ds = dateStr(d);
+    daySections += buildDaySection(jobs, ds, d === 0, tech);
+  }
 
-  var tmrwHtml = tmrwJobs.length
-    ? tmrwJobs.map(function(j){ return buildCard(j, tmrw); }).join('')
-    : '<div class="empty">Nothing booked yet</div>';
-
-  var h = 'calc(100vh - 97px - 36px - 36px - 36px - 36px - 2px)';
-
-  return '<div class="col">'
+  return '<div class="day-col">'
     + '<div class="tech-hd">'
-    + '<div class="tech-name" style="color:' + tech.color + '">' + tech.name + '</div>'
-    + '<span class="' + clkClass + '">' + clkText + '</span>'
+    + '<div class="tech-av"><div class="tech-av-inner" style="background:' + tech.bg + ';color:' + tech.color + '">' + tech.name[0] + '</div></div>'
+    + '<div class="tech-info"><div class="tech-name" style="color:' + tech.color + '">' + tech.name + '</div>'
+    + '<span class="' + clkClass + '">' + clkText + '</span></div>'
     + '</div>'
-    + '<div class="day-hd">TODAY &mdash; ' + fmtDate(today) + '</div>'
-    + '<div class="jobs" style="max-height:' + h + ';overflow-y:auto">' + todayHtml + '</div>'
-    + '<div class="tmrw">'
-    + '<div class="day-hd day-hd2">TOMORROW &mdash; ' + fmtDate(tmrw) + '</div>'
-    + '<div class="jobs" style="max-height:200px;overflow-y:auto">' + tmrwHtml + '</div>'
+    + '<div class="day-sections" style="display:table;width:100%;table-layout:fixed;height:calc(100vh - 90px - 74px)">'
+    + daySections
     + '</div>'
     + '</div>';
 }
@@ -241,34 +281,30 @@ function buildCol(tech, jobs, entries, today, tmrw) {
 // Clock
 function tick() {
   var now = new Date();
-  var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   document.getElementById('timeEl').innerHTML = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
-  document.getElementById('dateEl').innerHTML = days[now.getDay()] + ' ' + now.getDate() + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
+  document.getElementById('dateEl').innerHTML = DAYS[now.getDay()] + ' ' + now.getDate() + ' ' + MONTHS[now.getMonth()] + ' ' + now.getFullYear();
 }
 setInterval(tick, 1000);
 tick();
 
-// Data fetch using old XMLHttpRequest
+// Fetch
 function refresh() {
   var xhr = new XMLHttpRequest();
   xhr.open('GET', '/.netlify/functions/dashboard-data', true);
   xhr.onreadystatechange = function() {
     if (xhr.readyState !== 4) return;
     try {
-      if (xhr.status !== 200) throw new Error('Error ' + xhr.status);
+      if (xhr.status !== 200) throw new Error('Server error ' + xhr.status);
       var data = JSON.parse(xhr.responseText);
       var jobs = data.jobs || [];
       var entries = data.entries || [];
-      var today = data.today || dateStr(0);
-      var tmrw = data.tmrw || dateStr(1);
-
       var html = '';
       for (var i = 0; i < TECHS.length; i++) {
-        html += buildCol(TECHS[i], jobs, entries, today, tmrw);
+        html += buildTechCol(jobs, entries, TECHS[i]);
       }
-      document.getElementById('main').innerHTML = html;
-
+      document.getElementById('bodyEl').innerHTML = html;
       var now = new Date();
       document.getElementById('updEl').innerHTML = 'Updated ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
       document.getElementById('errEl').style.display = 'none';
