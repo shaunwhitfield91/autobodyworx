@@ -21,7 +21,7 @@ exports.handler = async (event) => {
 
   try {
     const [jobsRes, entriesRes] = await Promise.all([
-      fetch(`${SUPABASE_URL}/rest/v1/jobs?select=id,customer_name,vehicle,panels,booking_date,booking_time,duration,duration_days,assigned_tech,job_location,status,cd_required,source&archived=eq.false&status=neq.declined&booking_date=gte.${rangeStart}&booking_date=lte.${dayAfter}&order=booking_date.asc,booking_time.asc`, { headers }),
+      fetch(`${SUPABASE_URL}/rest/v1/jobs?select=id,customer_name,vehicle,panels,notes,booking_date,booking_time,duration,duration_days,assigned_tech,job_location,status,cd_required,source&archived=eq.false&status=neq.declined&booking_date=gte.${rangeStart}&booking_date=lte.${dayAfter}&order=booking_date.asc,booking_time.asc`, { headers }),
       fetch(`${SUPABASE_URL}/rest/v1/time_entries?date=eq.${today}&select=tech_name,clock_in,clock_out`, { headers })
     ]);
 
