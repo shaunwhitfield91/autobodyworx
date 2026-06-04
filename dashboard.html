@@ -7,118 +7,98 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0a0f;
-    --surface: #12121a;
-    --surface2: #1a1a26;
-    --border: #2a2a3a;
-    --accent: #e8c547;
-    --blue: #4a9eff;
-    --teal: #2dd4bf;
-    --tony: #a78bfa;
-    --amber: #fb923c;
-    --red: #f87171;
-    --green: #4ade80;
-    --txt: #f0f0f8;
-    --muted: #6b6b8a;
-    --dim: #3a3a52;
+    --bg:#0a0a0f; --surface:#12121a; --surface2:#1a1a26; --border:#2a2a3a;
+    --accent:#e8c547; --blue:#4a9eff; --teal:#2dd4bf; --tony:#a78bfa;
+    --amber:#fb923c; --red:#f87171; --green:#4ade80; --txt:#f0f0f8; --muted:#6b6b8a; --dim:#3a3a52;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
-  html, body { width:100%; height:100%; background:var(--bg); font-family:'DM Sans',sans-serif; color:var(--txt); overflow:hidden; }
+  html,body { width:100%; height:100%; background:var(--bg); font-family:'DM Sans',sans-serif; color:var(--txt); overflow:hidden; }
 
-  /* LOGIN */
-  .login-wrap { display:flex; align-items:center; justify-content:center; height:100vh; flex-direction:column; gap:16px; }
-  .login-box { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:40px; width:360px; text-align:center; }
-  .login-title { font-family:'Bebas Neue',sans-serif; font-size:36px; letter-spacing:3px; color:var(--accent); margin-bottom:6px; }
-  .login-sub { font-size:13px; color:var(--muted); margin-bottom:24px; }
-  .linp { width:100%; padding:12px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--txt); font-size:14px; font-family:'DM Sans',sans-serif; margin-bottom:10px; }
-  .linp:focus { outline:none; border-color:var(--accent); }
-  .lbtn { width:100%; padding:12px; background:var(--accent); color:#0a0a0f; border:none; border-radius:8px; font-size:15px; font-weight:700; font-family:'Bebas Neue',sans-serif; letter-spacing:2px; cursor:pointer; }
-  .lerr { color:var(--red); font-size:12px; margin-top:8px; min-height:18px; }
-
-  /* HEADER */
   .header { display:flex; align-items:center; justify-content:space-between; padding:16px 40px; border-bottom:1px solid var(--border); background:var(--surface); }
-  .logo { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:3px; color:var(--accent); }
+  .logo { font-family:'Bebas Neue',sans-serif; font-size:30px; letter-spacing:3px; color:var(--accent); }
   .logo span { color:var(--txt); }
-  .time-big { font-family:'Bebas Neue',sans-serif; font-size:48px; letter-spacing:4px; color:var(--accent); line-height:1; }
+  .time-big { font-family:'Bebas Neue',sans-serif; font-size:52px; letter-spacing:4px; color:var(--accent); line-height:1; text-align:center; }
   .date-lbl { font-size:13px; color:var(--muted); text-align:center; margin-top:2px; letter-spacing:.5px; }
   .refresh-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--green); margin-left:6px; animation:pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.3} }
 
-  /* MAIN */
-  .main { display:grid; grid-template-columns:1fr 1fr 1fr; height:calc(100vh - 95px); }
+  .main { display:grid; grid-template-columns:1fr 1fr 1fr; height:calc(100vh - 101px); }
   .tech-col { border-right:1px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
   .tech-col:last-child { border-right:none; }
-  .tech-header { padding:16px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; flex-shrink:0; background:var(--surface); }
-  .tech-avatar { width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Bebas Neue',sans-serif; font-size:20px; flex-shrink:0; }
-  .tech-name { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:2px; line-height:1; }
-  .tech-clock { font-size:11px; font-weight:600; padding:3px 8px; border-radius:20px; margin-top:3px; display:inline-block; }
-  .in { background:#16532d; color:#4ade80; }
-  .out { background:#1c1c2e; color:var(--muted); }
-  .day-hd { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:2.5px; color:var(--muted); padding:8px 24px 5px; background:var(--surface2); border-bottom:1px solid var(--border); flex-shrink:0; }
+
+  .tech-header { padding:16px 24px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:14px; flex-shrink:0; background:var(--surface); }
+  .tech-avatar { width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Bebas Neue',sans-serif; font-size:22px; flex-shrink:0; }
+  .tech-name { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:2px; line-height:1; }
+  .tech-clock { font-size:11px; font-weight:600; padding:3px 10px; border-radius:20px; margin-top:4px; display:inline-block; letter-spacing:.4px; }
+  .clk-in  { background:#16532d; color:#4ade80; }
+  .clk-out { background:#1c1c2e; color:var(--muted); }
+
+  .day-hd { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:2.5px; color:var(--muted); padding:8px 24px 6px; background:var(--surface2); border-bottom:1px solid var(--border); flex-shrink:0; }
   .day-hd.tmrw { background:var(--surface); }
+
   .jobs-scroll { overflow-y:auto; flex:1; }
   .jobs-scroll::-webkit-scrollbar { width:2px; }
   .jobs-scroll::-webkit-scrollbar-thumb { background:var(--dim); }
-  .jcard { padding:11px 24px; border-bottom:1px solid var(--border); position:relative; padding-left:28px; }
+
+  .jcard { padding:12px 24px 10px 27px; border-bottom:1px solid var(--border); position:relative; }
   .jcard::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; }
-  .jcard.mobile::before { background:var(--blue); }
+  .jcard.mobile::before   { background:var(--blue); }
   .jcard.workshop::before { background:var(--amber); }
-  .jcard.done::before { background:var(--green); }
-  .jcard.done { opacity:.4; }
-  .jcard.overdue::before { background:var(--red); }
-  .jcard.diary::before { background:var(--dim); }
-  .jtime { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:1px; color:var(--accent); }
-  .jtime.notset { font-size:11px; color:var(--muted); font-family:'DM Sans',sans-serif; font-style:italic; letter-spacing:0; }
-  .jname { font-size:15px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .jcard.done::before     { background:var(--green); }
+  .jcard.done             { opacity:.4; }
+  .jcard.overdue::before  { background:var(--red); }
+  .jcard.diary::before    { background:var(--dim); }
+  .jcard.multiday::before { background:var(--teal); }
+
+  .jtime { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:1px; color:var(--accent); }
+  .jtime.tbc { font-size:11px; color:var(--muted); font-family:'DM Sans',sans-serif; font-style:italic; letter-spacing:0; line-height:2; }
+  .jname { font-size:16px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .jname.done { text-decoration:line-through; color:var(--muted); }
-  .jveh { font-size:11px; color:var(--muted); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .jtags { display:flex; gap:4px; margin-top:4px; flex-wrap:wrap; }
-  .tag { font-size:9px; font-weight:700; padding:1px 6px; border-radius:2px; text-transform:uppercase; letter-spacing:.5px; }
-  .tag-mob { background:#1e3a5f; color:var(--blue); }
-  .tag-ws { background:#3a2200; color:var(--amber); }
-  .tag-done { background:#14532d; color:var(--green); }
-  .tag-late { background:#3a1212; color:var(--red); }
-  .tag-cd { background:#2a1a3a; color:var(--tony); }
-  .tag-diary { background:#1a1a2e; color:var(--muted); }
-  .empty { padding:20px 24px; font-size:13px; color:var(--muted); font-style:italic; }
+  .jveh { font-size:12px; color:var(--muted); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .jdur { font-size:11px; color:var(--accent); margin-top:3px; font-weight:600; }
+  .jtags { display:flex; gap:4px; margin-top:5px; flex-wrap:wrap; }
+  .tag { font-size:9px; font-weight:700; padding:2px 7px; border-radius:3px; text-transform:uppercase; letter-spacing:.5px; }
+  .tag-mob    { background:#1e3a5f; color:var(--blue); }
+  .tag-ws     { background:#3a2200; color:var(--amber); }
+  .tag-done   { background:#14532d; color:var(--green); }
+  .tag-late   { background:#3a1212; color:var(--red); }
+  .tag-cd     { background:#2a1a3a; color:var(--tony); }
+  .tag-diary  { background:#1a1a2e; color:var(--muted); }
+  .tag-multi  { background:#0d2a2a; color:var(--teal); }
+
+  .empty { padding:24px; font-size:13px; color:var(--muted); font-style:italic; }
   .tmrw-wrap { border-top:2px solid var(--dim); flex-shrink:0; }
-  .tmrw-scroll { overflow-y:auto; max-height:220px; }
+  .tmrw-scroll { overflow-y:auto; max-height:210px; }
+
+  .err-banner { position:fixed; bottom:20px; right:20px; background:#3a1212; border:1px solid var(--red); color:var(--red); padding:10px 16px; border-radius:8px; font-size:13px; display:none; }
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
-<div class="login-wrap" id="loginWrap">
-  <div class="login-box">
-    <div class="login-title">Auto Bodyworx</div>
-    <div class="login-sub">Workshop Dashboard — Sign in to continue</div>
-    <input class="linp" type="email" id="dEmail" placeholder="Email address" autocomplete="off">
-    <input class="linp" type="password" id="dPassword" placeholder="Password" autocomplete="new-password">
-    <button class="lbtn" onclick="dashLogin()">Sign In</button>
-    <div class="lerr" id="dErr"></div>
+<div class="header">
+  <div class="logo">Auto <span>Bodyworx</span></div>
+  <div>
+    <div class="time-big" id="timeLbl">--:--:--</div>
+    <div class="date-lbl" id="dateLbl"></div>
+  </div>
+  <div style="text-align:right">
+    <div style="font-size:12px;color:var(--muted)">Workshop Dashboard <span class="refresh-dot"></span></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:4px" id="updLbl">Loading...</div>
   </div>
 </div>
 
-<!-- DASHBOARD (hidden until login) -->
-<div id="dashWrap" style="display:none;height:100vh;overflow:hidden">
-  <div class="header">
-    <div class="logo">Auto <span>Bodyworx</span></div>
-    <div style="text-align:center">
-      <div class="time-big" id="timeLbl">--:--:--</div>
-      <div class="date-lbl" id="dateLbl"></div>
-    </div>
-    <div style="text-align:right">
-      <div style="font-size:12px;color:var(--muted)">Workshop Dashboard <span class="refresh-dot"></span></div>
-      <div style="font-size:11px;color:var(--muted);margin-top:3px" id="updLbl">Connecting...</div>
-    </div>
+<div class="main" id="mainGrid">
+  <div style="grid-column:1/-1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--muted)">
+    <div style="font-size:48px">⏳</div>
+    <div style="font-size:16px;letter-spacing:1px">Connecting to PanelPro...</div>
   </div>
-  <div class="main" id="mainGrid"></div>
 </div>
+
+<div class="err-banner" id="errBanner"></div>
 
 <script>
-const SUPABASE_URL = 'https://isxycoxqlummscxmdckj.supabase.co';
+const SUPABASE_URL  = 'https://isxycoxqlummscxmdckj.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzeHljb3hxbHVtbXNjeG1kY2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTg1MTIsImV4cCI6MjA5MDg5NDUxMn0.QU_VJ-RvHa9gxOQgKG0_ywxrny4upxE5rFwG9cNMEjw';
-let ACCESS_TOKEN = null;
 
 const TECHS = [
   { name:'Shaun',   col:'S', color:'#4a9eff', bg:'#1e2d4a' },
@@ -127,47 +107,11 @@ const TECHS = [
 ];
 const DIARY_SRC = ['Holiday','Appointment','Van day','Diary entry','Bank Holiday'];
 
-// ── Login ─────────────────────────────────────────────────────────────────
-async function dashLogin() {
-  const email = document.getElementById('dEmail').value.trim();
-  const pass = document.getElementById('dPassword').value;
-  const err = document.getElementById('dErr');
-  err.textContent = 'Signing in...';
-  try {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-      method:'POST',
-      headers:{ 'apikey':SUPABASE_ANON, 'Content-Type':'application/json' },
-      body: JSON.stringify({ email, password:pass })
-    });
-    const data = await res.json();
-    if (data.access_token) {
-      ACCESS_TOKEN = data.access_token;
-      // Save token to sessionStorage so TV doesn't need to log in again after refresh
-      sessionStorage.setItem('dash_token', ACCESS_TOKEN);
-      document.getElementById('loginWrap').style.display = 'none';
-      document.getElementById('dashWrap').style.display = 'block';
-      startDashboard();
-    } else {
-      err.textContent = data.error_description || 'Sign in failed';
-    }
-  } catch(e) { err.textContent = 'Connection error — check internet'; }
-}
-
-// ── Restore session ───────────────────────────────────────────────────────
-const saved = sessionStorage.getItem('dash_token');
-if (saved) {
-  ACCESS_TOKEN = saved;
-  document.getElementById('loginWrap').style.display = 'none';
-  document.getElementById('dashWrap').style.display = 'block';
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────
 function dateStr(offset=0) {
   const d = new Date(); d.setDate(d.getDate()+offset);
   return d.toISOString().split('T')[0];
 }
 function fmtDate(s) {
-  if (!s) return '';
   return new Date(s+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'});
 }
 function fmtTime(t) {
@@ -176,13 +120,23 @@ function fmtTime(t) {
   return `${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`;
 }
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function jobSpansDate(j, dateStr) {
+
+function parseDays(j) {
+  let days = j.duration_days || 1;
+  if (days <= 1 && j.duration) {
+    const m = j.duration.match(/(\d+)\s*day/i);
+    if (m) days = parseInt(m[1]);
+  }
+  return days;
+}
+
+function jobSpansDate(j, ds) {
   if (!j.booking_date) return false;
-  if ((j.duration_days||1) <= 1) return j.booking_date === dateStr;
+  const days = parseDays(j);
+  if (days <= 1) return j.booking_date === ds;
   const start = new Date(j.booking_date + 'T12:00:00');
-  const check = new Date(dateStr + 'T12:00:00');
-  const end = new Date(start);
-  end.setDate(start.getDate() + (j.duration_days||1) - 1);
+  const check = new Date(ds + 'T12:00:00');
+  const end   = new Date(start); end.setDate(start.getDate() + days - 1);
   return check >= start && check <= end;
 }
 
@@ -190,74 +144,77 @@ function belongs(assigned, col) {
   if (!assigned) return col==='S';
   const t = assigned.toLowerCase();
   if (t.includes('both')) return true;
-  if (col==='S') return t.includes('shaun')||(!t.includes('tony')&&!t.includes('charles'));
+  if (col==='S') return t.includes('shaun') || (!t.includes('tony') && !t.includes('charles'));
   if (col==='T') return t.includes('tony');
   if (col==='C') return t.includes('charles');
   return false;
 }
 
-async function sbGet(table, query) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${query}`, {
-    headers:{ 'apikey':SUPABASE_ANON, 'Authorization':`Bearer ${ACCESS_TOKEN}` }
+async function sbGet(path) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    headers: { 'apikey': SUPABASE_ANON, 'Authorization': `Bearer ${SUPABASE_ANON}` }
   });
-  if (res.status===401) { sessionStorage.removeItem('dash_token'); location.reload(); }
+  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
   return res.json();
 }
 
-// ── Clock ─────────────────────────────────────────────────────────────────
-function tick() {
-  const now = new Date();
-  document.getElementById('timeLbl').textContent = now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  document.getElementById('dateLbl').textContent = now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-}
-setInterval(tick,1000); tick();
-
-// ── Build job card ────────────────────────────────────────────────────────
-function buildCard(j) {
-  const isDone = j.status==='completed';
-  const today = dateStr(0);
-  const isOverdue = j.status==='booked' && j.booking_date===today && j.booking_time && j.booking_time < new Date().toTimeString().slice(0,5);
-  const isDiary = DIARY_SRC.includes(j.source);
-  const isMobile = j.job_location==='mobile';
+function buildCard(j, dateForCard) {
+  const today    = dateStr(0);
+  const isDone   = j.status === 'completed';
+  const isDiary  = DIARY_SRC.includes(j.source);
+  const isMobile = j.job_location === 'mobile';
+  const days     = parseDays(j);
+  const isMulti  = days > 1;
+  const now      = new Date().toTimeString().slice(0,5);
+  const isOverdue = j.status==='booked' && dateForCard===today && j.booking_time && j.booking_time < now;
 
   let cls = 'jcard';
-  if (isDone) cls+=' done';
-  else if (isOverdue) cls+=' overdue';
-  else if (isDiary) cls+=' diary';
-  else if (isMobile) cls+=' mobile';
-  else cls+=' workshop';
+  if (isDone)      cls += ' done';
+  else if (isOverdue) cls += ' overdue';
+  else if (isDiary)   cls += ' diary';
+  else if (isMulti)   cls += ' multiday';
+  else if (isMobile)  cls += ' mobile';
+  else                cls += ' workshop';
+
+  // Day X of Y for multi-day
+  let dayBadge = '';
+  if (isMulti) {
+    const start   = new Date(j.booking_date + 'T12:00:00');
+    const check   = new Date(dateForCard + 'T12:00:00');
+    const dayNum  = Math.round((check - start) / 86400000) + 1;
+    dayBadge = `<span class="tag tag-multi">Day ${dayNum}/${days}</span>`;
+  }
 
   const tags = [];
-  if (isDone) tags.push('<span class="tag tag-done">✓ Complete</span>');
-  else if (isOverdue) tags.push('<span class="tag tag-late">⚠ Overdue</span>');
-  if (!isDiary && !isDone && !isOverdue) {
+  if (isDone)      tags.push('<span class="tag tag-done">✓ Complete</span>');
+  if (isOverdue)   tags.push('<span class="tag tag-late">⚠ Overdue</span>');
+  if (!isDiary && !isMulti && !isDone && !isOverdue)
     tags.push(isMobile ? '<span class="tag tag-mob">🚐 Mobile</span>' : '<span class="tag tag-ws">Workshop</span>');
-  }
   if (j.cd_required) tags.push('<span class="tag tag-cd">C&D</span>');
   if (isDiary) tags.push(`<span class="tag tag-diary">${esc(j.source)}</span>`);
+  if (dayBadge) tags.push(dayBadge);
+
+  const durText = isMulti ? `${days}-day job` : (j.duration || '');
 
   return `<div class="${cls}">
-    <div class="${j.booking_time?'jtime':'jtime notset'}">${j.booking_time?fmtTime(j.booking_time):'Time TBC'}</div>
+    <div class="${j.booking_time?'jtime':'jtime tbc'}">${j.booking_time?fmtTime(j.booking_time):'Time TBC'}</div>
     <div class="jname${isDone?' done':''}">${esc(j.customer_name||'Unknown')}</div>
     <div class="jveh">${esc(j.vehicle||'—')}${j.panels?' · '+esc(j.panels):''}</div>
-    ${(j.duration||j.duration_days>1)?`<div style="font-size:11px;color:#e8c547;margin-top:2px;font-weight:600">⏱ ${j.duration_days>1?(j.duration_days+'-day job'):(j.duration||'')}</div>`:''}
+    ${durText?`<div class="jdur">⏱ ${esc(durText)}</div>`:''}
     ${tags.length?`<div class="jtags">${tags.join('')}</div>`:''}
   </div>`;
 }
 
-// ── Build tech column ─────────────────────────────────────────────────────
-function buildCol(tech, jobs, entries) {
-  const today = dateStr(0), tmrw = dateStr(1);
-  const sort = arr => arr.sort((a,b)=>(a.booking_time||'99:99').localeCompare(b.booking_time||'99:99'));
-  const todayJobs = sort(jobs.filter(j=>jobSpansDate(j,today)&&belongs(j.assigned_tech,tech.col)));
-  const tmrwJobs  = sort(jobs.filter(j=>jobSpansDate(j,tmrw) &&belongs(j.assigned_tech,tech.col)));
+function buildCol(tech, jobs, entries, today, tmrw) {
+  const sort = arr => [...arr].sort((a,b)=>(a.booking_time||'99:99').localeCompare(b.booking_time||'99:99'));
+  const todayJobs = sort(jobs.filter(j => jobSpansDate(j,today) && belongs(j.assigned_tech,tech.col)));
+  const tmrwJobs  = sort(jobs.filter(j => jobSpansDate(j,tmrw)  && belongs(j.assigned_tech,tech.col)));
 
-  const entry = entries.find(e=>e.tech_name===tech.name);
-  const clockIn  = entry?.clock_in;
-  const clockOut = entry?.clock_out;
-  const clkClass = clockIn&&!clockOut ? 'in' : 'out';
-  const clkText  = clockIn&&!clockOut ? `🟢 In since ${clockIn}`
-    : clockOut ? `⚫ Out at ${clockOut}` : '⚫ Not clocked in';
+  const entry = entries.find(e => e.tech_name===tech.name);
+  const clkClass = entry?.clock_in && !entry?.clock_out ? 'clk-in' : 'clk-out';
+  const clkText  = entry?.clock_in && !entry?.clock_out
+    ? `🟢 Clocked in ${entry.clock_in}`
+    : entry?.clock_out ? `⚫ Out at ${entry.clock_out}` : '⚫ Not clocked in';
 
   return `<div class="tech-col">
     <div class="tech-header">
@@ -268,35 +225,43 @@ function buildCol(tech, jobs, entries) {
       </div>
     </div>
     <div class="day-hd">TODAY — ${fmtDate(today)}</div>
-    <div class="jobs-scroll">${todayJobs.length ? todayJobs.map(buildCard).join('') : '<div class="empty">Nothing booked today</div>'}</div>
+    <div class="jobs-scroll">${todayJobs.length ? todayJobs.map(j=>buildCard(j,today)).join('') : '<div class="empty">Nothing booked today</div>'}</div>
     <div class="tmrw-wrap">
       <div class="day-hd tmrw">TOMORROW — ${fmtDate(tmrw)}</div>
-      <div class="tmrw-scroll">${tmrwJobs.length ? tmrwJobs.map(buildCard).join('') : '<div class="empty">Nothing booked yet</div>'}</div>
+      <div class="tmrw-scroll">${tmrwJobs.length ? tmrwJobs.map(j=>buildCard(j,tmrw)).join('') : '<div class="empty">Nothing booked yet</div>'}</div>
     </div>
   </div>`;
 }
 
-// ── Refresh data ──────────────────────────────────────────────────────────
+// Clock
+function tick() {
+  const now = new Date();
+  document.getElementById('timeLbl').textContent = now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('dateLbl').textContent = now.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+setInterval(tick,1000); tick();
+
 async function refresh() {
-  if (!ACCESS_TOKEN) return;
   try {
     const today = dateStr(0), tmrw = dateStr(1);
+    const rangeStart = new Date(new Date(today).getTime()-7*86400000).toISOString().split('T')[0];
     const [jobs, entries] = await Promise.all([
-      sbGet('jobs', `select=id,customer_name,vehicle,panels,booking_date,booking_time,duration,duration_days,assigned_tech,job_location,status,cd_required,source&archived=eq.false&status=neq.declined&booking_date=gte.${new Date(new Date(today).getTime()-7*86400000).toISOString().split('T')[0]}&booking_date=lte.${tmrw}&order=booking_date.asc,booking_time.asc`),
-      sbGet('time_entries', `date=eq.${today}&select=tech_name,clock_in,clock_out`)
+      sbGet(`jobs?select=id,customer_name,vehicle,panels,booking_date,booking_time,duration,duration_days,assigned_tech,job_location,status,cd_required,source&archived=eq.false&status=neq.declined&booking_date=gte.${rangeStart}&booking_date=lte.${tmrw}&order=booking_date.asc,booking_time.asc`),
+      sbGet(`time_entries?date=eq.${today}&select=tech_name,clock_in,clock_out`)
     ]);
-    document.getElementById('mainGrid').innerHTML = TECHS.map(t=>buildCol(t,jobs,entries)).join('');
+    document.getElementById('mainGrid').innerHTML = TECHS.map(t => buildCol(t,jobs,entries,today,tmrw)).join('');
     document.getElementById('updLbl').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-  } catch(e) { console.error(e); }
+    document.getElementById('errBanner').style.display = 'none';
+  } catch(e) {
+    console.error('Dashboard error:', e);
+    const b = document.getElementById('errBanner');
+    b.textContent = '⚠ ' + e.message;
+    b.style.display = 'block';
+  }
 }
 
-function startDashboard() { refresh(); setInterval(refresh, 30000); }
-if (ACCESS_TOKEN) startDashboard();
-
-// Login on Enter key
-document.addEventListener('keydown', e => {
-  if (e.key==='Enter' && document.getElementById('loginWrap').style.display!=='none') dashLogin();
-});
+refresh();
+setInterval(refresh, 30000);
 </script>
 </body>
 </html>
