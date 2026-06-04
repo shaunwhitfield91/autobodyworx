@@ -59,6 +59,8 @@ body { background:#0a0a0f; color:#f0f0f8; font-family:Arial,sans-serif; overflow
 .jname { font-size:15px; font-weight:700; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; margin-top:1px; }
 .jname-done { text-decoration:line-through; color:#6b6b8a; }
 .jveh { font-size:11px; color:#6b6b8a; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; margin-top:1px; }
+.jpanels { font-size:13px; color:#c0c0d8; font-weight:600; margin-top:3px; }
+.jnotes { font-size:12px; color:#9090b0; margin-top:4px; line-height:1.4; background:#16162a; padding:5px 8px; border-radius:4px; border-left:2px solid #3a3a52; }
 .jdur { font-size:11px; color:#e8c547; font-weight:700; margin-top:3px; }
 .tags { margin-top:4px; }
 .tag { display:inline-block; font-size:9px; font-weight:700; padding:2px 6px; border-radius:3px; margin-right:3px; text-transform:uppercase; letter-spacing:.4px; }
@@ -211,12 +213,21 @@ function buildCard(j, ds) {
   if (isMulti && !isDone) tags += '<span class="tag t-mul">' + days + '-day</span>';
 
   var nameClass = isDone ? 'jname jname-done' : 'jname';
+
+  // Panels work
+  var panelsHtml = j.panels ? '<div class="jpanels">' + esc(j.panels) + '</div>' : '';
+
+  // Notes — show full text
+  var notesHtml = j.notes ? '<div class="jnotes">' + esc(j.notes) + '</div>' : '';
+
   return '<div class="job">'
     + '<div class="jbar" style="background:' + barColor + '"></div>'
     + timeHtml
     + '<div class="' + nameClass + '">' + esc(j.customer_name || 'Unknown') + '</div>'
-    + '<div class="jveh">' + esc(j.vehicle || '') + (j.panels ? ' &middot; ' + esc(j.panels) : '') + '</div>'
+    + '<div class="jveh">' + esc(j.vehicle || '') + '</div>'
+    + panelsHtml
     + dur
+    + notesHtml
     + (tags ? '<div class="tags">' + tags + '</div>' : '')
     + '</div>';
 }
