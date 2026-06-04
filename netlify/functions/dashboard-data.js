@@ -34,7 +34,7 @@ exports.handler = async (event) => {
         'Access-Control-Allow-Origin': '*',
         'Cache-Control': 'no-cache'
       },
-      body: JSON.stringify({ jobs, entries, today, tmrw })
+      body: JSON.stringify({ jobs, entries, today, tmrw, dayAfter })
     };
   } catch(e) {
     return { statusCode: 500, body: JSON.stringify({ error: e.message }) };
