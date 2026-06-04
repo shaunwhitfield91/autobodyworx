@@ -235,21 +235,30 @@ function tick() {
 }
 setInterval(tick,1000); tick();
 
-async function refresh() {
-  try {
-    // Call Netlify function — bypasses Supabase allowlist entirely
-    const res = await fetch('/.netlify/functions/dashboard-data');
-    if (!res.ok) throw new Error('Server error ' + res.status);
-    const { jobs, entries, today, tmrw } = await res.json();
-    document.getElementById('mainGrid').innerHTML = TECHS.map(t => buildCol(t,jobs,entries,today,tmrw)).join('');
-    document.getElementById('updLbl').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    document.getElementById('errBanner').style.display = 'none';
-  } catch(e) {
-    console.error('Dashboard error:', e);
-    const b = document.getElementById('errBanner');
-    b.textContent = '⚠ ' + e.message;
+function refresh() {
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', '/.netlify/functions/dashboard-data', true);
+  xhr.onload = function() {
+    try {
+      if (xhr.status !== 200) throw new Error('Server error ' + xhr.status);
+      var data = JSON.parse(xhr.responseText);
+      var jobs = data.jobs, entries = data.entries, today = data.today, tmrw = data.tmrw;
+      document.getElementById('mainGrid').innerHTML = TECHS.map(function(t){ return buildCol(t,jobs,entries,today,tmrw); }).join('');
+      document.getElementById('updLbl').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      document.getElementById('errBanner').style.display = 'none';
+    } catch(e) {
+      console.error('Dashboard error:', e);
+      var b = document.getElementById('errBanner');
+      b.textContent = String.fromCharCode(9888) + ' ' + e.message;
+      b.style.display = 'block';
+    }
+  };
+  xhr.onerror = function() {
+    var b = document.getElementById('errBanner');
+    b.textContent = String.fromCharCode(9888) + ' Connection failed';
     b.style.display = 'block';
-  }
+  };
+  xhr.send();
 }
 
 refresh();
