@@ -247,6 +247,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .cal-day:hover{background:#f9f8ff}
 .cal-day.other-month{background:var(--surface2)}
 .cal-day.is-today .cal-dn{background:var(--blue);color:#fff;border-radius:50%}
+.cal-day.is-today{background:#1e2d4a!important;border:2px solid var(--blue)!important;}
 .cal-day.is-sel{background:#eff6ff}
 .cal-dn{font-size:11px;font-weight:700;color:var(--txt);width:21px;height:21px;display:flex;align-items:center;justify-content:center;margin-bottom:3px}
 .other-month .cal-dn{color:var(--hint)}
@@ -2550,7 +2551,7 @@ function buildJobCard(j) {
         </div>`;
     }
   } else if (j.status === 'booked' && currentProfile?.role !== 'tech') {
-    actions = `<button class="btn-approve" onclick="event.stopPropagation();openCompleteModal(${j.id})" style="background:var(--teal);font-size:11px">Mark as complete</button>
+    actions = `<button class="btn-approve" onclick="event.stopPropagation();openCompleteModal(${j.id})" style="background:#ea580c;font-size:11px;font-weight:800;letter-spacing:.3px">✓ JOB COMPLETE</button>
                <button class="btn-primary" onclick="event.stopPropagation();sendXeroInvoice(${j.id},'deposit')" style="font-size:11px">Parts deposit</button>
                <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>
                <button class="btn-danger" onclick="event.stopPropagation();customerCancelled(${j.id})" style="font-size:11px">Customer cancelled</button>
@@ -3011,13 +3012,18 @@ function closeAddModal() {
 }
 
 async function saveNewJob() {
+  // Check session still valid before saving
+  if (!currentUser?.access_token) {
+    alert('Your session has expired — please log out and back in before saving.');
+    return;
+  }
   const name = document.getElementById('m_name').value.trim();
   if (!name) { showToast('Enter customer name'); return; }
   const date = document.getElementById('m_date').value || null;
   const status = document.getElementById('m_status').value;
   const body = {
     customer_name: name,
-    customer_phone: document.getElementById('m_phone').value.trim() || null,
+    customer_phone: normalisePhone(document.getElementById('m_phone').value.trim()) || null,
     customer_email: document.getElementById('m_email')?.value.trim() || null,
     vehicle: document.getElementById('m_vehicle').value.trim() || null,
     colour: document.getElementById('m_colour').value.trim() || null,
@@ -3060,10 +3066,15 @@ async function saveNewJob() {
     if (prev) prev.innerHTML = '';
     resetPanelPicker('m');
     closeAddModal();
-    showToast('Job added ✓');
+    showToast('✓ Job saved successfully');
     await loadJobs();
     switchTab('jobs');
-  } catch(e) { alert('Failed: ' + e.message); }
+  } catch(e) {
+    alert('⚠ SAVE FAILED — this job was NOT saved to the system.\n\nError: ' + e.message + '\n\nPlease try again. If the error continues, note the customer details and contact Shaun.');
+    // Re-enable save button so they can retry
+    var btn = document.querySelector('#addModal .btn-primary');
+    if (btn) { btn.disabled = false; btn.textContent = 'Save job'; }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3126,7 +3137,12 @@ async function doInvoice(jobId, type) {
       : `✓ Receipt created in Xero — ${data.invoiceNum || ''}`;
     showToast(msg);
     await loadJobs();
-  } catch(e) { alert('Xero error: ' + e.message); }
+  } catch(e) {
+    // DO NOT mark as invoiced if Xero failed — allow retry
+    alert('⚠ Xero error — invoice was NOT created.\n\nError: ' + e.message + '\n\nYou can try sending again. The job has not been marked as invoiced.');
+    // Force refresh so the Send Invoice button reappears
+    await loadJobs();
+  }
 }
 
 // Keep openInvoiceFlow as alias for completed+paid button
@@ -4865,7 +4881,7 @@ async function saveEditJob() {
   const editDate = document.getElementById('edit_date').value || null;
   const updates = {
     customer_name: document.getElementById('edit_name').value.trim(),
-    customer_phone: document.getElementById('edit_phone').value.trim(),
+    customer_phone: normalisePhone(document.getElementById('edit_phone').value.trim()),
     customer_email: document.getElementById('edit_email').value.trim(),
     vehicle: document.getElementById('edit_vehicle').value.trim(),
     colour: document.getElementById('edit_colour').value.trim(),
@@ -6593,8 +6609,16 @@ async function renderStaffPortal() {
       const bhTo = calYear + '-12-31';
       const staffBh = getBankHolidaysBetween(bhFrom, bhTo);
       const bhCount = staffBh.length;
+      // Manual diary holidays (added directly to diary with source='Holiday')
+      const allDiary = diaryAllJobs.length ? diaryAllJobs : allJobs;
+      const manualHolDays = allDiary.filter(j =>
+        j.source === 'Holiday' &&
+        j.booking_date >= (calYear + '-01-01') &&
+        j.booking_date <= (calYear + '-12-31') &&
+        jobBelongsTo(j.assigned_tech, staff.col)
+      ).length;
       const annualEntitlement = getStaffEntitlement(staff);
-      const totalUsed = holDays + bhCount;
+      const totalUsed = holDays + bhCount + manualHolDays;
       const remaining = Math.max(0, annualEntitlement - totalUsed);
 
       // Time entries
@@ -6667,6 +6691,9 @@ async function renderStaffPortal() {
           <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;color:var(--muted)">
             <span>Booked holidays</span><span>−${holDays} days</span>
           </div>
+          ${manualHolDays>0?`<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;color:var(--muted)">
+            <span>Manual diary holidays</span><span>−\${manualHolDays} days</span>
+          </div>`:''}
           <div style="border-top:1px solid var(--border);padding-top:6px;margin-top:4px;display:flex;justify-content:space-between;font-size:13px">
             <span style="font-weight:700">Remaining</span>
             <span style="font-weight:800;color:${remaining<=(annualEntitlement*0.2)?'var(--red)':'var(--teal)'}">${remaining} days</span>
@@ -7206,6 +7233,20 @@ async function confirmMarkPaid(id) {
     if (btn) { btn.disabled = false; btn.textContent = 'Save payment'; }
     alert('Failed: ' + e.message);
   }
+}
+
+// ═══════════════════════════════════════════════════════════
+// PHONE NUMBER NORMALISATION
+// Always store as 07xxx format — Twilio adds +44 itself
+// ═══════════════════════════════════════════════════════════
+function normalisePhone(phone) {
+  if (!phone) return phone;
+  var p = phone.replace(/\s/g, '').replace(/-/g, '');
+  // Convert +44 to 07
+  if (p.startsWith('+44')) p = '0' + p.slice(3);
+  // Convert 0044 to 07
+  if (p.startsWith('0044')) p = '0' + p.slice(4);
+  return p;
 }
 
 // ═══════════════════════════════════════════════════════════
