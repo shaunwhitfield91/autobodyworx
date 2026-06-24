@@ -2075,7 +2075,10 @@ function switchTab(t) {
   // timesheets now embedded in staff tab
   if (t === 'customers') { renderCustomers(); }
   if (t === 'staff') { renderStaffPortal(); }
-  if (t === 'analytics') { renderAnalytics(); }
+  if (t === 'analytics') {
+    // Always load latest declined jobs so close rate is accurate
+    loadDeclinedJobs().then(() => renderAnalytics());
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -5088,6 +5091,8 @@ function startAutoRefresh() {
     try {
       await loadJobs();
       if (diaryAllJobs.length) loadDiaryJobs().catch(()=>{});
+      // Keep declined jobs fresh for analytics
+      loadDeclinedJobs().catch(()=>{});
     } catch(e) { console.warn('Auto-refresh failed', e); }
   }, 30000); // 30 seconds — less aggressive, safer for poor connections
 }
