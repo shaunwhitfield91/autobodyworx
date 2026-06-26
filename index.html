@@ -5773,15 +5773,19 @@ async function saveDiaryEntry() {
     while (d <= end) {
       const isWeekend = d.getDay() === 0 || d.getDay() === 6;
       if (!isWeekend) {
+        const isHoliday = _diaryEntryType === 'holiday';
+        const custName = isHoliday && tech && tech !== 'All'
+          ? tech + ' — Holiday'
+          : title;
         await sbRaw('POST', 'jobs', {
-          customer_name: title,
+          customer_name: custName,
           status: 'booked',
           booking_date: dateToStr(d),
           booking_time: time,
           assigned_tech: tech === 'All' ? 'Both' : tech,
           job_location: 'workshop',
           duration: 'Full day',
-          notes: notes || null,
+          notes: notes || (isHoliday ? 'Annual leave' : null),
           source: typeLabels[_diaryEntryType] || 'Diary entry',
           archived: false
         });
@@ -6930,7 +6934,7 @@ async function renderStaffPortal() {
             <span>Booked holidays</span><span>−${holDays} days</span>
           </div>
           ${manualHolDays>0?`<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;color:var(--muted)">
-            <span>Manual diary holidays</span><span>−\${manualHolDays} days</span>
+            <span>Manual diary holidays</span><span>−${manualHolDays} days</span>
           </div>`:''}
           <div style="border-top:1px solid var(--border);padding-top:6px;margin-top:4px;display:flex;justify-content:space-between;font-size:13px">
             <span style="font-weight:700">Remaining</span>
