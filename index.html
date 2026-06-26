@@ -1107,7 +1107,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="settings-card-hd">AI Quote Generator</div>
         <div class="settings-card-sub">Anthropic API key — required for quote generation. Stored in this browser only, never uploaded anywhere.</div>
         <div class="settings-row">
-          <input autocomplete="off" class="api-key-inp" type="password" id="anthropicKey" placeholder="sk-ant-...">
+          <input autocomplete="off" class="api-key-inp" type="text" id="anthropicKey" placeholder="sk-ant-..." style="font-family:monospace;letter-spacing:.5px;color:var(--muted)">
           <button class="btn-secondary" onclick="toggleKey()">Show</button>
           <button class="btn-primary" onclick="saveKey()">Save</button>
         </div>
