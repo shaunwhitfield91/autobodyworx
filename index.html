@@ -2598,6 +2598,7 @@ function buildJobCard(j) {
     actions = `<button class="btn-approve" onclick="event.stopPropagation();openCompleteModal(${j.id})" style="background:#ea580c;font-size:11px;font-weight:800;letter-spacing:.3px">✓ JOB COMPLETE</button>
                <button class="btn-primary" onclick="event.stopPropagation();sendXeroInvoice(${j.id},'deposit')" style="font-size:11px">Parts deposit</button>
                <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>
+               <button class="btn-secondary" onclick="event.stopPropagation();printJobCard(${j.id})" style="font-size:11px;background:#1e3a8a;color:#fff;border-color:#1e3a8a">🖨 Print job card</button>
                <button class="btn-danger" onclick="event.stopPropagation();customerCancelled(${j.id})" style="font-size:11px">Customer cancelled</button>
                <div style="width:100%;height:1px;background:var(--border);margin:4px 0"></div>
                <button class="btn-secondary" onclick="event.stopPropagation();deleteJob(${j.id})" style="font-size:10px;color:var(--muted);border-color:var(--border)">🗑 Delete job</button>`;
@@ -6136,6 +6137,338 @@ function exportTsPdf() {
   w.document.close();
   w.focus();
   setTimeout(() => w.print(), 500);
+}
+
+// ═══════════════════════════════════════════════════════════
+// PRINT JOB CARD
+// ═══════════════════════════════════════════════════════════
+function printJobCard(jobId) {
+  const j = allJobs.find(x => x.id === jobId);
+  if (!j) { showToast('Job not found'); return; }
+
+  const esc2 = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const fmt = d => d ? new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+  const jobNum = j.job_number || '—';
+  const today = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+
+  // Parse vehicle — strip colour suffix added by quote form
+  const vehicleRaw = (j.vehicle||'').replace(/\s*·\s*.+$/, '').trim();
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Job Card ${jobNum}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 11px; color: #111; background: #fff; padding: 16px; }
+  @page { size: A4; margin: 12mm; }
+
+  /* Header */
+  .hd { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 12px; }
+  .hd-logo { font-size: 22px; font-weight: 900; color: #1e3a8a; letter-spacing: -1px; }
+  .hd-logo span { color: #065f46; }
+  .hd-sub { font-size: 9px; color: #6b7280; margin-top: 2px; }
+  .hd-right { text-align: right; }
+  .job-num { font-size: 20px; font-weight: 900; color: #1e3a8a; letter-spacing: 1px; }
+  .job-date { font-size: 10px; color: #6b7280; margin-top: 2px; }
+
+  /* Info grid */
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .info-box { border: 1px solid #d1d5db; border-radius: 4px; padding: 7px 10px; }
+  .info-box.full { grid-column: 1 / -1; }
+  .info-lbl { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: #6b7280; margin-bottom: 3px; }
+  .info-val { font-size: 12px; font-weight: 600; color: #111; min-height: 16px; }
+
+  /* Stages */
+  .stages-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .8px; color: #1e3a8a; border-bottom: 2px solid #1e3a8a; padding-bottom: 4px; margin-bottom: 8px; margin-top: 10px; }
+  .stage { border: 1px solid #d1d5db; border-radius: 4px; margin-bottom: 6px; overflow: hidden; }
+  .stage-hd { display: flex; align-items: center; background: #f3f4f6; padding: 6px 10px; gap: 8px; }
+  .stage-num { width: 20px; height: 20px; border-radius: 50%; background: #1e3a8a; color: #fff; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .stage-name { font-weight: 700; font-size: 11px; flex: 1; }
+  .stage-signoff { display: flex; gap: 14px; align-items: center; margin-left: auto; }
+  .signoff-lbl { font-size: 8px; color: #6b7280; text-transform: uppercase; letter-spacing: .4px; }
+  .signoff-box { border-bottom: 1px solid #374151; width: 60px; height: 14px; display: inline-block; }
+  .stage-checks { padding: 6px 10px 8px 10px; border-top: 1px solid #e5e7eb; }
+  .check-item { display: flex; align-items: flex-start; gap: 7px; margin-bottom: 5px; }
+  .check-box { width: 13px; height: 13px; border: 1.5px solid #374151; border-radius: 2px; flex-shrink: 0; margin-top: 1px; }
+  .check-txt { font-size: 10px; color: #111; line-height: 1.4; }
+  .check-txt.critical { font-weight: 700; color: #991b1b; }
+  .check-txt.critical::before { content: '⚠ '; }
+
+  /* Notes */
+  .notes-box { border: 1px solid #d1d5db; border-radius: 4px; padding: 8px 10px; margin-top: 10px; min-height: 60px; }
+  .notes-lines { margin-top: 6px; }
+  .notes-line { border-bottom: 1px solid #e5e7eb; height: 18px; margin-bottom: 2px; }
+
+  /* Final signoffs */
+  .signoffs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .sig-box { border: 1px solid #d1d5db; border-radius: 4px; padding: 8px 10px; }
+  .sig-lbl { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: #6b7280; margin-bottom: 16px; }
+  .sig-line { border-bottom: 1.5px solid #374151; margin-bottom: 4px; }
+  .sig-date { font-size: 8px; color: #9ca3af; }
+
+  /* Footer */
+  .footer { margin-top: 12px; text-align: center; font-size: 8px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 6px; }
+
+  @media print {
+    body { padding: 0; }
+    .no-print { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hd">
+  <div>
+    <div class="hd-logo">Auto<span>Bodyworx</span></div>
+    <div class="hd-sub">Minor Body Repairs Ltd · Hungerford · autobodyworx.co.uk</div>
+  </div>
+  <div class="hd-right">
+    <div class="job-num">${esc2(jobNum)}</div>
+    <div class="job-date">Printed: ${today}</div>
+  </div>
+</div>
+
+<!-- INFO GRID -->
+<div class="info-grid">
+  <div class="info-box">
+    <div class="info-lbl">Customer</div>
+    <div class="info-val">${esc2(j.customer_name||'—')}</div>
+  </div>
+  <div class="info-box">
+    <div class="info-lbl">Phone</div>
+    <div class="info-val">${esc2(j.customer_phone||'—')}</div>
+  </div>
+  <div class="info-box">
+    <div class="info-lbl">Vehicle</div>
+    <div class="info-val">${esc2(vehicleRaw||'—')}</div>
+  </div>
+  <div class="info-box">
+    <div class="info-lbl">Colour</div>
+    <div class="info-val">${esc2(j.colour||'—')}</div>
+  </div>
+  <div class="info-box">
+    <div class="info-lbl">Registration</div>
+    <div class="info-val">&nbsp;</div>
+  </div>
+  <div class="info-box">
+    <div class="info-lbl">Date booked</div>
+    <div class="info-val">${fmt(j.booking_date)}</div>
+  </div>
+  <div class="info-box">
+    <div class="info-lbl">Technician</div>
+    <div class="info-val">${esc2(j.assigned_tech||'—')}</div>
+  </div>
+  <div class="info-box">
+    <div class="info-lbl">Location</div>
+    <div class="info-val">${j.job_location === 'mobile' ? 'Mobile — customer site' : 'Workshop'}</div>
+  </div>
+  <div class="info-box full">
+    <div class="info-lbl">Panels / Damage description</div>
+    <div class="info-val" style="white-space:pre-wrap;line-height:1.5">${esc2(j.panels||'—')}</div>
+  </div>
+  ${j.notes ? `<div class="info-box full">
+    <div class="info-lbl">⚠ Internal notes</div>
+    <div class="info-val" style="white-space:pre-wrap;line-height:1.5">${esc2(j.notes)}</div>
+  </div>` : ''}
+</div>
+
+<!-- STAGE SIGN-OFFS -->
+<div class="stages-title">Repair Stages — Sign off each stage before moving on</div>
+
+<!-- Stage 1: Vehicle received -->
+<div class="stage">
+  <div class="stage-hd">
+    <div class="stage-num">1</div>
+    <div class="stage-name">Vehicle received &amp; checked in</div>
+    <div class="stage-signoff">
+      <div><div class="signoff-lbl">Initials</div><div class="signoff-box"></div></div>
+      <div><div class="signoff-lbl">Time</div><div class="signoff-box"></div></div>
+    </div>
+  </div>
+  <div class="stage-checks">
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Vehicle condition documented — note any pre-existing damage</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Damage area photographed before work begins</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Job card matches vehicle and damage description</div></div>
+  </div>
+</div>
+
+<!-- Stage 2: Masking -->
+<div class="stage">
+  <div class="stage-hd">
+    <div class="stage-num">2</div>
+    <div class="stage-name">Masking up</div>
+    <div class="stage-signoff">
+      <div><div class="signoff-lbl">Initials</div><div class="signoff-box"></div></div>
+      <div><div class="signoff-lbl">Time</div><div class="signoff-box"></div></div>
+    </div>
+  </div>
+  <div class="stage-checks">
+    <div class="check-item"><div class="check-box"></div><div class="check-txt critical">Masking tape positioned clear of panel edge — NOT touching the panel being painted</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt critical">Tape left with enough gap so paint does NOT bridge the edge on demask</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt critical">All adjacent trims, rubbers and panels masked before any DA sanding</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Glass, lights and surrounding areas protected</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Masking paper secure — no lifting edges</div></div>
+  </div>
+</div>
+
+<!-- Stage 3: Filler / Prep -->
+<div class="stage">
+  <div class="stage-hd">
+    <div class="stage-num">3</div>
+    <div class="stage-name">Filler &amp; prep</div>
+    <div class="stage-signoff">
+      <div><div class="signoff-lbl">Initials</div><div class="signoff-box"></div></div>
+      <div><div class="signoff-lbl">Time</div><div class="signoff-box"></div></div>
+    </div>
+  </div>
+  <div class="stage-checks">
+    <div class="check-item"><div class="check-box"></div><div class="check-txt critical">Filler surface checked for pinholes — NONE acceptable before priming</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Filler fully cured and hardened</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Panel surface flat — no high spots or low spots</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Edges feathered correctly — no sharp transitions</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Panel cleaned and degreased before priming</div></div>
+  </div>
+</div>
+
+<!-- Stage 4: Prime -->
+<div class="stage">
+  <div class="stage-hd">
+    <div class="stage-num">4</div>
+    <div class="stage-name">Prime</div>
+    <div class="stage-signoff">
+      <div><div class="signoff-lbl">Initials</div><div class="signoff-box"></div></div>
+      <div><div class="signoff-lbl">Time</div><div class="signoff-box"></div></div>
+    </div>
+  </div>
+  <div class="stage-checks">
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Primer applied evenly — no runs or sags</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Primer fully cured before flatting</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Flatted back smooth — no sand-through to filler</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Panel cleaned and tacked off before colour</div></div>
+  </div>
+</div>
+
+<!-- Stage 5: Paint / Colour -->
+<div class="stage">
+  <div class="stage-hd">
+    <div class="stage-num">5</div>
+    <div class="stage-name">Paint &amp; colour</div>
+    <div class="stage-signoff">
+      <div><div class="signoff-lbl">Initials</div><div class="signoff-box"></div></div>
+      <div><div class="signoff-lbl">Time</div><div class="signoff-box"></div></div>
+    </div>
+  </div>
+  <div class="stage-checks">
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Colour match checked in natural light before applying</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Colour coats applied evenly — correct number of coats</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">No dry spray, runs or sags</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Flash-off time observed between coats</div></div>
+  </div>
+</div>
+
+<!-- Stage 6: Clear coat -->
+<div class="stage">
+  <div class="stage-hd">
+    <div class="stage-num">6</div>
+    <div class="stage-name">Clear coat</div>
+    <div class="stage-signoff">
+      <div><div class="signoff-lbl">Initials</div><div class="signoff-box"></div></div>
+      <div><div class="signoff-lbl">Time</div><div class="signoff-box"></div></div>
+    </div>
+  </div>
+  <div class="stage-checks">
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Clear coat applied evenly — no runs</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt critical">Clear coat inspected and d-nibbed for dust/dirt particles before polishing</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Clear fully cured before polishing</div></div>
+  </div>
+</div>
+
+<!-- Stage 7: Demask & Polish -->
+<div class="stage">
+  <div class="stage-hd">
+    <div class="stage-num">7</div>
+    <div class="stage-name">Demask &amp; polish</div>
+    <div class="stage-signoff">
+      <div><div class="signoff-lbl">Initials</div><div class="signoff-box"></div></div>
+      <div><div class="signoff-lbl">Time</div><div class="signoff-box"></div></div>
+    </div>
+  </div>
+  <div class="stage-checks">
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Masking removed carefully while paint still slightly warm</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">No hard edges, tape marks or bridging on demask</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Panel polished to high gloss — swirl free</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Blend area polished and blended correctly</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">All trims, rubbers and fittings refitted correctly — nothing missing</div></div>
+  </div>
+</div>
+
+<!-- Stage 8: Final inspection -->
+<div class="stage">
+  <div class="stage-hd">
+    <div class="stage-num">8</div>
+    <div class="stage-name">Final inspection &amp; ready for collection</div>
+    <div class="stage-signoff">
+      <div><div class="signoff-lbl">Initials</div><div class="signoff-box"></div></div>
+      <div><div class="signoff-lbl">Time</div><div class="signoff-box"></div></div>
+    </div>
+  </div>
+  <div class="stage-checks">
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Colour match acceptable in natural daylight</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Finish free from dirt, nibs, runs, scratches or polishing marks</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Vehicle cleaned — no compound residue on trims or rubbers</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">All panels, trims and fittings checked — nothing loose or missing</div></div>
+    <div class="check-item"><div class="check-box"></div><div class="check-txt">Vehicle ready for customer — Shaun / Chloe notified</div></div>
+  </div>
+</div>
+
+<!-- ISSUES / NOTES -->
+<div class="notes-box">
+  <div class="info-lbl">Issues &amp; notes during repair</div>
+  <div class="notes-lines">
+    <div class="notes-line"></div>
+    <div class="notes-line"></div>
+    <div class="notes-line"></div>
+    <div class="notes-line"></div>
+  </div>
+</div>
+
+<!-- FINAL SIGN-OFFS -->
+<div class="signoffs">
+  <div class="sig-box">
+    <div class="sig-lbl">Technician sign-off</div>
+    <div class="sig-line" style="margin-bottom:2px"></div>
+    <div class="sig-date">Name &amp; signature</div>
+    <div style="margin-top:10px"><div class="sig-line"></div><div class="sig-date">Time completed</div></div>
+  </div>
+  <div class="sig-box">
+    <div class="sig-lbl">QC check (Shaun / Charles)</div>
+    <div class="sig-line" style="margin-bottom:2px"></div>
+    <div class="sig-date">Name &amp; signature</div>
+    <div style="margin-top:10px"><div class="sig-line"></div><div class="sig-date">Time checked</div></div>
+  </div>
+  <div class="sig-box">
+    <div class="sig-lbl">Customer collected</div>
+    <div class="sig-line" style="margin-bottom:2px"></div>
+    <div class="sig-date">Customer signature</div>
+    <div style="margin-top:10px"><div class="sig-line"></div><div class="sig-date">Date &amp; time</div></div>
+  </div>
+</div>
+
+<div class="footer">
+  Auto Bodyworx · Minor Body Repairs Ltd · Job ${esc2(jobNum)} · Generated by PanelPro ${today}
+</div>
+
+<script>window.onload = () => window.print();</script>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  w.focus();
 }
 
 // ═══════════════════════════════════════════════════════════
