@@ -1162,9 +1162,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="modal-overlay" id="addModal">
   <div class="modal-box">
     <div class="modal-hd">Add job manually</div>
-    <!-- Hidden dummy fields stop browser treating this as a login form -->
-    <input type="text" style="display:none" autocomplete="username">
-    <input type="password" style="display:none" autocomplete="new-password">
     <div class="modal-grid2">
       <div><span class="qlbl">Customer name</span>
         <div style="position:relative">
@@ -1348,9 +1345,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="modal-overlay" id="bookModal">
   <div class="modal-box">
     <div class="modal-hd">Book job</div>
-    <!-- Hidden dummy fields stop browser treating this as a login form -->
-    <input type="text" style="display:none" autocomplete="username">
-    <input type="password" style="display:none" autocomplete="new-password">
     <div id="bookModalInfo" style="background:var(--blue-bg);border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;font-size:13px;color:var(--blue-txt);font-weight:500"></div>
     <div class="modal-grid2">
       <div><span class="qlbl">Date</span><input autocomplete="off" class="minp" type="date" id="bk_date"></div>
@@ -1399,9 +1393,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="modal-overlay" id="editModal">
   <div class="modal-box" style="max-width:560px">
     <div class="modal-hd">Edit job</div>
-    <!-- Hidden dummy fields stop browser treating this as a login form -->
-    <input type="text" style="display:none" autocomplete="username">
-    <input type="password" style="display:none" autocomplete="new-password">
     <input autocomplete="off" type="hidden" id="edit_jobId">
     <div class="modal-grid2">
       <div><span class="qlbl">Customer name</span><input autocomplete="off" class="minp" id="edit_name" placeholder="Full name"></div>
@@ -2651,12 +2642,13 @@ function buildJobCard(j) {
     </div>`;
   }
 
-  // Photos
+  // Photos — register URLs in the lightbox registry so inline onclick can reference by key
+  _lbRegistry['job-'+j.id] = photos.map(p => `${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}`);
   let photosHtml = `<div class="jbf" style="margin-bottom:6px">Photos</div>
     <div class="photos-row">
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
-        ${photos.map(p=>`<div style="position:relative;display:inline-block">
-          <img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="photo-thumb" alt="damage" onclick="event.stopPropagation();openJobPhotos(${JSON.stringify(photos)},${photos.indexOf(p)})">
+        ${photos.map((p,i)=>`<div style="position:relative;display:inline-block">
+          <img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="photo-thumb" alt="damage" onclick="event.stopPropagation();_lbOpen('job-${j.id}',${i})">
           ${currentProfile?.role==='admin'||currentProfile?.role==='admin_staff'?`<button onclick="event.stopPropagation();deletePhoto(${p.id})" style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--red);border:none;color:#fff;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;font-weight:700;padding:0">✕</button>`:''}
         </div>`).join('')}
       </div>
@@ -3058,7 +3050,14 @@ async function deletePart(partId, jobId) {
 // ═══════════════════════════════════════════════════════════
 // ADD JOB MODAL
 // ═══════════════════════════════════════════════════════════
-function openAddModal() { document.getElementById('addModal').classList.add('show'); setTimeout(initPriceInputs, 50); }
+function openAddModal() {
+  document.getElementById('addModal').classList.add('show');
+  setTimeout(initPriceInputs, 50);
+  document.querySelectorAll('#addModal input, #addModal select, #addModal textarea').forEach(el => {
+    el.setAttribute('autocomplete', 'new-password');
+    el.setAttribute('name', 'pp_' + Math.random().toString(36).slice(2));
+  });
+}
 function closeAddModal() {
   document.getElementById('addModal').classList.remove('show');
   resetPanelPicker('m');
@@ -4542,6 +4541,9 @@ function buildTechCard(j) {
   const photos = j.job_photos || [];
   const bmq = photos.filter(p => p.photo_type === 'damage');
   const amq = photos.filter(p => p.photo_type === 'completion');
+  // Register in lightbox registry
+  _lbRegistry['tech-dmg-'+j.id] = bmq.map(p => `${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}`);
+  _lbRegistry['tech-cmp-'+j.id] = amq.map(p => `${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}`);
 
   const completeBox = done
     ? `<div class="tech-done-banner">✓ Completed · ${esc(j.payment_method||'')} · ${j.signed_off_by||''}</div>`
@@ -4557,7 +4559,7 @@ function buildTechCard(j) {
         </label>
         <div class="tech-after-thumbs" id="taf-${j.id}">
           ${amq.map(p=>`<div style="position:relative;display:inline-block">
-          <img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="tech-after-thumb" alt="after" onclick="openJobPhotos(${JSON.stringify(amq)},${amq.indexOf(p)})">
+          <img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="tech-after-thumb" alt="after" onclick="event.stopPropagation();_lbOpen('tech-cmp-${j.id}',${amq.indexOf(p)})">
           <button onclick="event.stopPropagation();deletePhoto(${p.id},true)" style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--red);border:none;color:#fff;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;font-weight:700;padding:0">✕</button>
         </div>`).join('')}
         </div>
@@ -4581,7 +4583,7 @@ function buildTechCard(j) {
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           ${bmq.map((p,i)=>`<img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}"
             style="width:80px;height:80px;object-fit:cover;border-radius:var(--radius);border:1px solid var(--border);cursor:pointer"
-            alt="damage" onclick="openJobPhotos(${JSON.stringify(bmq)},${i})">`).join('')}
+            alt="damage" onclick="event.stopPropagation();_lbOpen('tech-dmg-${j.id}',${i})">`).join('')}
         </div>
       </div>`
     : '';
@@ -4633,7 +4635,7 @@ function buildTechCard(j) {
         <div class="tech-info-item full"><div class="tech-info-lbl">Panels / damage</div><div class="tech-info-val">${esc(j.panels||'—')}</div></div>
         ${j.notes?`<div class="tech-info-item full"><div class="tech-info-lbl">Notes</div><div class="tech-info-val">${esc(j.notes)}</div></div>`:''}
       </div>
-      ${bmq.length?`<div class="tech-photos-row">${bmq.map((p,i)=>`<img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="tech-photo-thumb" alt="damage" onclick="openJobPhotos(${JSON.stringify(bmq)},${i})">`).join('')}</div>`:''}
+      ${bmq.length?`<div class="tech-photos-row">${bmq.map((p,i)=>`<img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="tech-photo-thumb" alt="damage" onclick="event.stopPropagation();_lbOpen('tech-dmg-${j.id}',${i})">`).join('')}</div>`:''}
       ${damagePhotosHtml}
       ${editBox}
       ${completeBox}
@@ -4901,6 +4903,10 @@ function openBookModal(jobId) {
   document.getElementById('bk_cd').checked = !!j.cd_required;
   document.getElementById('bk_addr').value = j.customer_address || '';
   document.getElementById('bookModal').classList.add('show');
+  document.querySelectorAll('#bookModal input, #bookModal select, #bookModal textarea').forEach(el => {
+    el.setAttribute('autocomplete', 'new-password');
+    el.setAttribute('name', 'pp_' + Math.random().toString(36).slice(2));
+  });
 }
 
 function closeBookModal() {
@@ -4963,6 +4969,11 @@ let _editPhotos = [];
 
 async function openEditModal(jobId) {
   setTimeout(initPriceInputs, 50);
+  // Kill password manager on every input in the modal — browsers sniff field names
+  document.querySelectorAll('#editModal input, #editModal select, #editModal textarea').forEach(el => {
+    el.setAttribute('autocomplete', 'new-password');
+    el.setAttribute('name', 'pp_' + Math.random().toString(36).slice(2));
+  });
   // Reset save button state in case it got stuck
   const saveBtn = document.querySelector('#editModal .btn-primary');
   if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save changes'; }
@@ -5010,6 +5021,9 @@ async function openEditModal(jobId) {
   const photosEl = document.getElementById('editExistingPhotos');
   if (photosEl) {
     const existingPhotos = j.job_photos || [];
+    // Register in lightbox registry
+    const lbKey = 'edit-' + j.id;
+    _lbRegistry[lbKey] = existingPhotos.map(p => `${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}`);
     if (existingPhotos.length) {
       photosEl.innerHTML = `
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px">
@@ -5020,7 +5034,7 @@ async function openEditModal(jobId) {
             <div style="position:relative;display:inline-block">
               <img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}"
                 style="width:72px;height:72px;object-fit:cover;border-radius:var(--radius);border:1px solid var(--border);cursor:pointer"
-                onclick="openJobPhotos(${JSON.stringify(existingPhotos)},${i})" alt="damage photo">
+                onclick="_lbOpen('${lbKey}',${i})" alt="damage photo">
               <button onclick="deletePhoto(${p.id})"
                 style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--red);border:none;color:#fff;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;padding:0">✕</button>
             </div>`).join('')}
@@ -7556,6 +7570,13 @@ function normalisePhone(phone) {
 let _lbUrls = [];
 let _lbIdx = 0;
 let _lbTouchStartX = 0;
+const _lbRegistry = {}; // key → array of URLs, avoids JSON in onclick attributes
+
+function _lbOpen(key, idx) {
+  const urls = _lbRegistry[key];
+  if (!urls || !urls.length) return;
+  openLightbox(urls, idx || 0);
+}
 
 function openLightbox(urls, startIdx) {
   _lbUrls = Array.isArray(urls) ? urls : [urls];
