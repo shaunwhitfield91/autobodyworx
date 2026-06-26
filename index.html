@@ -864,8 +864,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
             <div id="q_cust_suggestions" class="cust-suggestions"></div>
           </div>
           <div class="qgrid2">
-            <div><span class="qlbl">Phone</span><input autocomplete="off" class="qinp" id="q_custPhone" placeholder="07700..."></div>
-            <div><span class="qlbl">Email</span><input autocomplete="off" class="qinp" id="q_custEmail" placeholder="email@..."></div>
+            <div><span class="qlbl">Phone</span><input autocomplete="nope" class="qinp" id="q_custPhone" placeholder="07700..."></div>
+            <div><span class="qlbl">Email</span><input autocomplete="nope" class="qinp" id="q_custEmail" placeholder="email@..."></div>
           </div>
           <div class="q-section-hd">Vehicle</div>
           <div class="qgrid3">
@@ -1159,7 +1159,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 <!-- ADD JOB MODAL -->
-<div class="modal-overlay" id="addModal" onclick="if(event.target===this)closeAddModal()">
+<div class="modal-overlay" id="addModal">
   <div class="modal-box">
     <div class="modal-hd">Add job manually</div>
     <div class="modal-grid2">
@@ -1169,10 +1169,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <div id="m_cust_suggestions" class="cust-suggestions"></div>
         </div>
       </div>
-      <div><span class="qlbl">Phone</span><input autocomplete="off" class="minp" id="m_phone" placeholder="07700..."></div>
+      <div><span class="qlbl">Phone</span><input autocomplete="nope" class="minp" id="m_phone" placeholder="07700..."></div>
     </div>
     <div class="modal-grid2">
-      <div><span class="qlbl">Email</span><input autocomplete="off" class="minp" id="m_email" placeholder="email@..." type="email"></div>
+      <div><span class="qlbl">Email</span><input autocomplete="nope" class="minp" id="m_email" placeholder="email@..." type="text" inputmode="email"></div>
       <div><span class="qlbl">Customer address</span><input autocomplete="off" class="minp" id="m_addr2" placeholder="Address, postcode"></div>
     </div>
     <span class="qlbl">Vehicle</span><input autocomplete="off" class="minp" id="m_vehicle" placeholder="Make, model, year">
@@ -1342,7 +1342,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 
 <!-- BOOK JOB MODAL -->
-<div class="modal-overlay" id="bookModal" onclick="if(event.target===this)closeBookModal()">
+<div class="modal-overlay" id="bookModal">
   <div class="modal-box">
     <div class="modal-hd">Book job</div>
     <div id="bookModalInfo" style="background:var(--blue-bg);border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;font-size:13px;color:var(--blue-txt);font-weight:500"></div>
@@ -1390,16 +1390,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 <!-- EDIT JOB MODAL -->
-<div class="modal-overlay" id="editModal" onclick="if(event.target===this)closeEditModal()">
+<div class="modal-overlay" id="editModal">
   <div class="modal-box" style="max-width:560px">
     <div class="modal-hd">Edit job</div>
     <input autocomplete="off" type="hidden" id="edit_jobId">
     <div class="modal-grid2">
       <div><span class="qlbl">Customer name</span><input autocomplete="off" class="minp" id="edit_name" placeholder="Full name"></div>
-      <div><span class="qlbl">Phone</span><input autocomplete="off" class="minp" id="edit_phone" placeholder="07700..."></div>
+      <div><span class="qlbl">Phone</span><input autocomplete="nope" class="minp" id="edit_phone" placeholder="07700..."></div>
     </div>
     <div class="modal-grid2">
-      <div><span class="qlbl">Email</span><input autocomplete="off" class="minp" id="edit_email" placeholder="email@..."></div>
+      <div><span class="qlbl">Email</span><input autocomplete="nope" class="minp" id="edit_email" placeholder="email@..."></div>
       <div><span class="qlbl">Vehicle</span><input autocomplete="off" class="minp" id="edit_vehicle" placeholder="Make, model, year"></div>
     </div>
     <div class="modal-grid2">
