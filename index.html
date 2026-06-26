@@ -1005,39 +1005,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
             <div style="font-size:40px">⚡</div>
             <div>Fill in the form and hit<br><strong>Generate quote</strong><br><span style="font-size:11px;color:var(--hint);margin-top:4px;display:block">or enter price manually</span></div>
           </div>
-          <!-- Manual entry panel -->
-          <div id="manualWrap" style="display:none">
-            <div style="font-size:13px;font-weight:600;color:var(--txt);margin-bottom:14px">Manual quote</div>
-            <span class="qlbl">Price (inc VAT)</span>
-            <input autocomplete="off" class="qinp" id="m_price_manual" placeholder="e.g. £320" style="font-size:22px;font-weight:700;text-align:center;color:var(--teal)">
-            <span class="qlbl" style="margin-top:8px">Rung / complexity</span>
-            <select class="qinp" id="m_rung_manual" style="margin-bottom:10px">
-              <option value="1">Rung 1 — minor touch up</option>
-              <option value="2" selected>Rung 2 — SMART 1 panel</option>
-              <option value="3">Rung 3 — moderate 1–2 panels</option>
-              <option value="4">Rung 4 — full respray 1 panel</option>
-              <option value="5">Rung 5 — 2+ panels full respray</option>
-              <option value="6">Rung 6 — major/complex</option>
-            </select>
-            <span class="qlbl">Duration</span>
-            <select class="qinp" id="m_dur_manual" style="margin-bottom:10px">
-              <option value="1 hour">1 hour</option>
-              <option value="2 hours">2 hours</option>
-              <option value="3 hours" selected>3 hours</option>
-              <option value="4 hours">4 hours</option>
-              <option value="5 hours">5 hours</option>
-              <option value="Full day">Full day</option>
-              <option value="2 days">2 days</option>
-              <option value="PDR">PDR (contracted out)</option>
-              <option value="Alloys">Alloys (contracted out)</option>
-            </select>
-            <span class="qlbl">Notes for customer (optional)</span>
-            <textarea autocomplete="off" class="qinp" id="m_note_manual" placeholder="Any notes to attach to this quote..." rows="2"></textarea>
-            <div style="display:flex;gap:8px;margin-top:4px">
-              <button class="btn-primary" onclick="saveManualQuote()" style="flex:1;padding:10px">Save quote</button>
-              <button class="btn-secondary" onclick="cancelManual()" style="flex:1;padding:10px">Cancel</button>
-            </div>
-          </div>
+          <!-- Manual entry panel — stub (actual content in modal below) -->
+          <div id="manualWrap" style="display:none"></div>
           <div class="quote-approved-msg" id="approvedMsg"></div>
         </div>
       </div>
@@ -3755,16 +3724,30 @@ function openDiaryEdit() {
 }
 
 function openDiaryJobCard() {
+  const targetId = diaryJobIdForPopup;
   closeDiaryPopup();
+  // Clear ALL filters so the job is definitely visible
+  currentFilter = 'all';
+  currentDateFilter = 'all';
+  // Reset status filter pills
+  document.querySelectorAll('.fpill').forEach(p => p.classList.remove('on'));
+  const allPill = document.getElementById('fp-all');
+  if (allPill) allPill.classList.add('on');
+  // Reset date filter pills
+  document.querySelectorAll('.dpill').forEach(p => p.classList.remove('on'));
+  const dateAllPill = document.getElementById('dfp-all');
+  if (dateAllPill) dateAllPill.classList.add('on');
   switchTab('jobs');
-  currentFilter = 'all'; // reset filter so job is definitely visible
   setTimeout(() => {
-    openJobId = diaryJobIdForPopup;
+    openJobId = targetId;
     renderJobs();
     setTimeout(() => {
-      const el = document.getElementById('jc-' + diaryJobIdForPopup);
-      if (el) { el.classList.add('open'); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-    }, 100);
+      const el = document.getElementById('jc-' + targetId);
+      if (el) {
+        el.classList.add('open');
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 150);
   }, 100);
 }
 
@@ -4072,7 +4055,7 @@ function revise() {
   quoteResult = null;
   document.getElementById('resultWrap').style.display = 'none';
   document.getElementById('quotePlaceholder').style.display = 'flex';
-  document.getElementById('manualWrap').style.display = 'none';
+  document.getElementById('manualQuoteModal').classList.remove('show');
 }
 
 async function sendForApproval() {
@@ -4142,7 +4125,7 @@ async function sendForApproval() {
     document.getElementById('upLbl').textContent = 'Tap to upload damage photos';
     document.getElementById('resultWrap').style.display = 'none';
     document.getElementById('quotePlaceholder').style.display = 'flex';
-    document.getElementById('manualWrap').style.display = 'none';
+    document.getElementById('manualQuoteModal').classList.remove('show');
     resetPanelPicker('q');
     const qSrc = document.getElementById('q_source'); if (qSrc) qSrc.value = 'whatsapp';
     await loadJobs();
@@ -4160,16 +4143,18 @@ function manualQuote() {
   document.getElementById('resultWrap').style.display = 'none';
   document.getElementById('loadingDiv').classList.remove('show');
   document.getElementById('approvedMsg').classList.remove('show');
-  document.getElementById('manualWrap').style.display = 'block';
-  // Scroll manualWrap into view on mobile where panels stack
-  setTimeout(() => {
-    const el = document.getElementById('manualWrap');
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 50);
+  // Reset fields
+  document.getElementById('m_price_manual').value = '';
+  document.getElementById('m_note_manual').value = '';
+  document.getElementById('m_rung_manual').value = '2';
+  document.getElementById('m_dur_manual').value = '3 hours';
+  // Open as a proper modal — can't be accidentally dismissed
+  document.getElementById('manualQuoteModal').classList.add('show');
+  setTimeout(() => document.getElementById('m_price_manual').focus(), 100);
 }
 
 function cancelManual() {
-  document.getElementById('manualWrap').style.display = 'none';
+  document.getElementById('manualQuoteModal').classList.remove('show');
   document.getElementById('quotePlaceholder').style.display = 'flex';
 }
 
@@ -4240,7 +4225,7 @@ async function saveManualQuote() {
         await sbRaw('POST', 'job_photos', { job_id: newJob.id, storage_path: storagePath, photo_type: 'damage' });
       }
     }
-    document.getElementById('manualWrap').style.display = 'none';
+    document.getElementById('manualQuoteModal').classList.remove('show');
     const msg = document.getElementById('approvedMsg');
     msg.textContent = '✓ Quote saved — ' + price + ' for ' + custName;
     msg.classList.add('show');
@@ -7474,5 +7459,44 @@ function normalisePhone(phone) {
   }
 })();
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!-- MANUAL QUOTE MODAL — can only be dismissed by Save/Cancel  -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="manualQuoteModal">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-hd">Manual quote</div>
+    <span class="qlbl">Price (inc VAT)</span>
+    <input autocomplete="off" class="qinp" id="m_price_manual" placeholder="e.g. £320" style="font-size:22px;font-weight:700;text-align:center;color:var(--teal);margin-bottom:12px">
+    <span class="qlbl">Rung / complexity</span>
+    <select class="qinp" id="m_rung_manual" style="margin-bottom:12px">
+      <option value="1">Rung 1 — minor touch up</option>
+      <option value="2" selected>Rung 2 — SMART 1 panel</option>
+      <option value="3">Rung 3 — moderate 1–2 panels</option>
+      <option value="4">Rung 4 — full respray 1 panel</option>
+      <option value="5">Rung 5 — 2+ panels full respray</option>
+      <option value="6">Rung 6 — major/complex</option>
+    </select>
+    <span class="qlbl">Duration</span>
+    <select class="qinp" id="m_dur_manual" style="margin-bottom:12px">
+      <option value="1 hour">1 hour</option>
+      <option value="2 hours">2 hours</option>
+      <option value="3 hours" selected>3 hours</option>
+      <option value="4 hours">4 hours</option>
+      <option value="5 hours">5 hours</option>
+      <option value="Full day">Full day</option>
+      <option value="2 days">2 days</option>
+      <option value="PDR">PDR (contracted out)</option>
+      <option value="Alloys">Alloys (contracted out)</option>
+    </select>
+    <span class="qlbl">Notes for customer (optional)</span>
+    <textarea autocomplete="off" class="qinp" id="m_note_manual" placeholder="Any notes to attach to this quote..." rows="3" style="margin-bottom:16px"></textarea>
+    <div style="display:flex;gap:8px">
+      <button class="btn-primary" onclick="saveManualQuote()" style="flex:1;padding:12px">Save quote</button>
+      <button class="btn-secondary" onclick="cancelManual()" style="flex:1;padding:12px">Cancel</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
