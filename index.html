@@ -542,13 +542,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="login-card">
     <div class="login-logo">Panel<span>Pro</span></div>
     <div class="login-tag">Quote. Book. Deliver.</div>
-    <form autocomplete="off" onsubmit="return false" style="display:contents">
-      <span class="login-lbl">Email</span>
-      <input class="login-inp" type="text" inputmode="email" id="loginEmail" placeholder="you@auto-bodyworx.com" autocomplete="username">
-      <span class="login-lbl">Password</span>
-      <input class="login-inp" type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
-      <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign in</button>
-    </form>
+    <span class="login-lbl">Email</span>
+    <input class="login-inp" type="text" inputmode="email" id="loginEmail" placeholder="you@auto-bodyworx.com" autocomplete="off">
+    <span class="login-lbl">Password</span>
+    <input class="login-inp" type="password" id="loginPass" placeholder="••••••••" autocomplete="off">
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign in</button>
     <div class="login-err" id="loginErr"></div>
   </div>
 </div>
