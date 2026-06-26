@@ -1755,6 +1755,7 @@ const XERO_FN = '/.netlify/functions/xero-invoice';
 let currentUser = null;
 let currentProfile = null;
 let allJobs = [];
+let allCustomers = [];
 let declinedJobs = [];
 let currentFilter = 'all';
 let currentDateFilter = 'all';
@@ -1989,8 +1990,8 @@ async function initApp() {
   // Home date/greeting
   updateHomeGreeting();
 
-  // Load data — diary jobs in parallel so diary is instant from first open
-  await Promise.all([loadJobs(), loadDiaryJobs()]);
+  // Load data — diary jobs and customers in parallel so everything is instant from first open
+  await Promise.all([loadJobs(), loadDiaryJobs(), loadCustomers()]);
   setupRealtime();
   startTokenRefreshTimer();
 
@@ -2073,7 +2074,7 @@ function switchTab(t) {
   if (t === 'tech') { renderTechPortal(); }
   if (t === 'settings') { checkApiKey(); checkXeroStatus(); }
   // timesheets now embedded in staff tab
-  if (t === 'customers') { renderCustomers(); }
+  if (t === 'customers') { loadCustomers().then(() => renderCustomers()); }
   if (t === 'staff') { renderStaffPortal(); }
   if (t === 'analytics') {
     // Always load latest declined jobs so close rate is accurate
@@ -2084,6 +2085,74 @@ function switchTab(t) {
 // ═══════════════════════════════════════════════════════════
 // LOAD JOBS
 // ═══════════════════════════════════════════════════════════
+async function loadCustomers() {
+  try {
+    const data = await sbRaw('GET', 'customers', null, `?select=*,vehicles(*)&order=last_name.asc,first_name.asc`);
+    allCustomers = data || [];
+  } catch(e) { allCustomers = []; }
+}
+
+async function upsertCustomer(name, phone, email, address, source) {
+  // Find existing customer by name + phone match
+  const normPhone = phone ? normalisePhone(phone) : null;
+  const firstName = name.split(' ')[0].trim();
+  const lastName = name.includes(' ') ? name.slice(name.indexOf(' ')+1).trim() : '';
+  // Check allCustomers first (fast path)
+  let existing = allCustomers.find(c => {
+    const cName = ((c.first_name||'')+' '+(c.last_name||'')).trim().toLowerCase();
+    return cName === name.toLowerCase().trim();
+  });
+  if (!existing && normPhone) {
+    existing = allCustomers.find(c => c.phone && normalisePhone(c.phone) === normPhone);
+  }
+  if (existing) {
+    // Update if we have new info they didn't before
+    const updates = {};
+    if (!existing.phone && normPhone) updates.phone = normPhone;
+    if (!existing.email && email) updates.email = email;
+    if (!existing.address && address) updates.address = address;
+    if (Object.keys(updates).length) {
+      await sbRaw('PATCH', 'customers', updates, `?id=eq.${existing.id}`);
+    }
+    return existing.id;
+  }
+  // Create new customer
+  const result = await sbRaw('POST', 'customers', {
+    first_name: firstName,
+    last_name: lastName,
+    phone: normPhone || null,
+    email: email || null,
+    address: address || null,
+    source: source || null
+  });
+  const newCustomer = Array.isArray(result) ? result[0] : result;
+  await loadCustomers();
+  return newCustomer?.id || null;
+}
+
+async function upsertVehicle(customerId, vehicleStr, colour, registration) {
+  if (!customerId || !vehicleStr?.trim()) return null;
+  const vStr = vehicleStr.trim();
+  // Check existing vehicles for this customer
+  const cust = allCustomers.find(c => c.id === customerId);
+  const existing = cust?.vehicles?.find(v => {
+    const vName = [v.make, v.model].filter(Boolean).join(' ').toLowerCase();
+    return vName === vStr.toLowerCase() || (registration && v.registration === registration);
+  });
+  if (existing) return existing.id;
+  // Parse make/model from vehicle string
+  const parts = vStr.split(' ');
+  const make = parts[0] || '';
+  const model = parts.slice(1).join(' ') || '';
+  const result = await sbRaw('POST', 'vehicles', {
+    customer_id: customerId,
+    make, model, colour: colour || null,
+    registration: registration || null
+  });
+  const newVehicle = Array.isArray(result) ? result[0] : result;
+  return newVehicle?.id || null;
+}
+
 async function loadJobs() {
   try {
     const data = await sbRaw('GET', 'jobs', null,
@@ -2618,7 +2687,7 @@ function buildJobCard(j) {
     <div class="jcard-top">
       <div class="jbar jbar-${s}"></div>
       <div class="jcard-main">
-        <div class="jcard-name">${esc(j.customer_name||'Unknown')}</div>
+        <div class="jcard-name">${esc(j.customer_name||'Unknown')}${j.job_number ? `<span style="font-size:10px;font-weight:700;color:var(--blue);background:var(--blue-bg);padding:1px 7px;border-radius:4px;margin-left:6px;letter-spacing:.3px">${esc(j.job_number)}</span>` : ''}</div>
         <div class="jcard-meta">
           <span style="font-size:12px;color:var(--txt2)">${esc(j.vehicle||'—')}</span>
           ${j.job_location==='mobile'?'<span class="badge bdg-mob">Mobile</span>':'<span class="badge bdg-ws">Workshop</span>'}
@@ -2642,6 +2711,7 @@ function buildJobCard(j) {
       ${buildProgBar(prog)}
       <!-- Details grid -->
       <div class="jbody-grid" style="margin-top:14px">
+        ${j.job_number ? `<div style="grid-column:1/-1"><div class="jbf">Job number</div><div class="jbv" style="font-weight:700;color:var(--blue);font-size:15px">${esc(j.job_number)}</div></div>` : ''}
         <div><div class="jbf">Customer</div><div class="jbv">${esc(j.customer_name||'—')}</div></div>
         <div><div class="jbf">Phone</div><div class="jbv"><a href="tel:${esc(j.customer_phone||'')}" style="color:var(--blue)">${esc(j.customer_phone||'—')}</a></div></div>
         <div><div class="jbf">Email</div><div class="jbv">${j.customer_email?`<a href="mailto:${esc(j.customer_email)}" style="color:var(--blue)">${esc(j.customer_email)}</a>`:'—'}</div></div>
@@ -3024,14 +3094,40 @@ async function saveNewJob() {
   if (!name) { showToast('Enter customer name'); return; }
   const date = document.getElementById('m_date').value || null;
   const status = document.getElementById('m_status').value;
+  const phone = normalisePhone(document.getElementById('m_phone').value.trim()) || null;
+  const email = document.getElementById('m_email')?.value.trim() || null;
+  const vehicleStr = document.getElementById('m_vehicle').value.trim() || null;
+  const colour = document.getElementById('m_colour').value.trim() || null;
+  const address = (document.getElementById('m_addr')?.value || document.getElementById('m_addr2')?.value || '').trim() || null;
+
+  // Upsert customer record
+  let customerId = null;
+  let vehicleId = null;
+  try {
+    customerId = await upsertCustomer(name, phone, email, address, document.getElementById('m_source')?.value);
+    if (customerId && vehicleStr) vehicleId = await upsertVehicle(customerId, vehicleStr, colour, null);
+  } catch(e) { console.warn('Customer upsert failed:', e); }
+
+  // Generate job number if status is booked
+  let jobNumber = null;
+  if (status === 'booked') {
+    try {
+      const seqRes = await sbRaw('POST', 'rpc/nextval', { sequence_name: 'job_number_seq' });
+      const seq = seqRes?.nextval || seqRes;
+      if (seq) jobNumber = 'ABW-' + String(seq).padStart(4, '0');
+    } catch(e) { console.warn('Job number generation failed:', e); }
+  }
+
   const body = {
     customer_name: name,
-    customer_phone: normalisePhone(document.getElementById('m_phone').value.trim()) || null,
-    customer_email: document.getElementById('m_email')?.value.trim() || null,
-    vehicle: document.getElementById('m_vehicle').value.trim() || null,
-    colour: document.getElementById('m_colour').value.trim() || null,
+    customer_phone: phone,
+    customer_email: email,
+    customer_id: customerId,
+    vehicle_id: vehicleId,
+    vehicle: vehicleStr || null,
+    colour,
     panels: document.getElementById('m_panels').value.trim() || null,
-    customer_address: (document.getElementById('m_addr')?.value || document.getElementById('m_addr2')?.value || '').trim() || null,
+    customer_address: address,
     quote_price: document.getElementById('m_price').value.trim() || null,
     booking_date: date,
     booking_time: date ? document.getElementById('m_time').value : null,
@@ -3040,6 +3136,7 @@ async function saveNewJob() {
     job_location: document.getElementById('m_loc').value,
     source: document.getElementById('m_source').value,
     status: status,
+    job_number: jobNumber,
     archived: false
   };
   try {
@@ -3900,15 +3997,33 @@ async function approveQuote() {
   const custName = document.getElementById('q_custName').value.trim() || 'Unknown';
   const custPhone = document.getElementById('q_custPhone').value.trim();
   const custEmail = document.getElementById('q_custEmail').value.trim();
-  const vehicle = [document.getElementById('q_make').value.trim(), document.getElementById('q_model').value.trim(), document.getElementById('q_year').value.trim()].filter(Boolean).join(' ');
+  const make = document.getElementById('q_make').value.trim();
+  const model = document.getElementById('q_model').value.trim();
+  const year = document.getElementById('q_year').value.trim();
+  const vehicle = [make, model, year].filter(Boolean).join(' ');
   const colour = document.getElementById('q_colour').value.trim();
   const panels = document.getElementById('q_panels').value.trim();
   const notes = document.getElementById('q_notes').value.trim();
+  const mAddr = [
+    document.getElementById('q_addr1')?.value?.trim(),
+    document.getElementById('q_addr2')?.value?.trim(),
+    document.getElementById('q_postcode')?.value?.trim()
+  ].filter(Boolean).join(', ');
+
+  // Upsert customer record
+  let customerId = null;
+  let vehicleId = null;
+  try {
+    customerId = await upsertCustomer(custName, custPhone, custEmail, mAddr, document.getElementById('q_source')?.value);
+    if (customerId && vehicle) vehicleId = await upsertVehicle(customerId, vehicle, colour, null);
+  } catch(e) { console.warn('Customer upsert failed:', e); }
 
   const body = {
     customer_name: custName,
     customer_phone: custPhone,
     customer_email: custEmail,
+    customer_id: customerId,
+    vehicle_id: vehicleId,
     vehicle: vehicle + (colour ? ' · ' + colour : ''),
     colour,
     panels,
@@ -3948,7 +4063,7 @@ async function approveQuote() {
     selectedQuotePhotos = [];
     document.getElementById('upPrev').innerHTML = '';
     document.getElementById('upLbl').textContent = 'Tap to upload damage photos';
-    await loadJobs();
+    await Promise.all([loadJobs(), loadCustomers()]);
     showToast('Quote saved ✓');
   } catch(e) { alert('Failed to save: ' + e.message); }
 }
@@ -4063,7 +4178,10 @@ async function saveManualQuote() {
   const custName = document.getElementById('q_custName').value.trim() || 'Unknown';
   const custPhone = document.getElementById('q_custPhone').value.trim();
   const custEmail = document.getElementById('q_custEmail').value.trim();
-  const vehicle = [document.getElementById('q_make').value.trim(), document.getElementById('q_model').value.trim(), document.getElementById('q_year').value.trim()].filter(Boolean).join(' ');
+  const make = document.getElementById('q_make').value.trim();
+  const model = document.getElementById('q_model').value.trim();
+  const year = document.getElementById('q_year').value.trim();
+  const vehicle = [make, model, year].filter(Boolean).join(' ');
   const colour = document.getElementById('q_colour').value.trim();
   const panels = document.getElementById('q_panels').value.trim();
   const rung = document.getElementById('m_rung_manual').value;
@@ -4077,11 +4195,22 @@ async function saveManualQuote() {
     document.getElementById('q_addr2')?.value?.trim(),
     document.getElementById('q_postcode')?.value?.trim()
   ].filter(Boolean).join(', ');
+
+  // Upsert customer record
+  let customerId = null;
+  let vehicleId = null;
+  try {
+    customerId = await upsertCustomer(custName, custPhone, custEmail, mAddr, document.getElementById('q_source')?.value);
+    if (customerId && vehicle) vehicleId = await upsertVehicle(customerId, vehicle, colour, null);
+  } catch(e) { console.warn('Customer upsert failed:', e); }
+
   const body = {
     customer_name: custName,
     customer_phone: custPhone,
     customer_email: custEmail,
     customer_address: mAddr || null,
+    customer_id: customerId,
+    vehicle_id: vehicleId,
     vehicle: vehicle + (colour ? ' · ' + colour : ''),
     colour,
     panels,
@@ -4118,7 +4247,7 @@ async function saveManualQuote() {
     selectedQuotePhotos = [];
     document.getElementById('upPrev').innerHTML = '';
     document.getElementById('upLbl').textContent = 'Tap to upload damage photos';
-    await loadJobs();
+    await Promise.all([loadJobs(), loadCustomers()]);
     showToast('Quote saved ✓');
   } catch(e) { alert('Failed: ' + e.message); }
 }
@@ -4787,6 +4916,23 @@ async function saveBooking() {
   if (!_bookJobId) return;
   const date = document.getElementById('bk_date').value;
   if (!date) { showToast('Please select a date'); return; }
+
+  // Generate job number if this job doesn't have one yet
+  const existingJob = allJobs.find(x => x.id === _bookJobId);
+  let jobNumber = existingJob?.job_number || null;
+  if (!jobNumber) {
+    try {
+      const maxRes = await sbRaw('GET', 'jobs', null, `?select=job_number&job_number=not.is.null&order=job_number.desc&limit=1`);
+      const lastNum = maxRes?.[0]?.job_number;
+      if (lastNum) {
+        const n = parseInt(lastNum.replace('ABW-','')) + 1;
+        jobNumber = 'ABW-' + String(n).padStart(4, '0');
+      } else {
+        jobNumber = 'ABW-0419';
+      }
+    } catch(e) { console.warn('Job number generation failed:', e); }
+  }
+
   const updates = {
     status: 'booked',
     booking_date: date,
@@ -4795,13 +4941,15 @@ async function saveBooking() {
     assigned_tech: document.getElementById('bk_tech').value,
     job_location: document.getElementById('bk_loc').value,
     cd_required: document.getElementById('bk_cd').checked,
-    customer_address: document.getElementById('bk_addr').value.trim() || null
+    customer_address: document.getElementById('bk_addr').value.trim() || null,
+    ...(jobNumber ? { job_number: jobNumber } : {})
   };
   try {
     await sbRaw('PATCH', 'jobs', updates, '?id=eq.' + _bookJobId);
-    showToast('✓ Job booked — ' + fmtDate(date));
+    const numStr = jobNumber ? ` · ${jobNumber}` : '';
+    showToast('✓ Job booked — ' + fmtDate(date) + numStr);
     closeBookModal();
-    await loadJobs();
+    await Promise.all([loadJobs(), loadCustomers()]);
     // Re-open the card
     openJobId = _bookJobId;
     setTimeout(() => {
@@ -6271,20 +6419,37 @@ function pickJobToBook(jobId) {
 
 // Build customer list from allJobs — deduplicated by name
 function buildCustomerList() {
+  // Use allCustomers (from customers table) if loaded, fall back to job-derived list
+  if (allCustomers.length) {
+    return allCustomers.map(c => {
+      const name = ((c.first_name||'') + ' ' + (c.last_name||'')).trim();
+      const cJobs = allJobs.filter(j => j.customer_id === c.id ||
+        j.customer_name?.toLowerCase().trim() === name.toLowerCase());
+      const lastJob = cJobs.length ? cJobs.reduce((a,b) => (a.booking_date||a.created_at) > (b.booking_date||b.created_at) ? a : b) : null;
+      const vehicles = c.vehicles || [];
+      return {
+        id: c.id,
+        name,
+        first_name: c.first_name || '',
+        last_name: c.last_name || '',
+        phone: c.phone || '',
+        email: c.email || '',
+        address: c.address || '',
+        vehicles,
+        vehicle: vehicles.length ? [vehicles[0].make, vehicles[0].model].filter(Boolean).join(' ') : '',
+        jobs: cJobs,
+        lastJob: lastJob?.booking_date || lastJob?.created_at?.split('T')[0] || null
+      };
+    }).sort((a,b) => a.name.localeCompare(b.name));
+  }
+  // Fallback: derive from jobs (legacy)
   const custMap = {};
   allJobs.forEach(j => {
     if (!j.customer_name || j.customer_name === 'Unknown') return;
     const key = j.customer_name.toLowerCase().trim();
     if (!custMap[key]) {
-      custMap[key] = {
-        name: j.customer_name,
-        phone: j.customer_phone || '',
-        email: j.customer_email || '',
-        address: j.customer_address || '',
-        vehicle: j.vehicle || '',
-        jobs: [],
-        lastJob: null
-      };
+      custMap[key] = { name: j.customer_name, phone: j.customer_phone || '', email: j.customer_email || '',
+        address: j.customer_address || '', vehicle: j.vehicle || '', vehicles: [], jobs: [], lastJob: null };
     }
     custMap[key].jobs.push(j);
     if (!custMap[key].phone && j.customer_phone) custMap[key].phone = j.customer_phone;
@@ -6303,35 +6468,58 @@ function renderCustomers() {
   if (q) customers = customers.filter(c =>
     c.name.toLowerCase().includes(q) ||
     c.phone.includes(q) ||
-    c.email.toLowerCase().includes(q)
+    c.email.toLowerCase().includes(q) ||
+    c.vehicles?.some(v => [v.make,v.model,v.registration].filter(Boolean).join(' ').toLowerCase().includes(q))
   );
-  // Highlight potential duplicates
-  const nameCounts = {};
-  buildCustomerList().forEach(c => {
-    const first = c.name.split(' ')[0].toLowerCase();
-    nameCounts[first] = (nameCounts[first] || 0) + 1;
-  });
 
   if (!customers.length) {
     el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">No customers found</div>';
     return;
   }
   el.innerHTML = customers.map(c => {
-    const isDup = nameCounts[c.name.split(' ')[0].toLowerCase()] > 1;
     const jobCount = c.jobs.length;
-    const totalSpend = c.jobs.reduce((s,j) => s + (parseFloat((j.quote_price||'0').replace(/[^0-9.]/g,''))||0), 0);
+    const totalSpend = c.jobs.reduce((s,j) => s + (parseFloat((j.invoice_amount||j.quote_price||'0').replace(/[^0-9.]/g,''))||0), 0);
+    const activeJobs = c.jobs.filter(j => j.status !== 'completed' && j.status !== 'declined');
+
+    // Vehicles list
+    const vehiclesHtml = c.vehicles && c.vehicles.length
+      ? c.vehicles.map(v => {
+          const vName = [v.make, v.model].filter(Boolean).join(' ');
+          const vDetail = [v.colour, v.registration].filter(Boolean).join(' · ');
+          return `<span style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:11px;color:var(--txt2)">🚗 ${esc(vName)}${vDetail?' <span style="color:var(--muted)">'+esc(vDetail)+'</span>':''}</span>`;
+        }).join('')
+      : c.vehicle ? `<span style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:11px;color:var(--txt2)">🚗 ${esc(c.vehicle)}</span>` : '';
+
+    // Recent jobs list (last 3)
+    const recentJobs = c.jobs.slice(0,3);
+    const recentJobsHtml = recentJobs.length ? `
+      <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px">Job history</div>
+        ${recentJobs.map(j => {
+          const statusColour = {quoted:'#92400e',booked:'#1e3a8a',completed:'#065f46',pending:'#374151',declined:'#991b1b'}[j.status]||'#374151';
+          const statusBg = {quoted:'#fef9c3',booked:'#dbeafe',completed:'#d1fae5',pending:'#f3f4f6',declined:'#fee2e2'}[j.status]||'#f3f4f6';
+          return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;flex-wrap:wrap">
+            ${j.job_number ? `<span style="font-weight:700;color:var(--blue);font-size:11px;min-width:70px">${esc(j.job_number)}</span>` : ''}
+            <span style="color:var(--txt2)">${j.booking_date ? fmtDate(j.booking_date) : fmtDate(j.created_at?.split('T')[0])}</span>
+            <span style="color:var(--txt);flex:1">${esc(j.panels||j.vehicle||'—')}</span>
+            <span style="background:${statusBg};color:${statusColour};font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px">${j.status}</span>
+            ${j.invoice_amount||j.quote_price ? `<span style="font-weight:700;color:var(--teal)">£${esc((j.invoice_amount||j.quote_price||'').replace('£',''))}</span>` : ''}
+          </div>`;
+        }).join('')}
+        ${c.jobs.length > 3 ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">+ ${c.jobs.length-3} more job${c.jobs.length-3!==1?'s':''}</div>` : ''}
+      </div>` : '';
+
     return `<div class="cust-card">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:6px">
-        <div>
-          <div class="cust-card-name">${esc(c.name)}
-            ${isDup ? '<span class="cust-sug-badge">⚠ Possible duplicate</span>' : ''}
+        <div style="flex:1;min-width:0">
+          <div class="cust-card-name">${esc(c.name)}</div>
+          <div class="cust-card-detail" style="margin-top:3px">
+            ${c.phone ? `<a href="tel:${esc(c.phone)}" style="color:var(--blue);text-decoration:none">📞 ${esc(c.phone)}</a>&nbsp;` : ''}
+            ${c.email ? `<a href="mailto:${esc(c.email)}" style="color:var(--blue);text-decoration:none">✉ ${esc(c.email)}</a>&nbsp;` : ''}
+            ${c.address ? `<span>📍 ${esc(c.address)}</span>` : ''}
           </div>
-          <div class="cust-card-detail">
-            ${c.phone ? '📞 ' + esc(c.phone) + ' &nbsp;' : ''}
-            ${c.email ? '✉ ' + esc(c.email) + ' &nbsp;' : ''}
-            ${c.address ? '📍 ' + esc(c.address) : ''}
-          </div>
-          ${c.vehicle ? `<div style="font-size:12px;color:var(--muted)">🚗 Last vehicle: ${esc(c.vehicle)}</div>` : ''}
+          ${vehiclesHtml ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${vehiclesHtml}</div>` : ''}
+          ${activeJobs.length ? `<div style="margin-top:6px"><span style="background:#dbeafe;color:#1e3a8a;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px">🔧 ${activeJobs.length} active job${activeJobs.length!==1?'s':''}</span></div>` : ''}
         </div>
         <div style="text-align:right;flex-shrink:0">
           <div style="font-size:13px;font-weight:700;color:var(--txt)">${jobCount} job${jobCount!==1?'s':''}</div>
@@ -6339,7 +6527,8 @@ function renderCustomers() {
           ${c.lastJob ? `<div style="font-size:11px;color:var(--muted)">Last: ${fmtDate(c.lastJob)}</div>` : ''}
         </div>
       </div>
-      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+      ${recentJobsHtml}
+      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
         <button onclick="newQuoteForCustomer(${JSON.stringify(c).split('"').join('&quot;')})" class="btn-primary" style="font-size:11px;padding:5px 10px">+ New quote</button>
         <button onclick="newJobForCustomer(${JSON.stringify(c).split('"').join('&quot;')})" class="btn-secondary" style="font-size:11px;padding:5px 10px">+ Book job</button>
       </div>
