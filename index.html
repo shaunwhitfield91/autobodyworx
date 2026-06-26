@@ -3677,12 +3677,15 @@ async function deleteDiaryAppointment() {
   const j = allJobs.find(x => x.id === diaryJobIdForPopup) || diaryAllJobs.find(x => x.id === diaryJobIdForPopup);
   if (!j) return;
   if (!confirm(`Remove ${j.customer_name||'this job'} from the diary? The job record will be kept.`)) return;
-  await sbRaw('PATCH', 'jobs', { booking_date: null, booking_time: null, status: 'quoted' }, `?id=eq.${diaryJobIdForPopup}`);
   closeDiaryPopup();
-  showToast('Job unscheduled — back to quoted');
-  await loadJobs();
-  await loadDiaryJobs();
+  // Remove from local cache immediately so diary updates instantly
+  diaryAllJobs = diaryAllJobs.filter(x => x.id !== diaryJobIdForPopup);
+  allJobs = allJobs.filter(x => x.id !== diaryJobIdForPopup);
   renderDiary();
+  showToast('Job unscheduled — back to quoted');
+  // Then save to DB and refresh in background
+  await sbRaw('PATCH', 'jobs', { booking_date: null, booking_time: null, status: 'quoted' }, `?id=eq.${diaryJobIdForPopup}`);
+  Promise.all([loadJobs(), loadDiaryJobs()]).then(() => renderDiary());
 }
 
 async function deleteDiaryEntry() {
@@ -3691,11 +3694,14 @@ async function deleteDiaryEntry() {
   const j = diaryAllJobs.find(x => x.id === diaryJobIdForPopup);
   if (!j) return;
   if (!confirm(`Delete "${j.customer_name||'this entry'}"? This cannot be undone.`)) return;
-  await sbRaw('DELETE', 'jobs', null, `?id=eq.${diaryJobIdForPopup}`);
   closeDiaryPopup();
-  showToast('Entry deleted');
-  await loadDiaryJobs();
+  // Remove instantly from local cache
+  diaryAllJobs = diaryAllJobs.filter(x => x.id !== diaryJobIdForPopup);
   renderDiary();
+  showToast('Entry deleted');
+  // Save to DB in background
+  await sbRaw('DELETE', 'jobs', null, `?id=eq.${diaryJobIdForPopup}`);
+  loadDiaryJobs().then(() => renderDiary());
 }
 
 function openDiaryEntryEdit() {
