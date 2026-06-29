@@ -2849,7 +2849,13 @@ async function confirmDecline(id) {
     showToast('✓ Job declined — Chloe can see the reason in Declined Jobs');
     renderJobs();
     loadDeclinedJobs();
-    // Notify Chloe via in-app badge
+    // Notify Chloe via push notification
+    const j = allJobs.find(x => x.id === id) || { customer_name: 'Customer', vehicle: '' };
+    sendNotif(
+      '❌ Job declined — ' + (j.customer_name || 'Customer'),
+      (j.vehicle ? j.vehicle + ' · ' : '') + reason,
+      '/icon-192.png'
+    );
     updatePendingBadge();
     setTimeout(() => { window._suppressReload = false; }, 3000);
   } catch(e) {
@@ -5375,6 +5381,26 @@ function checkForNewNotifs(freshJobs) {
       );
     }
   });
+  // Check for jobs that Shaun declined — they disappear from the main list
+  // Poll recently declined jobs and notify Chloe within 2 minutes of decline
+  if (role === 'admin_staff') {
+    sbRaw('GET', 'jobs', null,
+      `?select=id,customer_name,vehicle,decline_reason,notes,updated_at&status=eq.declined&order=updated_at.desc&limit=5`)
+    .then(recentDeclined => {
+      if (!recentDeclined) return;
+      recentDeclined.forEach(j => {
+        const age = (Date.now() - new Date(j.updated_at).getTime()) / 1000;
+        if (age < 120 && !_knownJobIds.has('declined-' + j.id)) {
+          _knownJobIds.add('declined-' + j.id);
+          sendNotif(
+            '❌ Job declined — ' + (j.customer_name || 'Customer'),
+            (j.vehicle ? j.vehicle + ' · ' : '') + (j.decline_reason || j.notes || 'See declined jobs'),
+            '/icon-192.png'
+          );
+        }
+      });
+    }).catch(() => {});
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -7891,7 +7917,7 @@ function normalisePhone(phone) {
   <!-- Counter -->
   <div id="lbCounter" style="position:absolute;top:20px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.7);font-size:13px;font-weight:600;letter-spacing:.5px"></div>
   <!-- Image -->
-  <img id="lbImg" src="" style="max-width:calc(100vw - 100px);max-height:calc(100vh - 120px);object-fit:contain;border-radius:6px;user-select:none;-webkit-user-drag:none" alt="photo">
+  <img id="lbImg" src="" style="max-width:calc(100vw - 100px);max-height:calc(100vh - 120px);object-fit:contain;border-radius:6px;user-select:none;-webkit-user-drag:none;touch-action:none;transition:transform .1s ease" alt="photo">
   <!-- Arrows -->
   <button id="lbPrev" onclick="lbNav(-1)" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;color:#fff;font-size:26px;width:48px;height:64px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center">‹</button>
   <button id="lbNext" onclick="lbNav(1)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;color:#fff;font-size:26px;width:48px;height:64px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center">›</button>
@@ -7906,7 +7932,15 @@ function normalisePhone(phone) {
 let _lbUrls = [];
 let _lbIdx = 0;
 let _lbTouchStartX = 0;
-const _lbRegistry = {}; // key → array of URLs, avoids JSON in onclick attributes
+const _lbRegistry = {};
+
+// Zoom state
+let _lbScale = 1;
+let _lbPanX = 0;
+let _lbPanY = 0;
+let _lbPinchDist = null;
+let _lbPanStart = null;
+let _lbLastTap = 0;
 
 function _lbOpen(key, idx) {
   const urls = _lbRegistry[key];
@@ -7917,14 +7951,14 @@ function _lbOpen(key, idx) {
 function openLightbox(urls, startIdx) {
   _lbUrls = Array.isArray(urls) ? urls : [urls];
   _lbIdx = startIdx || 0;
+  _lbResetZoom();
   const lb = document.getElementById('photoLightbox');
   lb.style.display = 'flex';
   document.body.style.overflow = 'hidden';
   lbRender();
-  // Swipe support
-  lb.addEventListener('touchstart', lbTouchStart, { passive: true });
+  lb.addEventListener('touchstart', lbTouchStart, { passive: false });
+  lb.addEventListener('touchmove', lbTouchMove, { passive: false });
   lb.addEventListener('touchend', lbTouchEnd, { passive: true });
-  // Keyboard support
   document.addEventListener('keydown', lbKeydown);
 }
 
@@ -7932,9 +7966,23 @@ function closeLightbox() {
   const lb = document.getElementById('photoLightbox');
   lb.style.display = 'none';
   document.body.style.overflow = '';
+  _lbResetZoom();
   lb.removeEventListener('touchstart', lbTouchStart);
+  lb.removeEventListener('touchmove', lbTouchMove);
   lb.removeEventListener('touchend', lbTouchEnd);
   document.removeEventListener('keydown', lbKeydown);
+}
+
+function _lbResetZoom() {
+  _lbScale = 1; _lbPanX = 0; _lbPanY = 0;
+  _lbPinchDist = null; _lbPanStart = null;
+  const img = document.getElementById('lbImg');
+  if (img) img.style.transform = '';
+}
+
+function _lbApplyZoom() {
+  const img = document.getElementById('lbImg');
+  if (img) img.style.transform = `scale(${_lbScale}) translate(${_lbPanX/_lbScale}px, ${_lbPanY/_lbScale}px)`;
 }
 
 function lbRender() {
@@ -7943,6 +7991,7 @@ function lbRender() {
   const dots = document.getElementById('lbDots');
   const prev = document.getElementById('lbPrev');
   const next = document.getElementById('lbNext');
+  _lbResetZoom();
   img.src = _lbUrls[_lbIdx];
   counter.textContent = _lbUrls.length > 1 ? (_lbIdx + 1) + ' / ' + _lbUrls.length : '';
   prev.style.display = _lbUrls.length > 1 ? 'flex' : 'none';
@@ -7953,6 +8002,7 @@ function lbRender() {
 }
 
 function lbNav(dir) {
+  if (_lbScale > 1) return; // don't swipe between photos while zoomed
   _lbIdx = (_lbIdx + dir + _lbUrls.length) % _lbUrls.length;
   lbRender();
 }
@@ -7965,13 +8015,72 @@ function lbKeydown(e) {
   else if (e.key === 'Escape') closeLightbox();
 }
 
-function lbTouchStart(e) { _lbTouchStartX = e.touches[0].clientX; }
-function lbTouchEnd(e) {
-  const diff = _lbTouchStartX - e.changedTouches[0].clientX;
-  if (Math.abs(diff) > 40) lbNav(diff > 0 ? 1 : -1);
+function _pinchDist(touches) {
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.sqrt(dx*dx + dy*dy);
 }
 
-// Helper — build URL array from job photos and open lightbox
+function lbTouchStart(e) {
+  if (e.touches.length === 2) {
+    // Pinch start
+    _lbPinchDist = _pinchDist(e.touches);
+    _lbPanStart = null;
+    e.preventDefault();
+  } else if (e.touches.length === 1) {
+    const t = e.touches[0];
+    // Double tap to zoom
+    const now = Date.now();
+    if (now - _lbLastTap < 280) {
+      e.preventDefault();
+      if (_lbScale > 1) { _lbResetZoom(); _lbApplyZoom(); }
+      else { _lbScale = 2.5; _lbApplyZoom(); }
+      _lbLastTap = 0;
+      return;
+    }
+    _lbLastTap = now;
+    // Pan start (only when zoomed)
+    if (_lbScale > 1) {
+      _lbPanStart = { x: t.clientX - _lbPanX, y: t.clientY - _lbPanY };
+    } else {
+      _lbTouchStartX = t.clientX;
+    }
+  }
+}
+
+function lbTouchMove(e) {
+  if (e.touches.length === 2) {
+    // Pinch zoom
+    e.preventDefault();
+    const dist = _pinchDist(e.touches);
+    if (_lbPinchDist) {
+      _lbScale = Math.min(5, Math.max(1, _lbScale * (dist / _lbPinchDist)));
+      _lbApplyZoom();
+    }
+    _lbPinchDist = dist;
+  } else if (e.touches.length === 1 && _lbScale > 1 && _lbPanStart) {
+    // Pan when zoomed
+    e.preventDefault();
+    _lbPanX = e.touches[0].clientX - _lbPanStart.x;
+    _lbPanY = e.touches[0].clientY - _lbPanStart.y;
+    _lbApplyZoom();
+  }
+}
+
+function lbTouchEnd(e) {
+  _lbPinchDist = null;
+  if (_lbScale <= 1) {
+    // Swipe to next/prev only when not zoomed
+    if (e.changedTouches.length === 1 && !_lbPanStart) {
+      const diff = _lbTouchStartX - e.changedTouches[0].clientX;
+      if (Math.abs(diff) > 50) lbNav(diff > 0 ? 1 : -1);
+    }
+    _lbPanStart = null;
+  } else {
+    _lbPanStart = null;
+  }
+}
+
 function openJobPhotos(photos, startIdx) {
   const urls = photos.map(p => `${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}`);
   openLightbox(urls, startIdx || 0);
