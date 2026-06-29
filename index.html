@@ -7917,7 +7917,7 @@ function normalisePhone(phone) {
   <!-- Counter -->
   <div id="lbCounter" style="position:absolute;top:20px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.7);font-size:13px;font-weight:600;letter-spacing:.5px"></div>
   <!-- Image -->
-  <img id="lbImg" src="" style="max-width:calc(100vw - 100px);max-height:calc(100vh - 120px);object-fit:contain;border-radius:6px;user-select:none;-webkit-user-drag:none;touch-action:none" alt="photo">
+  <img id="lbImg" src="" style="max-width:calc(100vw - 100px);max-height:calc(100vh - 120px);object-fit:contain;border-radius:6px;user-select:none;-webkit-user-drag:none;touch-action:manipulation" alt="photo">
   <!-- Arrows -->
   <button id="lbPrev" onclick="lbNav(-1)" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;color:#fff;font-size:26px;width:48px;height:64px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center">‹</button>
   <button id="lbNext" onclick="lbNav(1)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;color:#fff;font-size:26px;width:48px;height:64px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center">›</button>
@@ -7956,20 +7956,28 @@ function openLightbox(urls, startIdx) {
   lb.style.display = 'flex';
   document.body.style.overflow = 'hidden';
   lbRender();
-  lb.addEventListener('touchstart', lbTouchStart, { passive: false });
-  lb.addEventListener('touchmove', lbTouchMove, { passive: false });
-  lb.addEventListener('touchend', lbTouchEnd, { passive: true });
+  // Attach touch events to the IMAGE directly, not the overlay
+  const img = document.getElementById('lbImg');
+  img.addEventListener('touchstart', lbTouchStart, { passive: false });
+  img.addEventListener('touchmove', lbTouchMove, { passive: false });
+  img.addEventListener('touchend', lbTouchEnd, { passive: true });
+  // Swipe on overlay (when not zoomed)
+  lb.addEventListener('touchstart', lbOverlayTouchStart, { passive: true });
+  lb.addEventListener('touchend', lbOverlayTouchEnd, { passive: true });
   document.addEventListener('keydown', lbKeydown);
 }
 
 function closeLightbox() {
   const lb = document.getElementById('photoLightbox');
+  const img = document.getElementById('lbImg');
   lb.style.display = 'none';
   document.body.style.overflow = '';
   _lbResetZoom();
-  lb.removeEventListener('touchstart', lbTouchStart);
-  lb.removeEventListener('touchmove', lbTouchMove);
-  lb.removeEventListener('touchend', lbTouchEnd);
+  img.removeEventListener('touchstart', lbTouchStart);
+  img.removeEventListener('touchmove', lbTouchMove);
+  img.removeEventListener('touchend', lbTouchEnd);
+  lb.removeEventListener('touchstart', lbOverlayTouchStart);
+  lb.removeEventListener('touchend', lbOverlayTouchEnd);
   document.removeEventListener('keydown', lbKeydown);
 }
 
@@ -8021,26 +8029,40 @@ function _pinchDist(touches) {
   return Math.sqrt(dx*dx + dy*dy);
 }
 
+// Overlay swipe (only fires when not on the image)
+let _lbOverlayStartX = 0;
+function lbOverlayTouchStart(e) {
+  if (e.target === document.getElementById('lbImg')) return;
+  _lbOverlayStartX = e.touches[0].clientX;
+}
+function lbOverlayTouchEnd(e) {
+  if (e.target === document.getElementById('lbImg')) return;
+  if (_lbScale > 1) return;
+  const diff = _lbOverlayStartX - e.changedTouches[0].clientX;
+  if (Math.abs(diff) > 50) lbNav(diff > 0 ? 1 : -1);
+}
+
+// Image touch handlers — zoom + pan + double tap
 function lbTouchStart(e) {
   if (e.touches.length === 2) {
-    // Pinch start
+    e.preventDefault();
     _lbPinchDist = _pinchDist(e.touches);
     _lbPanStart = null;
-    e.preventDefault();
   } else if (e.touches.length === 1) {
     const t = e.touches[0];
-    // Double tap to zoom
     const now = Date.now();
-    if (now - _lbLastTap < 280) {
+    // Double tap
+    if (now - _lbLastTap < 300) {
       e.preventDefault();
-      if (_lbScale > 1) { _lbResetZoom(); _lbApplyZoom(); }
-      else { _lbScale = 2.5; _lbApplyZoom(); }
+      if (_lbScale > 1) { _lbResetZoom(); }
+      else { _lbScale = 2.5; }
+      _lbApplyZoom();
       _lbLastTap = 0;
       return;
     }
     _lbLastTap = now;
-    // Pan start (only when zoomed)
     if (_lbScale > 1) {
+      e.preventDefault();
       _lbPanStart = { x: t.clientX - _lbPanX, y: t.clientY - _lbPanY };
     } else {
       _lbTouchStartX = t.clientX;
@@ -8050,7 +8072,6 @@ function lbTouchStart(e) {
 
 function lbTouchMove(e) {
   if (e.touches.length === 2) {
-    // Pinch zoom
     e.preventDefault();
     const dist = _pinchDist(e.touches);
     if (_lbPinchDist) {
@@ -8059,7 +8080,6 @@ function lbTouchMove(e) {
     }
     _lbPinchDist = dist;
   } else if (e.touches.length === 1 && _lbScale > 1 && _lbPanStart) {
-    // Pan when zoomed
     e.preventDefault();
     _lbPanX = e.touches[0].clientX - _lbPanStart.x;
     _lbPanY = e.touches[0].clientY - _lbPanStart.y;
@@ -8068,15 +8088,14 @@ function lbTouchMove(e) {
 }
 
 function lbTouchEnd(e) {
-  _lbPinchDist = null;
-  if (_lbScale <= 1) {
-    // Swipe to next/prev only when not zoomed
-    if (e.changedTouches.length === 1 && !_lbPanStart) {
+  if (e.touches.length === 0) {
+    _lbPinchDist = null;
+    // Swipe on image when not zoomed
+    if (_lbScale <= 1 && !_lbPanStart) {
       const diff = _lbTouchStartX - e.changedTouches[0].clientX;
       if (Math.abs(diff) > 50) lbNav(diff > 0 ? 1 : -1);
     }
-    _lbPanStart = null;
-  } else {
+    if (_lbScale <= 1.05) _lbResetZoom();
     _lbPanStart = null;
   }
 }
