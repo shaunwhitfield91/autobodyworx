@@ -7911,13 +7911,13 @@ function normalisePhone(phone) {
 <!-- ═══════════════════════════════════════════════════ -->
 <!-- PHOTO LIGHTBOX SLIDESHOW                           -->
 <!-- ═══════════════════════════════════════════════════ -->
-<div id="photoLightbox" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.95);flex-direction:column;align-items:center;justify-content:center;touch-action:none">
+<div id="photoLightbox" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.95);flex-direction:column;align-items:center;justify-content:center">
   <!-- Close -->
   <button onclick="closeLightbox()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:22px;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2">✕</button>
   <!-- Counter -->
   <div id="lbCounter" style="position:absolute;top:20px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.7);font-size:13px;font-weight:600;letter-spacing:.5px"></div>
   <!-- Image -->
-  <img id="lbImg" src="" style="max-width:calc(100vw - 100px);max-height:calc(100vh - 120px);object-fit:contain;border-radius:6px;user-select:none;-webkit-user-drag:none;touch-action:none;transition:transform .1s ease" alt="photo">
+  <img id="lbImg" src="" style="max-width:calc(100vw - 100px);max-height:calc(100vh - 120px);object-fit:contain;border-radius:6px;user-select:none;-webkit-user-drag:none;touch-action:none" alt="photo">
   <!-- Arrows -->
   <button id="lbPrev" onclick="lbNav(-1)" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;color:#fff;font-size:26px;width:48px;height:64px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center">‹</button>
   <button id="lbNext" onclick="lbNav(1)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;color:#fff;font-size:26px;width:48px;height:64px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center">›</button>
