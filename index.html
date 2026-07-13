@@ -2126,7 +2126,7 @@ async function upsertVehicle(customerId, vehicleStr, colour, registration) {
 async function loadJobs() {
   try {
     const data = await sbRaw('GET', 'jobs', null,
-      `?select=*,job_parts(*),job_photos(*)&archived=eq.false&status=neq.declined&source=not.in.(Holiday,Appointment,Van%20day,Diary%20entry)&order=created_at.desc`);
+      `?select=*,job_parts(*),job_photos(*)&archived=eq.false&status=neq.declined&source=not.in.(Holiday,Holiday_approved,Appointment,Van%20day,Diary%20entry)&order=created_at.desc`);
     const freshJobs = data || [];
     if (_notifsReady) checkForNewNotifs(freshJobs);
     allJobs = freshJobs;
@@ -3395,7 +3395,7 @@ function renderDiary() {
 }
 
 function isDiaryEntry(j) {
-  return ['Holiday','Appointment','Van day','Diary entry','Bank Holiday'].includes(j?.source);
+  return ['Holiday','Holiday_approved','Appointment','Van day','Diary entry','Bank Holiday'].includes(j?.source);
 }
 
 function getJobsForDate(dateStr) {
@@ -4443,7 +4443,7 @@ function renderTechPortal() {
   const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1); yesterday.setHours(0,0,0,0);
   const ahead = new Date(now); ahead.setDate(now.getDate() + 7); ahead.setHours(23,59,59,999);
 
-  const DIARY_SOURCES = ['Holiday','Appointment','Van day','Diary entry'];
+  const DIARY_SOURCES = ['Holiday','Holiday_approved','Appointment','Van day','Diary entry'];
 
   // Upcoming diary entries for this tech (holidays, appointments etc)
   const today = now.toISOString().split('T')[0];
@@ -5696,7 +5696,7 @@ async function respondHol(status) {
             job_location: 'workshop',
             duration: 'Full day',
             notes: 'Holiday — ' + (r.reason || 'Annual leave'),
-            source: 'Holiday',
+            source: 'Holiday_approved',
             archived: false
           });
         }
@@ -6587,7 +6587,7 @@ function renderJobsRevBar(jobs) {
   // Only show revenue bar when date filter is active
   if (currentDateFilter === 'all') { el.innerHTML = ''; return; }
 
-  const diaryExclude = ['Holiday','Appointment','Van day','Diary entry'];
+  const diaryExclude = ['Holiday','Holiday_approved','Appointment','Van day','Diary entry'];
   const realJobs = jobs.filter(j => !diaryExclude.includes(j.source));
 
   function getPrice(j) {
@@ -7416,7 +7416,7 @@ function updateRevTarget() {
   const thisMonth = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
   const thisYear = now.getFullYear() + '';
 
-  const diaryExclude = ['Holiday','Appointment','Van day','Diary entry','Bank Holiday'];
+  const diaryExclude = ['Holiday','Holiday_approved','Appointment','Van day','Diary entry','Bank Holiday'];
   function getPrice(j) {
     return parseFloat((j.quote_price||j.invoice_amount||'0').toString().replace(/[^0-9.]/g,''))||0;
   }
@@ -7558,7 +7558,7 @@ function renderAnalytics() {
     ? new Date(now.getTime() - _analyticsRangeDays * 86400000).toISOString().split('T')[0]
     : '2000-01-01';
 
-  const diaryExclude = ['Holiday','Appointment','Van day','Diary entry','Bank Holiday'];
+  const diaryExclude = ['Holiday','Holiday_approved','Appointment','Van day','Diary entry','Bank Holiday'];
   function getPrice(j) {
     return parseFloat((j.quote_price||j.invoice_amount||'0').toString().replace(/[^0-9.]/g,''))||0;
   }
