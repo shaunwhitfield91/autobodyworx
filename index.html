@@ -536,6 +536,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <body>
 
 <!-- Chrome autofill decoy — prevents password save prompts on modals -->
+<div style="position:absolute;width:0;height:0;overflow:hidden;opacity:0;left:-9999px" aria-hidden="true">
+  <input type="text" name="fakeusernameremembered" tabindex="-1" autocomplete="off">
+  <input type="password" name="fakepasswordremembered" tabindex="-1" autocomplete="new-password">
+</div>
 
 <!-- LOGIN -->
 <div id="loginScreen">
@@ -543,9 +547,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="login-logo">Panel<span>Pro</span></div>
     <div class="login-tag">Quote. Book. Deliver.</div>
     <span class="login-lbl">Email</span>
-    <input class="login-inp" type="text" inputmode="email" id="loginEmail" placeholder="you@auto-bodyworx.com" autocomplete="off">
+    <input class="login-inp" type="email" id="loginEmail" placeholder="you@auto-bodyworx.com" autocomplete="email">
     <span class="login-lbl">Password</span>
-    <input class="login-inp" type="password" id="loginPass" placeholder="••••••••" autocomplete="off">
+    <input class="login-inp" type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password">
     <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign in</button>
     <div class="login-err" id="loginErr"></div>
   </div>
@@ -860,8 +864,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
             <div id="q_cust_suggestions" class="cust-suggestions"></div>
           </div>
           <div class="qgrid2">
-            <div><span class="qlbl">Phone</span><input autocomplete="nope" class="qinp" id="q_custPhone" placeholder="07700..."></div>
-            <div><span class="qlbl">Email</span><input autocomplete="nope" class="qinp" id="q_custEmail" placeholder="email@..."></div>
+            <div><span class="qlbl">Phone</span><input autocomplete="off" class="qinp" id="q_custPhone" placeholder="07700..."></div>
+            <div><span class="qlbl">Email</span><input autocomplete="off" class="qinp" id="q_custEmail" placeholder="email@..."></div>
           </div>
           <div class="q-section-hd">Vehicle</div>
           <div class="qgrid3">
@@ -1001,8 +1005,39 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
             <div style="font-size:40px">⚡</div>
             <div>Fill in the form and hit<br><strong>Generate quote</strong><br><span style="font-size:11px;color:var(--hint);margin-top:4px;display:block">or enter price manually</span></div>
           </div>
-          <!-- Manual entry panel — stub (actual content in modal below) -->
-          <div id="manualWrap" style="display:none"></div>
+          <!-- Manual entry panel -->
+          <div id="manualWrap" style="display:none">
+            <div style="font-size:13px;font-weight:600;color:var(--txt);margin-bottom:14px">Manual quote</div>
+            <span class="qlbl">Price (inc VAT)</span>
+            <input autocomplete="off" class="qinp" id="m_price_manual" placeholder="e.g. £320" style="font-size:22px;font-weight:700;text-align:center;color:var(--teal)">
+            <span class="qlbl" style="margin-top:8px">Rung / complexity</span>
+            <select class="qinp" id="m_rung_manual" style="margin-bottom:10px">
+              <option value="1">Rung 1 — minor touch up</option>
+              <option value="2" selected>Rung 2 — SMART 1 panel</option>
+              <option value="3">Rung 3 — moderate 1–2 panels</option>
+              <option value="4">Rung 4 — full respray 1 panel</option>
+              <option value="5">Rung 5 — 2+ panels full respray</option>
+              <option value="6">Rung 6 — major/complex</option>
+            </select>
+            <span class="qlbl">Duration</span>
+            <select class="qinp" id="m_dur_manual" style="margin-bottom:10px">
+              <option value="1 hour">1 hour</option>
+              <option value="2 hours">2 hours</option>
+              <option value="3 hours" selected>3 hours</option>
+              <option value="4 hours">4 hours</option>
+              <option value="5 hours">5 hours</option>
+              <option value="Full day">Full day</option>
+              <option value="2 days">2 days</option>
+              <option value="PDR">PDR (contracted out)</option>
+              <option value="Alloys">Alloys (contracted out)</option>
+            </select>
+            <span class="qlbl">Notes for customer (optional)</span>
+            <textarea autocomplete="off" class="qinp" id="m_note_manual" placeholder="Any notes to attach to this quote..." rows="2"></textarea>
+            <div style="display:flex;gap:8px;margin-top:4px">
+              <button class="btn-primary" onclick="saveManualQuote()" style="flex:1;padding:10px">Save quote</button>
+              <button class="btn-secondary" onclick="cancelManual()" style="flex:1;padding:10px">Cancel</button>
+            </div>
+          </div>
           <div class="quote-approved-msg" id="approvedMsg"></div>
         </div>
       </div>
@@ -1105,7 +1140,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         <div class="settings-card-hd">AI Quote Generator</div>
         <div class="settings-card-sub">Anthropic API key — required for quote generation. Stored in this browser only, never uploaded anywhere.</div>
         <div class="settings-row">
-          <input autocomplete="off" class="api-key-inp" type="text" id="anthropicKey" placeholder="sk-ant-..." style="font-family:monospace;letter-spacing:.5px;color:var(--muted)">
+          <input autocomplete="off" class="api-key-inp" type="password" id="anthropicKey" placeholder="sk-ant-...">
           <button class="btn-secondary" onclick="toggleKey()">Show</button>
           <button class="btn-primary" onclick="saveKey()">Save</button>
         </div>
@@ -1155,7 +1190,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 <!-- ADD JOB MODAL -->
-<div class="modal-overlay" id="addModal">
+<div class="modal-overlay" id="addModal" onclick="if(event.target===this)closeAddModal()">
   <div class="modal-box">
     <div class="modal-hd">Add job manually</div>
     <div class="modal-grid2">
@@ -1165,10 +1200,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <div id="m_cust_suggestions" class="cust-suggestions"></div>
         </div>
       </div>
-      <div><span class="qlbl">Phone</span><input autocomplete="nope" class="minp" id="m_phone" placeholder="07700..."></div>
+      <div><span class="qlbl">Phone</span><input autocomplete="off" class="minp" id="m_phone" placeholder="07700..."></div>
     </div>
     <div class="modal-grid2">
-      <div><span class="qlbl">Email</span><input autocomplete="nope" class="minp" id="m_email" placeholder="email@..." type="text" inputmode="email"></div>
+      <div><span class="qlbl">Email</span><input autocomplete="off" class="minp" id="m_email" placeholder="email@..." type="email"></div>
       <div><span class="qlbl">Customer address</span><input autocomplete="off" class="minp" id="m_addr2" placeholder="Address, postcode"></div>
     </div>
     <span class="qlbl">Vehicle</span><input autocomplete="off" class="minp" id="m_vehicle" placeholder="Make, model, year">
@@ -1338,7 +1373,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 
 <!-- BOOK JOB MODAL -->
-<div class="modal-overlay" id="bookModal">
+<div class="modal-overlay" id="bookModal" onclick="if(event.target===this)closeBookModal()">
   <div class="modal-box">
     <div class="modal-hd">Book job</div>
     <div id="bookModalInfo" style="background:var(--blue-bg);border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;font-size:13px;color:var(--blue-txt);font-weight:500"></div>
@@ -1376,6 +1411,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <input autocomplete="off" type="checkbox" id="bk_cd" style="width:18px;height:18px;cursor:pointer;accent-color:var(--blue);flex-shrink:0">
       <label for="bk_cd" style="font-size:13px;font-weight:600;color:var(--blue-txt);cursor:pointer">🚗 Collection &amp; Delivery required</label>
     </div>
+    <div style="display:flex;gap:8px;margin-top:8px;align-items:center;background:#fef9c3;border:1px solid #fde047;border-radius:var(--radius);padding:10px 12px">
+      <input autocomplete="off" type="checkbox" id="bk_parts" style="width:18px;height:18px;cursor:pointer;accent-color:#92400e;flex-shrink:0">
+      <label for="bk_parts" style="font-size:13px;font-weight:600;color:#713f12;cursor:pointer">🔧 Parts required</label>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;align-items:center;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--radius);padding:10px 12px">
+      <input autocomplete="off" type="checkbox" id="bk_courtesy" style="width:18px;height:18px;cursor:pointer;accent-color:#065f46;flex-shrink:0">
+      <label for="bk_courtesy" style="font-size:13px;font-weight:600;color:#065f46;cursor:pointer">🚘 Courtesy car required</label>
+    </div>
     <span class="qlbl" style="margin-top:12px">Customer address (if mobile / C&amp;D)</span>
     <input autocomplete="off" class="minp" id="bk_addr" placeholder="Full address">
     <div style="display:flex;gap:8px;margin-top:8px">
@@ -1386,16 +1429,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 <!-- EDIT JOB MODAL -->
-<div class="modal-overlay" id="editModal">
+<div class="modal-overlay" id="editModal" onclick="if(event.target===this)closeEditModal()">
   <div class="modal-box" style="max-width:560px">
     <div class="modal-hd">Edit job</div>
     <input autocomplete="off" type="hidden" id="edit_jobId">
     <div class="modal-grid2">
       <div><span class="qlbl">Customer name</span><input autocomplete="off" class="minp" id="edit_name" placeholder="Full name"></div>
-      <div><span class="qlbl">Phone</span><input autocomplete="nope" class="minp" id="edit_phone" placeholder="07700..."></div>
+      <div><span class="qlbl">Phone</span><input autocomplete="off" class="minp" id="edit_phone" placeholder="07700..."></div>
     </div>
     <div class="modal-grid2">
-      <div><span class="qlbl">Email</span><input autocomplete="nope" class="minp" id="edit_email" placeholder="email@..."></div>
+      <div><span class="qlbl">Email</span><input autocomplete="off" class="minp" id="edit_email" placeholder="email@..."></div>
       <div><span class="qlbl">Vehicle</span><input autocomplete="off" class="minp" id="edit_vehicle" placeholder="Make, model, year"></div>
     </div>
     <div class="modal-grid2">
@@ -1462,13 +1505,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
     <span class="qlbl">Internal notes</span>
     <textarea autocomplete="off" class="minp" id="edit_notes" rows="2" placeholder="Notes visible to all staff..." style="resize:vertical"></textarea>
-    <span class="qlbl" style="margin-top:10px">Parts</span>
-    <div id="edit_parts_list" style="margin-bottom:8px"></div>
-    <div style="display:flex;gap:6px;margin-bottom:4px">
-      <input autocomplete="off" class="minp" id="edit_pn" placeholder="Part name" style="flex:2">
-      <input autocomplete="off" class="minp" id="edit_pq" placeholder="Qty" style="width:55px">
-      <input autocomplete="off" class="minp" id="edit_pp" placeholder="£" style="width:65px">
-      <button class="btn-secondary" onclick="addPartFromEdit()" style="font-size:11px;padding:6px 10px;white-space:nowrap">+ Add</button>
+    <div style="display:flex;gap:8px;margin-top:10px;margin-bottom:6px;align-items:center;background:#fef9c3;border:1px solid #fde047;border-radius:var(--radius);padding:8px 12px">
+      <input autocomplete="off" type="checkbox" id="edit_parts_required" style="width:16px;height:16px;accent-color:#92400e;cursor:pointer;flex-shrink:0">
+      <label for="edit_parts_required" style="font-size:13px;font-weight:600;color:#713f12;cursor:pointer">🔧 Parts required — document in notes</label>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--radius);padding:8px 12px">
+      <input autocomplete="off" type="checkbox" id="edit_courtesy_car" style="width:16px;height:16px;accent-color:#065f46;cursor:pointer;flex-shrink:0">
+      <label for="edit_courtesy_car" style="font-size:13px;font-weight:600;color:#065f46;cursor:pointer">🚘 Courtesy car required</label>
     </div>
     <div class="modal-grid2">
       <div><span class="qlbl">Booking date</span><input autocomplete="off" class="minp" type="date" id="edit_date"></div>
@@ -1563,8 +1606,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"
         onchange="handleEditPhotos(this)">
     </label>
-    <!-- Existing damage photos -->
-    <div id="editExistingPhotos" style="margin-bottom:12px"></div>
     <div style="display:flex;gap:8px;margin-top:4px">
       <button class="btn-primary" onclick="saveEditJob()" style="flex:1;padding:10px">Save changes</button>
       <button class="btn-secondary" onclick="closeEditModal()" style="flex:1;padding:10px">Cancel</button>
@@ -1722,7 +1763,6 @@ const XERO_FN = '/.netlify/functions/xero-invoice';
 let currentUser = null;
 let currentProfile = null;
 let allJobs = [];
-let allCustomers = [];
 let declinedJobs = [];
 let currentFilter = 'all';
 let currentDateFilter = 'all';
@@ -1876,9 +1916,6 @@ async function doLogin() {
     const data = await sbAuth(email, pass);
     currentUser = data;
     localStorage.setItem('pp_session', JSON.stringify({ access_token: data.access_token, refresh_token: data.refresh_token, email }));
-    // Clear fields immediately so browser never sees a password + form-hide event
-    document.getElementById('loginEmail').value = '';
-    document.getElementById('loginPass').value = '';
     await initApp();
   } catch(e) {
     errEl.textContent = e.message;
@@ -1960,8 +1997,8 @@ async function initApp() {
   // Home date/greeting
   updateHomeGreeting();
 
-  // Load data — diary jobs and customers in parallel so everything is instant from first open
-  await Promise.all([loadJobs(), loadDiaryJobs(), loadCustomers()]);
+  // Load data — diary jobs in parallel so diary is instant from first open
+  await Promise.all([loadJobs(), loadDiaryJobs()]);
   setupRealtime();
   startTokenRefreshTimer();
 
@@ -2044,7 +2081,7 @@ function switchTab(t) {
   if (t === 'tech') { renderTechPortal(); }
   if (t === 'settings') { checkApiKey(); checkXeroStatus(); }
   // timesheets now embedded in staff tab
-  if (t === 'customers') { loadCustomers().then(() => renderCustomers()); }
+  if (t === 'customers') { renderCustomers(); }
   if (t === 'staff') { renderStaffPortal(); }
   if (t === 'analytics') {
     // Always load latest declined jobs so close rate is accurate
@@ -2055,78 +2092,10 @@ function switchTab(t) {
 // ═══════════════════════════════════════════════════════════
 // LOAD JOBS
 // ═══════════════════════════════════════════════════════════
-async function loadCustomers() {
-  try {
-    const data = await sbRaw('GET', 'customers', null, `?select=*,vehicles(*)&order=last_name.asc,first_name.asc`);
-    allCustomers = data || [];
-  } catch(e) { allCustomers = []; }
-}
-
-async function upsertCustomer(name, phone, email, address, source) {
-  // Find existing customer by name + phone match
-  const normPhone = phone ? normalisePhone(phone) : null;
-  const firstName = name.split(' ')[0].trim();
-  const lastName = name.includes(' ') ? name.slice(name.indexOf(' ')+1).trim() : '';
-  // Check allCustomers first (fast path)
-  let existing = allCustomers.find(c => {
-    const cName = ((c.first_name||'')+' '+(c.last_name||'')).trim().toLowerCase();
-    return cName === name.toLowerCase().trim();
-  });
-  if (!existing && normPhone) {
-    existing = allCustomers.find(c => c.phone && normalisePhone(c.phone) === normPhone);
-  }
-  if (existing) {
-    // Update if we have new info they didn't before
-    const updates = {};
-    if (!existing.phone && normPhone) updates.phone = normPhone;
-    if (!existing.email && email) updates.email = email;
-    if (!existing.address && address) updates.address = address;
-    if (Object.keys(updates).length) {
-      await sbRaw('PATCH', 'customers', updates, `?id=eq.${existing.id}`);
-    }
-    return existing.id;
-  }
-  // Create new customer
-  const result = await sbRaw('POST', 'customers', {
-    first_name: firstName,
-    last_name: lastName,
-    phone: normPhone || null,
-    email: email || null,
-    address: address || null,
-    source: source || null
-  });
-  const newCustomer = Array.isArray(result) ? result[0] : result;
-  await loadCustomers();
-  return newCustomer?.id || null;
-}
-
-async function upsertVehicle(customerId, vehicleStr, colour, registration) {
-  if (!customerId || !vehicleStr?.trim()) return null;
-  const vStr = vehicleStr.trim();
-  // Check existing vehicles for this customer
-  const cust = allCustomers.find(c => c.id === customerId);
-  const existing = cust?.vehicles?.find(v => {
-    const vName = [v.make, v.model].filter(Boolean).join(' ').toLowerCase();
-    return vName === vStr.toLowerCase() || (registration && v.registration === registration);
-  });
-  if (existing) return existing.id;
-  // Parse make/model from vehicle string
-  const parts = vStr.split(' ');
-  const make = parts[0] || '';
-  const model = parts.slice(1).join(' ') || '';
-  const result = await sbRaw('POST', 'vehicles', {
-    customer_id: customerId,
-    make, model, colour: colour || null,
-    registration: registration || null
-  });
-  const newVehicle = Array.isArray(result) ? result[0] : result;
-  return newVehicle?.id || null;
-}
-
 async function loadJobs() {
   try {
     const data = await sbRaw('GET', 'jobs', null,
-      `?select=*,job_parts(*),job_photos(*)&archived=eq.false&status=neq.declined&source=not.in.(Holiday,Holiday_approved,Appointment,Van%20day,Diary%20entry)&order=created_at.desc`);
+      `?select=*,job_parts(*),job_photos(*)&archived=eq.false&status=neq.declined&source=not.in.(Holiday,Appointment,Van%20day,Diary%20entry)&order=created_at.desc`);
     const freshJobs = data || [];
     if (_notifsReady) checkForNewNotifs(freshJobs);
     allJobs = freshJobs;
@@ -2596,7 +2565,6 @@ function buildJobCard(j) {
     actions = `<button class="btn-approve" onclick="event.stopPropagation();openCompleteModal(${j.id})" style="background:#ea580c;font-size:11px;font-weight:800;letter-spacing:.3px">✓ JOB COMPLETE</button>
                <button class="btn-primary" onclick="event.stopPropagation();sendXeroInvoice(${j.id},'deposit')" style="font-size:11px">Parts deposit</button>
                <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>
-               <button class="btn-secondary" onclick="event.stopPropagation();printJobCard(${j.id})" style="font-size:11px;background:#1e3a8a;color:#fff;border-color:#1e3a8a">🖨 Print job card</button>
                <button class="btn-danger" onclick="event.stopPropagation();customerCancelled(${j.id})" style="font-size:11px">Customer cancelled</button>
                <div style="width:100%;height:1px;background:var(--border);margin:4px 0"></div>
                <button class="btn-secondary" onclick="event.stopPropagation();deleteJob(${j.id})" style="font-size:10px;color:var(--muted);border-color:var(--border)">🗑 Delete job</button>`;
@@ -2642,13 +2610,12 @@ function buildJobCard(j) {
     </div>`;
   }
 
-  // Photos — register URLs in the lightbox registry so inline onclick can reference by key
-  _lbRegistry['job-'+j.id] = photos.map(p => `${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}`);
+  // Photos
   let photosHtml = `<div class="jbf" style="margin-bottom:6px">Photos</div>
     <div class="photos-row">
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
-        ${photos.map((p,i)=>`<div style="position:relative;display:inline-block">
-          <img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="photo-thumb" alt="damage" onclick="event.stopPropagation();_lbOpen('job-${j.id}',${i})">
+        ${photos.map(p=>`<div style="position:relative;display:inline-block">
+          <img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="photo-thumb" alt="damage" onclick="event.stopPropagation();window.open(this.src,'_blank')">
           ${currentProfile?.role==='admin'||currentProfile?.role==='admin_staff'?`<button onclick="event.stopPropagation();deletePhoto(${p.id})" style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--red);border:none;color:#fff;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;font-weight:700;padding:0">✕</button>`:''}
         </div>`).join('')}
       </div>
@@ -2659,7 +2626,7 @@ function buildJobCard(j) {
     <div class="jcard-top">
       <div class="jbar jbar-${s}"></div>
       <div class="jcard-main">
-        <div class="jcard-name">${esc(j.customer_name||'Unknown')}${j.job_number ? `<span style="font-size:10px;font-weight:700;color:var(--blue);background:var(--blue-bg);padding:1px 7px;border-radius:4px;margin-left:6px;letter-spacing:.3px">${esc(j.job_number)}</span>` : ''}</div>
+        <div class="jcard-name">${esc(j.customer_name||'Unknown')}</div>
         <div class="jcard-meta">
           <span style="font-size:12px;color:var(--txt2)">${esc(j.vehicle||'—')}</span>
           ${j.job_location==='mobile'?'<span class="badge bdg-mob">Mobile</span>':'<span class="badge bdg-ws">Workshop</span>'}
@@ -2683,7 +2650,6 @@ function buildJobCard(j) {
       ${buildProgBar(prog)}
       <!-- Details grid -->
       <div class="jbody-grid" style="margin-top:14px">
-        ${j.job_number ? `<div style="grid-column:1/-1"><div class="jbf">Job number</div><div class="jbv" style="font-weight:700;color:var(--blue);font-size:15px">${esc(j.job_number)}</div></div>` : ''}
         <div><div class="jbf">Customer</div><div class="jbv">${esc(j.customer_name||'—')}</div></div>
         <div><div class="jbf">Phone</div><div class="jbv"><a href="tel:${esc(j.customer_phone||'')}" style="color:var(--blue)">${esc(j.customer_phone||'—')}</a></div></div>
         <div><div class="jbf">Email</div><div class="jbv">${j.customer_email?`<a href="mailto:${esc(j.customer_email)}" style="color:var(--blue)">${esc(j.customer_email)}</a>`:'—'}</div></div>
@@ -2849,13 +2815,7 @@ async function confirmDecline(id) {
     showToast('✓ Job declined — Chloe can see the reason in Declined Jobs');
     renderJobs();
     loadDeclinedJobs();
-    // Notify Chloe via push notification
-    const j = allJobs.find(x => x.id === id) || { customer_name: 'Customer', vehicle: '' };
-    sendNotif(
-      '❌ Job declined — ' + (j.customer_name || 'Customer'),
-      (j.vehicle ? j.vehicle + ' · ' : '') + reason,
-      '/icon-192.png'
-    );
+    // Notify Chloe via in-app badge
     updatePendingBadge();
     setTimeout(() => { window._suppressReload = false; }, 3000);
   } catch(e) {
@@ -3056,14 +3016,7 @@ async function deletePart(partId, jobId) {
 // ═══════════════════════════════════════════════════════════
 // ADD JOB MODAL
 // ═══════════════════════════════════════════════════════════
-function openAddModal() {
-  document.getElementById('addModal').classList.add('show');
-  setTimeout(initPriceInputs, 50);
-  document.querySelectorAll('#addModal input, #addModal select, #addModal textarea').forEach(el => {
-    el.setAttribute('autocomplete', 'new-password');
-    el.setAttribute('name', 'pp_' + Math.random().toString(36).slice(2));
-  });
-}
+function openAddModal() { document.getElementById('addModal').classList.add('show'); setTimeout(initPriceInputs, 50); }
 function closeAddModal() {
   document.getElementById('addModal').classList.remove('show');
   resetPanelPicker('m');
@@ -3079,40 +3032,14 @@ async function saveNewJob() {
   if (!name) { showToast('Enter customer name'); return; }
   const date = document.getElementById('m_date').value || null;
   const status = document.getElementById('m_status').value;
-  const phone = normalisePhone(document.getElementById('m_phone').value.trim()) || null;
-  const email = document.getElementById('m_email')?.value.trim() || null;
-  const vehicleStr = document.getElementById('m_vehicle').value.trim() || null;
-  const colour = document.getElementById('m_colour').value.trim() || null;
-  const address = (document.getElementById('m_addr')?.value || document.getElementById('m_addr2')?.value || '').trim() || null;
-
-  // Upsert customer record
-  let customerId = null;
-  let vehicleId = null;
-  try {
-    customerId = await upsertCustomer(name, phone, email, address, document.getElementById('m_source')?.value);
-    if (customerId && vehicleStr) vehicleId = await upsertVehicle(customerId, vehicleStr, colour, null);
-  } catch(e) { console.warn('Customer upsert failed:', e); }
-
-  // Generate job number if status is booked
-  let jobNumber = null;
-  if (status === 'booked') {
-    try {
-      const seqRes = await sbRaw('POST', 'rpc/nextval', { sequence_name: 'job_number_seq' });
-      const seq = seqRes?.nextval || seqRes;
-      if (seq) jobNumber = 'ABW-' + String(seq).padStart(4, '0');
-    } catch(e) { console.warn('Job number generation failed:', e); }
-  }
-
   const body = {
     customer_name: name,
-    customer_phone: phone,
-    customer_email: email,
-    customer_id: customerId,
-    vehicle_id: vehicleId,
-    vehicle: vehicleStr || null,
-    colour,
+    customer_phone: normalisePhone(document.getElementById('m_phone').value.trim()) || null,
+    customer_email: document.getElementById('m_email')?.value.trim() || null,
+    vehicle: document.getElementById('m_vehicle').value.trim() || null,
+    colour: document.getElementById('m_colour').value.trim() || null,
     panels: document.getElementById('m_panels').value.trim() || null,
-    customer_address: address,
+    customer_address: (document.getElementById('m_addr')?.value || document.getElementById('m_addr2')?.value || '').trim() || null,
     quote_price: document.getElementById('m_price').value.trim() || null,
     booking_date: date,
     booking_time: date ? document.getElementById('m_time').value : null,
@@ -3121,7 +3048,6 @@ async function saveNewJob() {
     job_location: document.getElementById('m_loc').value,
     source: document.getElementById('m_source').value,
     status: status,
-    job_number: jobNumber,
     archived: false
   };
   try {
@@ -3395,7 +3321,7 @@ function renderDiary() {
 }
 
 function isDiaryEntry(j) {
-  return ['Holiday','Holiday_approved','Appointment','Van day','Diary entry','Bank Holiday'].includes(j?.source);
+  return ['Holiday','Appointment','Van day','Diary entry','Bank Holiday'].includes(j?.source);
 }
 
 function getJobsForDate(dateStr) {
@@ -3519,6 +3445,8 @@ function renderMonthView() {
         const isDone = e.status === 'completed';
         const isDiaryEnt = isDiaryEntry(e);
         const isMobile = e.job_location === 'mobile';
+        const hasParts = e.parts_required;
+        const hasCourtesy = e.courtesy_car;
         const evtClass = isDiaryEnt ? 'cal-evt-diary' : `cal-evt-${tc}${isDone?' cal-evt-done':''}`;
         const evtIcon = isDiaryEnt ? '📅 ' : isDone ? '✓ ' : isMobile ? '🚐 ' : '';
 
@@ -3548,10 +3476,11 @@ function renderMonthView() {
           }
         }
 
+        const extraIcons = (hasParts?'🔧':'') + (hasCourtesy?'🚘':'');
         html += `<div class="cal-evt ${evtClass}" style="${spanStyle}"
           onmouseenter="showDiaryTip(event,'${tipName}','${tipVeh}','${tipAddr}','${tipPrice}','${tipLoc}','${tipDur}','${tipCd}','${tipTech}')"
           onmouseleave="hideDiaryTip()"
-        ><div class="cal-dot" style="background:#9ca3af;display:${isDiaryEnt?'none':'inline-block'}"></div>${evtIcon}${firstName}${days>1?' '+spanLabel:durShort}</div>`;
+        ><div class="cal-dot" style="background:#9ca3af;display:${isDiaryEnt?'none':'inline-block'}"></div>${evtIcon}${firstName}${days>1?' '+spanLabel:durShort}${extraIcons?' '+extraIcons:''}</div>`;
         shown++;
       });
       if (filteredEvts.length > 3) html += `<div class="cal-more">+${filteredEvts.length-3} more</div>`;
@@ -3740,30 +3669,16 @@ function openDiaryEdit() {
 }
 
 function openDiaryJobCard() {
-  const targetId = diaryJobIdForPopup;
   closeDiaryPopup();
-  // Clear ALL filters so the job is definitely visible
-  currentFilter = 'all';
-  currentDateFilter = 'all';
-  // Reset status filter pills
-  document.querySelectorAll('.fpill').forEach(p => p.classList.remove('on'));
-  const allPill = document.getElementById('fp-all');
-  if (allPill) allPill.classList.add('on');
-  // Reset date filter pills
-  document.querySelectorAll('.dpill').forEach(p => p.classList.remove('on'));
-  const dateAllPill = document.getElementById('dfp-all');
-  if (dateAllPill) dateAllPill.classList.add('on');
   switchTab('jobs');
+  currentFilter = 'all'; // reset filter so job is definitely visible
   setTimeout(() => {
-    openJobId = targetId;
+    openJobId = diaryJobIdForPopup;
     renderJobs();
     setTimeout(() => {
-      const el = document.getElementById('jc-' + targetId);
-      if (el) {
-        el.classList.add('open');
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 150);
+      const el = document.getElementById('jc-' + diaryJobIdForPopup);
+      if (el) { el.classList.add('open'); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    }, 100);
   }, 100);
 }
 
@@ -3996,33 +3911,15 @@ async function approveQuote() {
   const custName = document.getElementById('q_custName').value.trim() || 'Unknown';
   const custPhone = document.getElementById('q_custPhone').value.trim();
   const custEmail = document.getElementById('q_custEmail').value.trim();
-  const make = document.getElementById('q_make').value.trim();
-  const model = document.getElementById('q_model').value.trim();
-  const year = document.getElementById('q_year').value.trim();
-  const vehicle = [make, model, year].filter(Boolean).join(' ');
+  const vehicle = [document.getElementById('q_make').value.trim(), document.getElementById('q_model').value.trim(), document.getElementById('q_year').value.trim()].filter(Boolean).join(' ');
   const colour = document.getElementById('q_colour').value.trim();
   const panels = document.getElementById('q_panels').value.trim();
   const notes = document.getElementById('q_notes').value.trim();
-  const mAddr = [
-    document.getElementById('q_addr1')?.value?.trim(),
-    document.getElementById('q_addr2')?.value?.trim(),
-    document.getElementById('q_postcode')?.value?.trim()
-  ].filter(Boolean).join(', ');
-
-  // Upsert customer record
-  let customerId = null;
-  let vehicleId = null;
-  try {
-    customerId = await upsertCustomer(custName, custPhone, custEmail, mAddr, document.getElementById('q_source')?.value);
-    if (customerId && vehicle) vehicleId = await upsertVehicle(customerId, vehicle, colour, null);
-  } catch(e) { console.warn('Customer upsert failed:', e); }
 
   const body = {
     customer_name: custName,
     customer_phone: custPhone,
     customer_email: custEmail,
-    customer_id: customerId,
-    vehicle_id: vehicleId,
     vehicle: vehicle + (colour ? ' · ' + colour : ''),
     colour,
     panels,
@@ -4062,7 +3959,7 @@ async function approveQuote() {
     selectedQuotePhotos = [];
     document.getElementById('upPrev').innerHTML = '';
     document.getElementById('upLbl').textContent = 'Tap to upload damage photos';
-    await Promise.all([loadJobs(), loadCustomers()]);
+    await loadJobs();
     showToast('Quote saved ✓');
   } catch(e) { alert('Failed to save: ' + e.message); }
 }
@@ -4071,7 +3968,7 @@ function revise() {
   quoteResult = null;
   document.getElementById('resultWrap').style.display = 'none';
   document.getElementById('quotePlaceholder').style.display = 'flex';
-  document.getElementById('manualQuoteModal').classList.remove('show');
+  document.getElementById('manualWrap').style.display = 'none';
 }
 
 async function sendForApproval() {
@@ -4141,7 +4038,7 @@ async function sendForApproval() {
     document.getElementById('upLbl').textContent = 'Tap to upload damage photos';
     document.getElementById('resultWrap').style.display = 'none';
     document.getElementById('quotePlaceholder').style.display = 'flex';
-    document.getElementById('manualQuoteModal').classList.remove('show');
+    document.getElementById('manualWrap').style.display = 'none';
     resetPanelPicker('q');
     const qSrc = document.getElementById('q_source'); if (qSrc) qSrc.value = 'whatsapp';
     await loadJobs();
@@ -4159,18 +4056,16 @@ function manualQuote() {
   document.getElementById('resultWrap').style.display = 'none';
   document.getElementById('loadingDiv').classList.remove('show');
   document.getElementById('approvedMsg').classList.remove('show');
-  // Reset fields
-  document.getElementById('m_price_manual').value = '';
-  document.getElementById('m_note_manual').value = '';
-  document.getElementById('m_rung_manual').value = '2';
-  document.getElementById('m_dur_manual').value = '3 hours';
-  // Open as a proper modal — can't be accidentally dismissed
-  document.getElementById('manualQuoteModal').classList.add('show');
-  setTimeout(() => document.getElementById('m_price_manual').focus(), 100);
+  document.getElementById('manualWrap').style.display = 'block';
+  // Scroll manualWrap into view on mobile where panels stack
+  setTimeout(() => {
+    const el = document.getElementById('manualWrap');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 50);
 }
 
 function cancelManual() {
-  document.getElementById('manualQuoteModal').classList.remove('show');
+  document.getElementById('manualWrap').style.display = 'none';
   document.getElementById('quotePlaceholder').style.display = 'flex';
 }
 
@@ -4179,10 +4074,7 @@ async function saveManualQuote() {
   const custName = document.getElementById('q_custName').value.trim() || 'Unknown';
   const custPhone = document.getElementById('q_custPhone').value.trim();
   const custEmail = document.getElementById('q_custEmail').value.trim();
-  const make = document.getElementById('q_make').value.trim();
-  const model = document.getElementById('q_model').value.trim();
-  const year = document.getElementById('q_year').value.trim();
-  const vehicle = [make, model, year].filter(Boolean).join(' ');
+  const vehicle = [document.getElementById('q_make').value.trim(), document.getElementById('q_model').value.trim(), document.getElementById('q_year').value.trim()].filter(Boolean).join(' ');
   const colour = document.getElementById('q_colour').value.trim();
   const panels = document.getElementById('q_panels').value.trim();
   const rung = document.getElementById('m_rung_manual').value;
@@ -4196,22 +4088,11 @@ async function saveManualQuote() {
     document.getElementById('q_addr2')?.value?.trim(),
     document.getElementById('q_postcode')?.value?.trim()
   ].filter(Boolean).join(', ');
-
-  // Upsert customer record
-  let customerId = null;
-  let vehicleId = null;
-  try {
-    customerId = await upsertCustomer(custName, custPhone, custEmail, mAddr, document.getElementById('q_source')?.value);
-    if (customerId && vehicle) vehicleId = await upsertVehicle(customerId, vehicle, colour, null);
-  } catch(e) { console.warn('Customer upsert failed:', e); }
-
   const body = {
     customer_name: custName,
     customer_phone: custPhone,
     customer_email: custEmail,
     customer_address: mAddr || null,
-    customer_id: customerId,
-    vehicle_id: vehicleId,
     vehicle: vehicle + (colour ? ' · ' + colour : ''),
     colour,
     panels,
@@ -4241,14 +4122,14 @@ async function saveManualQuote() {
         await sbRaw('POST', 'job_photos', { job_id: newJob.id, storage_path: storagePath, photo_type: 'damage' });
       }
     }
-    document.getElementById('manualQuoteModal').classList.remove('show');
+    document.getElementById('manualWrap').style.display = 'none';
     const msg = document.getElementById('approvedMsg');
     msg.textContent = '✓ Quote saved — ' + price + ' for ' + custName;
     msg.classList.add('show');
     selectedQuotePhotos = [];
     document.getElementById('upPrev').innerHTML = '';
     document.getElementById('upLbl').textContent = 'Tap to upload damage photos';
-    await Promise.all([loadJobs(), loadCustomers()]);
+    await loadJobs();
     showToast('Quote saved ✓');
   } catch(e) { alert('Failed: ' + e.message); }
 }
@@ -4443,7 +4324,7 @@ function renderTechPortal() {
   const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1); yesterday.setHours(0,0,0,0);
   const ahead = new Date(now); ahead.setDate(now.getDate() + 7); ahead.setHours(23,59,59,999);
 
-  const DIARY_SOURCES = ['Holiday','Holiday_approved','Appointment','Van day','Diary entry'];
+  const DIARY_SOURCES = ['Holiday','Appointment','Van day','Diary entry'];
 
   // Upcoming diary entries for this tech (holidays, appointments etc)
   const today = now.toISOString().split('T')[0];
@@ -4547,9 +4428,6 @@ function buildTechCard(j) {
   const photos = j.job_photos || [];
   const bmq = photos.filter(p => p.photo_type === 'damage');
   const amq = photos.filter(p => p.photo_type === 'completion');
-  // Register in lightbox registry
-  _lbRegistry['tech-dmg-'+j.id] = bmq.map(p => `${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}`);
-  _lbRegistry['tech-cmp-'+j.id] = amq.map(p => `${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}`);
 
   const completeBox = done
     ? `<div class="tech-done-banner">✓ Completed · ${esc(j.payment_method||'')} · ${j.signed_off_by||''}</div>`
@@ -4565,7 +4443,7 @@ function buildTechCard(j) {
         </label>
         <div class="tech-after-thumbs" id="taf-${j.id}">
           ${amq.map(p=>`<div style="position:relative;display:inline-block">
-          <img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="tech-after-thumb" alt="after" onclick="event.stopPropagation();_lbOpen('tech-cmp-${j.id}',${amq.indexOf(p)})">
+          <img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="tech-after-thumb" alt="after" onclick="window.open(this.src,'_blank')">
           <button onclick="event.stopPropagation();deletePhoto(${p.id},true)" style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--red);border:none;color:#fff;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;font-weight:700;padding:0">✕</button>
         </div>`).join('')}
         </div>
@@ -4587,9 +4465,9 @@ function buildTechCard(j) {
     ? `<div style="padding:10px 14px;border-top:1px solid var(--border)">
         <div class="tech-info-lbl" style="margin-bottom:8px">Damage photos</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          ${bmq.map((p,i)=>`<img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}"
+          ${bmq.map(p=>`<img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}"
             style="width:80px;height:80px;object-fit:cover;border-radius:var(--radius);border:1px solid var(--border);cursor:pointer"
-            alt="damage" onclick="event.stopPropagation();_lbOpen('tech-dmg-${j.id}',${i})">`).join('')}
+            alt="damage" onclick="window.open(this.src,'_blank')">`).join('')}
         </div>
       </div>`
     : '';
@@ -4615,6 +4493,8 @@ function buildTechCard(j) {
             : j.duration?`<span class="badge bdg-dur">${esc(j.duration)}</span>`:''
           }
           ${j.cd_required?'<span class="badge bdg-cd">C&D</span>':''}
+          ${j.parts_required?'<span class="badge" style="background:#fef9c3;color:#713f12;border:1px solid #fde047">🔧 Parts</span>':''}
+          ${j.courtesy_car?'<span class="badge" style="background:#f0fdf4;color:#065f46;border:1px solid #bbf7d0">🚘 Courtesy</span>':''}
           ${j.is_rework?'<span class="badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5">🔄 Rework</span>':''}
         </div>
       </div>
@@ -4641,7 +4521,7 @@ function buildTechCard(j) {
         <div class="tech-info-item full"><div class="tech-info-lbl">Panels / damage</div><div class="tech-info-val">${esc(j.panels||'—')}</div></div>
         ${j.notes?`<div class="tech-info-item full"><div class="tech-info-lbl">Notes</div><div class="tech-info-val">${esc(j.notes)}</div></div>`:''}
       </div>
-      ${bmq.length?`<div class="tech-photos-row">${bmq.map((p,i)=>`<img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="tech-photo-thumb" alt="damage" onclick="event.stopPropagation();_lbOpen('tech-dmg-${j.id}',${i})">`).join('')}</div>`:''}
+      ${bmq.length?`<div class="tech-photos-row">${bmq.map(p=>`<img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="tech-photo-thumb" alt="damage" onclick="window.open(this.src,'_blank')">`).join('')}</div>`:''}
       ${damagePhotosHtml}
       ${editBox}
       ${completeBox}
@@ -4909,10 +4789,6 @@ function openBookModal(jobId) {
   document.getElementById('bk_cd').checked = !!j.cd_required;
   document.getElementById('bk_addr').value = j.customer_address || '';
   document.getElementById('bookModal').classList.add('show');
-  document.querySelectorAll('#bookModal input, #bookModal select, #bookModal textarea').forEach(el => {
-    el.setAttribute('autocomplete', 'new-password');
-    el.setAttribute('name', 'pp_' + Math.random().toString(36).slice(2));
-  });
 }
 
 function closeBookModal() {
@@ -4924,23 +4800,6 @@ async function saveBooking() {
   if (!_bookJobId) return;
   const date = document.getElementById('bk_date').value;
   if (!date) { showToast('Please select a date'); return; }
-
-  // Generate job number if this job doesn't have one yet
-  const existingJob = allJobs.find(x => x.id === _bookJobId);
-  let jobNumber = existingJob?.job_number || null;
-  if (!jobNumber) {
-    try {
-      const maxRes = await sbRaw('GET', 'jobs', null, `?select=job_number&job_number=not.is.null&order=job_number.desc&limit=1`);
-      const lastNum = maxRes?.[0]?.job_number;
-      if (lastNum) {
-        const n = parseInt(lastNum.replace('ABW-','')) + 1;
-        jobNumber = 'ABW-' + String(n).padStart(4, '0');
-      } else {
-        jobNumber = 'ABW-0419';
-      }
-    } catch(e) { console.warn('Job number generation failed:', e); }
-  }
-
   const updates = {
     status: 'booked',
     booking_date: date,
@@ -4949,15 +4808,13 @@ async function saveBooking() {
     assigned_tech: document.getElementById('bk_tech').value,
     job_location: document.getElementById('bk_loc').value,
     cd_required: document.getElementById('bk_cd').checked,
-    customer_address: document.getElementById('bk_addr').value.trim() || null,
-    ...(jobNumber ? { job_number: jobNumber } : {})
+    customer_address: document.getElementById('bk_addr').value.trim() || null
   };
   try {
     await sbRaw('PATCH', 'jobs', updates, '?id=eq.' + _bookJobId);
-    const numStr = jobNumber ? ` · ${jobNumber}` : '';
-    showToast('✓ Job booked — ' + fmtDate(date) + numStr);
+    showToast('✓ Job booked — ' + fmtDate(date));
     closeBookModal();
-    await Promise.all([loadJobs(), loadCustomers()]);
+    await loadJobs();
     // Re-open the card
     openJobId = _bookJobId;
     setTimeout(() => {
@@ -4975,11 +4832,6 @@ let _editPhotos = [];
 
 async function openEditModal(jobId) {
   setTimeout(initPriceInputs, 50);
-  // Kill password manager on every input in the modal — browsers sniff field names
-  document.querySelectorAll('#editModal input, #editModal select, #editModal textarea').forEach(el => {
-    el.setAttribute('autocomplete', 'new-password');
-    el.setAttribute('name', 'pp_' + Math.random().toString(36).slice(2));
-  });
   // Reset save button state in case it got stuck
   const saveBtn = document.querySelector('#editModal .btn-primary');
   if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save changes'; }
@@ -5008,6 +4860,10 @@ async function openEditModal(jobId) {
   if (pmEl) pmEl.value = j.payment_method || '';
   const rwEl = document.getElementById('edit_rework');
   if (rwEl) rwEl.checked = j.is_rework || false;
+  const prEl = document.getElementById('edit_parts_required');
+  if (prEl) prEl.checked = j.parts_required || false;
+  const ccEl = document.getElementById('edit_courtesy_car');
+  if (ccEl) ccEl.checked = j.courtesy_car || false;
   document.getElementById('edit_loc').value = j.job_location || 'workshop';
   document.getElementById('edit_source').value = j.source || 'other';
   document.getElementById('edit_cd').checked = !!j.cd_required;
@@ -5023,32 +4879,6 @@ async function openEditModal(jobId) {
       </span></div>`).join('') || '<div style="font-size:11px;color:var(--muted)">No parts yet</div>';
   } catch(e) {}
   document.getElementById('editModal').classList.add('show');
-  // Display existing job photos in edit modal
-  const photosEl = document.getElementById('editExistingPhotos');
-  if (photosEl) {
-    const existingPhotos = j.job_photos || [];
-    // Register in lightbox registry
-    const lbKey = 'edit-' + j.id;
-    _lbRegistry[lbKey] = existingPhotos.map(p => `${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}`);
-    if (existingPhotos.length) {
-      photosEl.innerHTML = `
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px">
-          Damage photos (${existingPhotos.length})
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px">
-          ${existingPhotos.map((p,i) => `
-            <div style="position:relative;display:inline-block">
-              <img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}"
-                style="width:72px;height:72px;object-fit:cover;border-radius:var(--radius);border:1px solid var(--border);cursor:pointer"
-                onclick="_lbOpen('${lbKey}',${i})" alt="damage photo">
-              <button onclick="deletePhoto(${p.id})"
-                style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--red);border:none;color:#fff;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;padding:0">✕</button>
-            </div>`).join('')}
-        </div>`;
-    } else {
-      photosEl.innerHTML = '<div style="font-size:11px;color:var(--hint);margin-bottom:8px">No damage photos on this job yet</div>';
-    }
-  }
 }
 
 function closeEditModal() {
@@ -5093,6 +4923,8 @@ async function saveEditJob() {
     source: document.getElementById('edit_source').value,
     cd_required: document.getElementById('edit_cd').checked,
     is_rework: document.getElementById('edit_rework')?.checked || false,
+    parts_required: document.getElementById('edit_parts_required')?.checked || false,
+    courtesy_car: document.getElementById('edit_courtesy_car')?.checked || false,
     customer_address: document.getElementById('edit_addr').value.trim() || null,
     payment_method: document.getElementById('edit_payment_method')?.value || null
   };
@@ -5381,26 +5213,6 @@ function checkForNewNotifs(freshJobs) {
       );
     }
   });
-  // Check for jobs that Shaun declined — they disappear from the main list
-  // Poll recently declined jobs and notify Chloe within 2 minutes of decline
-  if (role === 'admin_staff') {
-    sbRaw('GET', 'jobs', null,
-      `?select=id,customer_name,vehicle,decline_reason,notes,updated_at&status=eq.declined&order=updated_at.desc&limit=5`)
-    .then(recentDeclined => {
-      if (!recentDeclined) return;
-      recentDeclined.forEach(j => {
-        const age = (Date.now() - new Date(j.updated_at).getTime()) / 1000;
-        if (age < 120 && !_knownJobIds.has('declined-' + j.id)) {
-          _knownJobIds.add('declined-' + j.id);
-          sendNotif(
-            '❌ Job declined — ' + (j.customer_name || 'Customer'),
-            (j.vehicle ? j.vehicle + ' · ' : '') + (j.decline_reason || j.notes || 'See declined jobs'),
-            '/icon-192.png'
-          );
-        }
-      });
-    }).catch(() => {});
-  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -5696,7 +5508,7 @@ async function respondHol(status) {
             job_location: 'workshop',
             duration: 'Full day',
             notes: 'Holiday — ' + (r.reason || 'Annual leave'),
-            source: 'Holiday_approved',
+            source: 'Holiday',
             archived: false
           });
         }
@@ -5798,19 +5610,15 @@ async function saveDiaryEntry() {
     while (d <= end) {
       const isWeekend = d.getDay() === 0 || d.getDay() === 6;
       if (!isWeekend) {
-        const isHoliday = _diaryEntryType === 'holiday';
-        const custName = isHoliday && tech && tech !== 'All'
-          ? tech + ' — Holiday'
-          : title;
         await sbRaw('POST', 'jobs', {
-          customer_name: custName,
+          customer_name: title,
           status: 'booked',
           booking_date: dateToStr(d),
           booking_time: time,
           assigned_tech: tech === 'All' ? 'Both' : tech,
           job_location: 'workshop',
           duration: 'Full day',
-          notes: notes || (isHoliday ? 'Annual leave' : null),
+          notes: notes || null,
           source: typeLabels[_diaryEntryType] || 'Diary entry',
           archived: false
         });
@@ -6164,338 +5972,6 @@ function exportTsPdf() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// PRINT JOB CARD
-// ═══════════════════════════════════════════════════════════
-function printJobCard(jobId) {
-  const j = allJobs.find(x => x.id === jobId);
-  if (!j) { showToast('Job not found'); return; }
-
-  const esc2 = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const fmt = d => d ? new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—';
-  const jobNum = j.job_number || '—';
-  const today = new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
-
-  // Parse vehicle — strip colour suffix added by quote form
-  const vehicleRaw = (j.vehicle||'').replace(/\s*·\s*.+$/, '').trim();
-
-  const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Job Card ${jobNum}</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; font-size: 11px; color: #111; background: #fff; padding: 16px; }
-  @page { size: A4; margin: 12mm; }
-
-  /* Header */
-  .hd { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 12px; }
-  .hd-logo { font-size: 22px; font-weight: 900; color: #1e3a8a; letter-spacing: -1px; }
-  .hd-logo span { color: #065f46; }
-  .hd-sub { font-size: 9px; color: #6b7280; margin-top: 2px; }
-  .hd-right { text-align: right; }
-  .job-num { font-size: 20px; font-weight: 900; color: #1e3a8a; letter-spacing: 1px; }
-  .job-date { font-size: 10px; color: #6b7280; margin-top: 2px; }
-
-  /* Info grid */
-  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-  .info-box { border: 1px solid #d1d5db; border-radius: 4px; padding: 7px 10px; }
-  .info-box.full { grid-column: 1 / -1; }
-  .info-lbl { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: #6b7280; margin-bottom: 3px; }
-  .info-val { font-size: 12px; font-weight: 600; color: #111; min-height: 16px; }
-
-  /* Stages */
-  .stages-title { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .8px; color: #1e3a8a; border-bottom: 2px solid #1e3a8a; padding-bottom: 4px; margin-bottom: 8px; margin-top: 10px; }
-  .stage { border: 1px solid #d1d5db; border-radius: 4px; margin-bottom: 6px; overflow: hidden; }
-  .stage-hd { display: flex; align-items: center; background: #f3f4f6; padding: 6px 10px; gap: 8px; }
-  .stage-num { width: 20px; height: 20px; border-radius: 50%; background: #1e3a8a; color: #fff; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .stage-name { font-weight: 700; font-size: 11px; flex: 1; }
-  .stage-signoff { display: flex; gap: 14px; align-items: center; margin-left: auto; }
-  .signoff-lbl { font-size: 8px; color: #6b7280; text-transform: uppercase; letter-spacing: .4px; }
-  .signoff-box { border-bottom: 1px solid #374151; width: 60px; height: 14px; display: inline-block; }
-  .stage-checks { padding: 6px 10px 8px 10px; border-top: 1px solid #e5e7eb; }
-  .check-item { display: flex; align-items: flex-start; gap: 7px; margin-bottom: 5px; }
-  .check-box { width: 13px; height: 13px; border: 1.5px solid #374151; border-radius: 2px; flex-shrink: 0; margin-top: 1px; }
-  .check-txt { font-size: 10px; color: #111; line-height: 1.4; }
-  .check-txt.critical { font-weight: 700; color: #991b1b; }
-  .check-txt.critical::before { content: '⚠ '; }
-
-  /* Notes */
-  .notes-box { border: 1px solid #d1d5db; border-radius: 4px; padding: 8px 10px; margin-top: 10px; min-height: 60px; }
-  .notes-lines { margin-top: 6px; }
-  .notes-line { border-bottom: 1px solid #e5e7eb; height: 18px; margin-bottom: 2px; }
-
-  /* Final signoffs */
-  .signoffs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
-  .sig-box { border: 1px solid #d1d5db; border-radius: 4px; padding: 8px 10px; }
-  .sig-lbl { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: #6b7280; margin-bottom: 16px; }
-  .sig-line { border-bottom: 1.5px solid #374151; margin-bottom: 4px; }
-  .sig-date { font-size: 8px; color: #9ca3af; }
-
-  /* Footer */
-  .footer { margin-top: 12px; text-align: center; font-size: 8px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 6px; }
-
-  @media print {
-    body { padding: 0; }
-    .no-print { display: none; }
-  }
-</style>
-</head>
-<body>
-
-<!-- HEADER -->
-<div class="hd">
-  <div>
-    <div class="hd-logo">Auto<span>Bodyworx</span></div>
-    <div class="hd-sub">Minor Body Repairs Ltd · Hungerford · autobodyworx.co.uk</div>
-  </div>
-  <div class="hd-right">
-    <div class="job-num">${esc2(jobNum)}</div>
-    <div class="job-date">Printed: ${today}</div>
-  </div>
-</div>
-
-<!-- INFO GRID -->
-<div class="info-grid">
-  <div class="info-box">
-    <div class="info-lbl">Customer</div>
-    <div class="info-val">${esc2(j.customer_name||'—')}</div>
-  </div>
-  <div class="info-box">
-    <div class="info-lbl">Phone</div>
-    <div class="info-val">${esc2(j.customer_phone||'—')}</div>
-  </div>
-  <div class="info-box">
-    <div class="info-lbl">Vehicle</div>
-    <div class="info-val">${esc2(vehicleRaw||'—')}</div>
-  </div>
-  <div class="info-box">
-    <div class="info-lbl">Colour</div>
-    <div class="info-val">${esc2(j.colour||'—')}</div>
-  </div>
-  <div class="info-box">
-    <div class="info-lbl">Registration</div>
-    <div class="info-val">&nbsp;</div>
-  </div>
-  <div class="info-box">
-    <div class="info-lbl">Date booked</div>
-    <div class="info-val">${fmt(j.booking_date)}</div>
-  </div>
-  <div class="info-box">
-    <div class="info-lbl">Technician</div>
-    <div class="info-val">${esc2(j.assigned_tech||'—')}</div>
-  </div>
-  <div class="info-box">
-    <div class="info-lbl">Location</div>
-    <div class="info-val">${j.job_location === 'mobile' ? 'Mobile — customer site' : 'Workshop'}</div>
-  </div>
-  <div class="info-box full">
-    <div class="info-lbl">Panels / Damage description</div>
-    <div class="info-val" style="white-space:pre-wrap;line-height:1.5">${esc2(j.panels||'—')}</div>
-  </div>
-  ${j.notes ? `<div class="info-box full">
-    <div class="info-lbl">⚠ Internal notes</div>
-    <div class="info-val" style="white-space:pre-wrap;line-height:1.5">${esc2(j.notes)}</div>
-  </div>` : ''}
-</div>
-
-<!-- STAGE SIGN-OFFS -->
-<div class="stages-title">Repair Stages — Sign off each stage before moving on</div>
-
-<!-- Stage 1: Vehicle received -->
-<div class="stage">
-  <div class="stage-hd">
-    <div class="stage-num">1</div>
-    <div class="stage-name">Vehicle received &amp; checked in</div>
-    <div class="stage-signoff">
-      <div><div class="signoff-lbl">Initials</div><div class="signoff-box"></div></div>
-      <div><div class="signoff-lbl">Time</div><div class="signoff-box"></div></div>
-    </div>
-  </div>
-  <div class="stage-checks">
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Vehicle condition documented — note any pre-existing damage</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Damage area photographed before work begins</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Job card matches vehicle and damage description</div></div>
-  </div>
-</div>
-
-<!-- Stage 2: Masking -->
-<div class="stage">
-  <div class="stage-hd">
-    <div class="stage-num">2</div>
-    <div class="stage-name">Masking up</div>
-    <div class="stage-signoff">
-      <div><div class="signoff-lbl">Initials</div><div class="signoff-box"></div></div>
-      <div><div class="signoff-lbl">Time</div><div class="signoff-box"></div></div>
-    </div>
-  </div>
-  <div class="stage-checks">
-    <div class="check-item"><div class="check-box"></div><div class="check-txt critical">Masking tape positioned clear of panel edge — NOT touching the panel being painted</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt critical">Tape left with enough gap so paint does NOT bridge the edge on demask</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt critical">All adjacent trims, rubbers and panels masked before any DA sanding</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Glass, lights and surrounding areas protected</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Masking paper secure — no lifting edges</div></div>
-  </div>
-</div>
-
-<!-- Stage 3: Filler / Prep -->
-<div class="stage">
-  <div class="stage-hd">
-    <div class="stage-num">3</div>
-    <div class="stage-name">Filler &amp; prep</div>
-    <div class="stage-signoff">
-      <div><div class="signoff-lbl">Initials</div><div class="signoff-box"></div></div>
-      <div><div class="signoff-lbl">Time</div><div class="signoff-box"></div></div>
-    </div>
-  </div>
-  <div class="stage-checks">
-    <div class="check-item"><div class="check-box"></div><div class="check-txt critical">Filler surface checked for pinholes — NONE acceptable before priming</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Filler fully cured and hardened</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Panel surface flat — no high spots or low spots</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Edges feathered correctly — no sharp transitions</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Panel cleaned and degreased before priming</div></div>
-  </div>
-</div>
-
-<!-- Stage 4: Prime -->
-<div class="stage">
-  <div class="stage-hd">
-    <div class="stage-num">4</div>
-    <div class="stage-name">Prime</div>
-    <div class="stage-signoff">
-      <div><div class="signoff-lbl">Initials</div><div class="signoff-box"></div></div>
-      <div><div class="signoff-lbl">Time</div><div class="signoff-box"></div></div>
-    </div>
-  </div>
-  <div class="stage-checks">
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Primer applied evenly — no runs or sags</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Primer fully cured before flatting</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Flatted back smooth — no sand-through to filler</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Panel cleaned and tacked off before colour</div></div>
-  </div>
-</div>
-
-<!-- Stage 5: Paint / Colour -->
-<div class="stage">
-  <div class="stage-hd">
-    <div class="stage-num">5</div>
-    <div class="stage-name">Paint &amp; colour</div>
-    <div class="stage-signoff">
-      <div><div class="signoff-lbl">Initials</div><div class="signoff-box"></div></div>
-      <div><div class="signoff-lbl">Time</div><div class="signoff-box"></div></div>
-    </div>
-  </div>
-  <div class="stage-checks">
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Colour match checked in natural light before applying</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Colour coats applied evenly — correct number of coats</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">No dry spray, runs or sags</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Flash-off time observed between coats</div></div>
-  </div>
-</div>
-
-<!-- Stage 6: Clear coat -->
-<div class="stage">
-  <div class="stage-hd">
-    <div class="stage-num">6</div>
-    <div class="stage-name">Clear coat</div>
-    <div class="stage-signoff">
-      <div><div class="signoff-lbl">Initials</div><div class="signoff-box"></div></div>
-      <div><div class="signoff-lbl">Time</div><div class="signoff-box"></div></div>
-    </div>
-  </div>
-  <div class="stage-checks">
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Clear coat applied evenly — no runs</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt critical">Clear coat inspected and d-nibbed for dust/dirt particles before polishing</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Clear fully cured before polishing</div></div>
-  </div>
-</div>
-
-<!-- Stage 7: Demask & Polish -->
-<div class="stage">
-  <div class="stage-hd">
-    <div class="stage-num">7</div>
-    <div class="stage-name">Demask &amp; polish</div>
-    <div class="stage-signoff">
-      <div><div class="signoff-lbl">Initials</div><div class="signoff-box"></div></div>
-      <div><div class="signoff-lbl">Time</div><div class="signoff-box"></div></div>
-    </div>
-  </div>
-  <div class="stage-checks">
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Masking removed carefully while paint still slightly warm</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">No hard edges, tape marks or bridging on demask</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Panel polished to high gloss — swirl free</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Blend area polished and blended correctly</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">All trims, rubbers and fittings refitted correctly — nothing missing</div></div>
-  </div>
-</div>
-
-<!-- Stage 8: Final inspection -->
-<div class="stage">
-  <div class="stage-hd">
-    <div class="stage-num">8</div>
-    <div class="stage-name">Final inspection &amp; ready for collection</div>
-    <div class="stage-signoff">
-      <div><div class="signoff-lbl">Initials</div><div class="signoff-box"></div></div>
-      <div><div class="signoff-lbl">Time</div><div class="signoff-box"></div></div>
-    </div>
-  </div>
-  <div class="stage-checks">
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Colour match acceptable in natural daylight</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Finish free from dirt, nibs, runs, scratches or polishing marks</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Vehicle cleaned — no compound residue on trims or rubbers</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">All panels, trims and fittings checked — nothing loose or missing</div></div>
-    <div class="check-item"><div class="check-box"></div><div class="check-txt">Vehicle ready for customer — Shaun / Chloe notified</div></div>
-  </div>
-</div>
-
-<!-- ISSUES / NOTES -->
-<div class="notes-box">
-  <div class="info-lbl">Issues &amp; notes during repair</div>
-  <div class="notes-lines">
-    <div class="notes-line"></div>
-    <div class="notes-line"></div>
-    <div class="notes-line"></div>
-    <div class="notes-line"></div>
-  </div>
-</div>
-
-<!-- FINAL SIGN-OFFS -->
-<div class="signoffs">
-  <div class="sig-box">
-    <div class="sig-lbl">Technician sign-off</div>
-    <div class="sig-line" style="margin-bottom:2px"></div>
-    <div class="sig-date">Name &amp; signature</div>
-    <div style="margin-top:10px"><div class="sig-line"></div><div class="sig-date">Time completed</div></div>
-  </div>
-  <div class="sig-box">
-    <div class="sig-lbl">QC check (Shaun / Charles)</div>
-    <div class="sig-line" style="margin-bottom:2px"></div>
-    <div class="sig-date">Name &amp; signature</div>
-    <div style="margin-top:10px"><div class="sig-line"></div><div class="sig-date">Time checked</div></div>
-  </div>
-  <div class="sig-box">
-    <div class="sig-lbl">Customer collected</div>
-    <div class="sig-line" style="margin-bottom:2px"></div>
-    <div class="sig-date">Customer signature</div>
-    <div style="margin-top:10px"><div class="sig-line"></div><div class="sig-date">Date &amp; time</div></div>
-  </div>
-</div>
-
-<div class="footer">
-  Auto Bodyworx · Minor Body Repairs Ltd · Job ${esc2(jobNum)} · Generated by PanelPro ${today}
-</div>
-
-<scr'+'ipt>window.onload = () => window.print();<\/script>
-</body>
-</html>`;
-
-  const w = window.open('', '_blank');
-  w.document.write(html);
-  w.document.close();
-  w.focus();
-}
-
-// ═══════════════════════════════════════════════════════════
 // CUSTOMER CANCELLED
 // ═══════════════════════════════════════════════════════════
 async function customerCancelled(jobId) {
@@ -6587,7 +6063,7 @@ function renderJobsRevBar(jobs) {
   // Only show revenue bar when date filter is active
   if (currentDateFilter === 'all') { el.innerHTML = ''; return; }
 
-  const diaryExclude = ['Holiday','Holiday_approved','Appointment','Van day','Diary entry'];
+  const diaryExclude = ['Holiday','Appointment','Van day','Diary entry'];
   const realJobs = jobs.filter(j => !diaryExclude.includes(j.source));
 
   function getPrice(j) {
@@ -6814,37 +6290,20 @@ function pickJobToBook(jobId) {
 
 // Build customer list from allJobs — deduplicated by name
 function buildCustomerList() {
-  // Use allCustomers (from customers table) if loaded, fall back to job-derived list
-  if (allCustomers.length) {
-    return allCustomers.map(c => {
-      const name = ((c.first_name||'') + ' ' + (c.last_name||'')).trim();
-      const cJobs = allJobs.filter(j => j.customer_id === c.id ||
-        j.customer_name?.toLowerCase().trim() === name.toLowerCase());
-      const lastJob = cJobs.length ? cJobs.reduce((a,b) => (a.booking_date||a.created_at) > (b.booking_date||b.created_at) ? a : b) : null;
-      const vehicles = c.vehicles || [];
-      return {
-        id: c.id,
-        name,
-        first_name: c.first_name || '',
-        last_name: c.last_name || '',
-        phone: c.phone || '',
-        email: c.email || '',
-        address: c.address || '',
-        vehicles,
-        vehicle: vehicles.length ? [vehicles[0].make, vehicles[0].model].filter(Boolean).join(' ') : '',
-        jobs: cJobs,
-        lastJob: lastJob?.booking_date || lastJob?.created_at?.split('T')[0] || null
-      };
-    }).sort((a,b) => a.name.localeCompare(b.name));
-  }
-  // Fallback: derive from jobs (legacy)
   const custMap = {};
   allJobs.forEach(j => {
     if (!j.customer_name || j.customer_name === 'Unknown') return;
     const key = j.customer_name.toLowerCase().trim();
     if (!custMap[key]) {
-      custMap[key] = { name: j.customer_name, phone: j.customer_phone || '', email: j.customer_email || '',
-        address: j.customer_address || '', vehicle: j.vehicle || '', vehicles: [], jobs: [], lastJob: null };
+      custMap[key] = {
+        name: j.customer_name,
+        phone: j.customer_phone || '',
+        email: j.customer_email || '',
+        address: j.customer_address || '',
+        vehicle: j.vehicle || '',
+        jobs: [],
+        lastJob: null
+      };
     }
     custMap[key].jobs.push(j);
     if (!custMap[key].phone && j.customer_phone) custMap[key].phone = j.customer_phone;
@@ -6863,58 +6322,35 @@ function renderCustomers() {
   if (q) customers = customers.filter(c =>
     c.name.toLowerCase().includes(q) ||
     c.phone.includes(q) ||
-    c.email.toLowerCase().includes(q) ||
-    c.vehicles?.some(v => [v.make,v.model,v.registration].filter(Boolean).join(' ').toLowerCase().includes(q))
+    c.email.toLowerCase().includes(q)
   );
+  // Highlight potential duplicates
+  const nameCounts = {};
+  buildCustomerList().forEach(c => {
+    const first = c.name.split(' ')[0].toLowerCase();
+    nameCounts[first] = (nameCounts[first] || 0) + 1;
+  });
 
   if (!customers.length) {
     el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">No customers found</div>';
     return;
   }
   el.innerHTML = customers.map(c => {
+    const isDup = nameCounts[c.name.split(' ')[0].toLowerCase()] > 1;
     const jobCount = c.jobs.length;
-    const totalSpend = c.jobs.reduce((s,j) => s + (parseFloat((j.invoice_amount||j.quote_price||'0').replace(/[^0-9.]/g,''))||0), 0);
-    const activeJobs = c.jobs.filter(j => j.status !== 'completed' && j.status !== 'declined');
-
-    // Vehicles list
-    const vehiclesHtml = c.vehicles && c.vehicles.length
-      ? c.vehicles.map(v => {
-          const vName = [v.make, v.model].filter(Boolean).join(' ');
-          const vDetail = [v.colour, v.registration].filter(Boolean).join(' · ');
-          return `<span style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:11px;color:var(--txt2)">🚗 ${esc(vName)}${vDetail?' <span style="color:var(--muted)">'+esc(vDetail)+'</span>':''}</span>`;
-        }).join('')
-      : c.vehicle ? `<span style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:11px;color:var(--txt2)">🚗 ${esc(c.vehicle)}</span>` : '';
-
-    // Recent jobs list (last 3)
-    const recentJobs = c.jobs.slice(0,3);
-    const recentJobsHtml = recentJobs.length ? `
-      <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px">
-        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px">Job history</div>
-        ${recentJobs.map(j => {
-          const statusColour = {quoted:'#92400e',booked:'#1e3a8a',completed:'#065f46',pending:'#374151',declined:'#991b1b'}[j.status]||'#374151';
-          const statusBg = {quoted:'#fef9c3',booked:'#dbeafe',completed:'#d1fae5',pending:'#f3f4f6',declined:'#fee2e2'}[j.status]||'#f3f4f6';
-          return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;flex-wrap:wrap">
-            ${j.job_number ? `<span style="font-weight:700;color:var(--blue);font-size:11px;min-width:70px">${esc(j.job_number)}</span>` : ''}
-            <span style="color:var(--txt2)">${j.booking_date ? fmtDate(j.booking_date) : fmtDate(j.created_at?.split('T')[0])}</span>
-            <span style="color:var(--txt);flex:1">${esc(j.panels||j.vehicle||'—')}</span>
-            <span style="background:${statusBg};color:${statusColour};font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px">${j.status}</span>
-            ${j.invoice_amount||j.quote_price ? `<span style="font-weight:700;color:var(--teal)">£${esc((j.invoice_amount||j.quote_price||'').replace('£',''))}</span>` : ''}
-          </div>`;
-        }).join('')}
-        ${c.jobs.length > 3 ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">+ ${c.jobs.length-3} more job${c.jobs.length-3!==1?'s':''}</div>` : ''}
-      </div>` : '';
-
+    const totalSpend = c.jobs.reduce((s,j) => s + (parseFloat((j.quote_price||'0').replace(/[^0-9.]/g,''))||0), 0);
     return `<div class="cust-card">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:6px">
-        <div style="flex:1;min-width:0">
-          <div class="cust-card-name">${esc(c.name)}</div>
-          <div class="cust-card-detail" style="margin-top:3px">
-            ${c.phone ? `<a href="tel:${esc(c.phone)}" style="color:var(--blue);text-decoration:none">📞 ${esc(c.phone)}</a>&nbsp;` : ''}
-            ${c.email ? `<a href="mailto:${esc(c.email)}" style="color:var(--blue);text-decoration:none">✉ ${esc(c.email)}</a>&nbsp;` : ''}
-            ${c.address ? `<span>📍 ${esc(c.address)}</span>` : ''}
+        <div>
+          <div class="cust-card-name">${esc(c.name)}
+            ${isDup ? '<span class="cust-sug-badge">⚠ Possible duplicate</span>' : ''}
           </div>
-          ${vehiclesHtml ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${vehiclesHtml}</div>` : ''}
-          ${activeJobs.length ? `<div style="margin-top:6px"><span style="background:#dbeafe;color:#1e3a8a;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px">🔧 ${activeJobs.length} active job${activeJobs.length!==1?'s':''}</span></div>` : ''}
+          <div class="cust-card-detail">
+            ${c.phone ? '📞 ' + esc(c.phone) + ' &nbsp;' : ''}
+            ${c.email ? '✉ ' + esc(c.email) + ' &nbsp;' : ''}
+            ${c.address ? '📍 ' + esc(c.address) : ''}
+          </div>
+          ${c.vehicle ? `<div style="font-size:12px;color:var(--muted)">🚗 Last vehicle: ${esc(c.vehicle)}</div>` : ''}
         </div>
         <div style="text-align:right;flex-shrink:0">
           <div style="font-size:13px;font-weight:700;color:var(--txt)">${jobCount} job${jobCount!==1?'s':''}</div>
@@ -6922,8 +6358,7 @@ function renderCustomers() {
           ${c.lastJob ? `<div style="font-size:11px;color:var(--muted)">Last: ${fmtDate(c.lastJob)}</div>` : ''}
         </div>
       </div>
-      ${recentJobsHtml}
-      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
         <button onclick="newQuoteForCustomer(${JSON.stringify(c).split('"').join('&quot;')})" class="btn-primary" style="font-size:11px;padding:5px 10px">+ New quote</button>
         <button onclick="newJobForCustomer(${JSON.stringify(c).split('"').join('&quot;')})" class="btn-secondary" style="font-size:11px;padding:5px 10px">+ Book job</button>
       </div>
@@ -6957,11 +6392,9 @@ function newQuoteForCustomer(cStr) {
     // Pre-fill make/model if available
     if (c.vehicle) {
       const vparts = c.vehicle.split(' ');
-      const yearPart = vparts.find(p => /^(19|20)\d{2}$/.test(p));
-      const nonYear = vparts.filter(p => !/^(19|20)\d{2}$/.test(p));
-      set('q_make', nonYear[0] || '');
-      set('q_model', nonYear.slice(1).join(' ') || '');
-      if (yearPart) set('q_year', yearPart);
+      set('q_make', vparts[0] || '');
+      set('q_model', vparts.slice(1,-1).join(' ') || '');
+      set('q_year', vparts[vparts.length-1] || '');
     }
     updateCustomerPreview?.();
   }, 200);
@@ -7042,11 +6475,9 @@ function selectCustomerSuggestion(inputId, suggestionsId, cStr) {
     }
     if (c.vehicle) {
       const vparts = c.vehicle.split(' ');
-      const yearPart = vparts.find(p => /^(19|20)\d{2}$/.test(p));
-      const nonYear = vparts.filter(p => !/^(19|20)\d{2}$/.test(p));
-      set('q_make', nonYear[0] || '');
-      set('q_model', nonYear.slice(1).join(' ') || '');
-      if (yearPart) set('q_year', yearPart);
+      set('q_make', vparts[0]||'');
+      set('q_model', vparts.slice(1,-1).join(' ')||'');
+      set('q_year', vparts[vparts.length-1]||'');
     }
     updateCustomerPreview?.();
   } else if (inputId === 'm_name') {
@@ -7291,7 +6722,7 @@ async function renderStaffPortal() {
             <span>Booked holidays</span><span>−${holDays} days</span>
           </div>
           ${manualHolDays>0?`<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;color:var(--muted)">
-            <span>Manual diary holidays</span><span>−${manualHolDays} days</span>
+            <span>Manual diary holidays</span><span>−\${manualHolDays} days</span>
           </div>`:''}
           <div style="border-top:1px solid var(--border);padding-top:6px;margin-top:4px;display:flex;justify-content:space-between;font-size:13px">
             <span style="font-weight:700">Remaining</span>
@@ -7416,7 +6847,7 @@ function updateRevTarget() {
   const thisMonth = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
   const thisYear = now.getFullYear() + '';
 
-  const diaryExclude = ['Holiday','Holiday_approved','Appointment','Van day','Diary entry','Bank Holiday'];
+  const diaryExclude = ['Holiday','Appointment','Van day','Diary entry','Bank Holiday'];
   function getPrice(j) {
     return parseFloat((j.quote_price||j.invoice_amount||'0').toString().replace(/[^0-9.]/g,''))||0;
   }
@@ -7558,7 +6989,7 @@ function renderAnalytics() {
     ? new Date(now.getTime() - _analyticsRangeDays * 86400000).toISOString().split('T')[0]
     : '2000-01-01';
 
-  const diaryExclude = ['Holiday','Holiday_approved','Appointment','Van day','Diary entry','Bank Holiday'];
+  const diaryExclude = ['Holiday','Appointment','Van day','Diary entry','Bank Holiday'];
   function getPrice(j) {
     return parseFloat((j.quote_price||j.invoice_amount||'0').toString().replace(/[^0-9.]/g,''))||0;
   }
@@ -7869,242 +7300,5 @@ function normalisePhone(phone) {
   }
 })();
 </script>
-
-<!-- ═══════════════════════════════════════════════════════════ -->
-<!-- MANUAL QUOTE MODAL — can only be dismissed by Save/Cancel  -->
-<!-- ═══════════════════════════════════════════════════════════ -->
-<div class="modal-overlay" id="manualQuoteModal">
-  <div class="modal-box" style="max-width:420px">
-    <div class="modal-hd">Manual quote</div>
-    <span class="qlbl">Price (inc VAT)</span>
-    <input autocomplete="off" class="qinp" id="m_price_manual" placeholder="e.g. £320" style="font-size:22px;font-weight:700;text-align:center;color:var(--teal);margin-bottom:12px">
-    <span class="qlbl">Rung / complexity</span>
-    <select class="qinp" id="m_rung_manual" style="margin-bottom:12px">
-      <option value="1">Rung 1 — minor touch up</option>
-      <option value="2" selected>Rung 2 — SMART 1 panel</option>
-      <option value="3">Rung 3 — moderate 1–2 panels</option>
-      <option value="4">Rung 4 — full respray 1 panel</option>
-      <option value="5">Rung 5 — 2+ panels full respray</option>
-      <option value="6">Rung 6 — major/complex</option>
-    </select>
-    <span class="qlbl">Duration</span>
-    <select class="qinp" id="m_dur_manual" style="margin-bottom:12px">
-      <option value="1 hour">1 hour</option>
-      <option value="2 hours">2 hours</option>
-      <option value="3 hours" selected>3 hours</option>
-      <option value="4 hours">4 hours</option>
-      <option value="5 hours">5 hours</option>
-      <option value="Full day">Full day</option>
-      <option value="2 days">2 days</option>
-      <option value="PDR">PDR (contracted out)</option>
-      <option value="Alloys">Alloys (contracted out)</option>
-    </select>
-    <span class="qlbl">Notes for customer (optional)</span>
-    <textarea autocomplete="off" class="qinp" id="m_note_manual" placeholder="Any notes to attach to this quote..." rows="3" style="margin-bottom:16px"></textarea>
-    <div style="display:flex;gap:8px">
-      <button class="btn-primary" onclick="saveManualQuote()" style="flex:1;padding:12px">Save quote</button>
-      <button class="btn-secondary" onclick="cancelManual()" style="flex:1;padding:12px">Cancel</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════ -->
-<!-- PHOTO LIGHTBOX SLIDESHOW                           -->
-<!-- ═══════════════════════════════════════════════════ -->
-<div id="photoLightbox" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.95);flex-direction:column;align-items:center;justify-content:center">
-  <!-- Close -->
-  <button onclick="closeLightbox()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:22px;width:44px;height:44px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2">✕</button>
-  <!-- Counter -->
-  <div id="lbCounter" style="position:absolute;top:20px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.7);font-size:13px;font-weight:600;letter-spacing:.5px"></div>
-  <!-- Image -->
-  <img id="lbImg" src="" style="max-width:calc(100vw - 100px);max-height:calc(100vh - 120px);object-fit:contain;border-radius:6px;user-select:none;-webkit-user-drag:none;touch-action:manipulation" alt="photo">
-  <!-- Arrows -->
-  <button id="lbPrev" onclick="lbNav(-1)" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;color:#fff;font-size:26px;width:48px;height:64px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center">‹</button>
-  <button id="lbNext" onclick="lbNav(1)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;color:#fff;font-size:26px;width:48px;height:64px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center">›</button>
-  <!-- Dot strip -->
-  <div id="lbDots" style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:6px;flex-wrap:wrap;justify-content:center;max-width:80vw"></div>
-</div>
-
-<script>
-// ═══════════════════════════════════════════════════════════
-// PHOTO LIGHTBOX
-// ═══════════════════════════════════════════════════════════
-let _lbUrls = [];
-let _lbIdx = 0;
-let _lbTouchStartX = 0;
-const _lbRegistry = {};
-
-// Zoom state
-let _lbScale = 1;
-let _lbPanX = 0;
-let _lbPanY = 0;
-let _lbPinchDist = null;
-let _lbPanStart = null;
-let _lbLastTap = 0;
-
-function _lbOpen(key, idx) {
-  const urls = _lbRegistry[key];
-  if (!urls || !urls.length) return;
-  openLightbox(urls, idx || 0);
-}
-
-function openLightbox(urls, startIdx) {
-  _lbUrls = Array.isArray(urls) ? urls : [urls];
-  _lbIdx = startIdx || 0;
-  _lbResetZoom();
-  const lb = document.getElementById('photoLightbox');
-  lb.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-  lbRender();
-  // Attach touch events to the IMAGE directly, not the overlay
-  const img = document.getElementById('lbImg');
-  img.addEventListener('touchstart', lbTouchStart, { passive: false });
-  img.addEventListener('touchmove', lbTouchMove, { passive: false });
-  img.addEventListener('touchend', lbTouchEnd, { passive: true });
-  // Swipe on overlay (when not zoomed)
-  lb.addEventListener('touchstart', lbOverlayTouchStart, { passive: true });
-  lb.addEventListener('touchend', lbOverlayTouchEnd, { passive: true });
-  document.addEventListener('keydown', lbKeydown);
-}
-
-function closeLightbox() {
-  const lb = document.getElementById('photoLightbox');
-  const img = document.getElementById('lbImg');
-  lb.style.display = 'none';
-  document.body.style.overflow = '';
-  _lbResetZoom();
-  img.removeEventListener('touchstart', lbTouchStart);
-  img.removeEventListener('touchmove', lbTouchMove);
-  img.removeEventListener('touchend', lbTouchEnd);
-  lb.removeEventListener('touchstart', lbOverlayTouchStart);
-  lb.removeEventListener('touchend', lbOverlayTouchEnd);
-  document.removeEventListener('keydown', lbKeydown);
-}
-
-function _lbResetZoom() {
-  _lbScale = 1; _lbPanX = 0; _lbPanY = 0;
-  _lbPinchDist = null; _lbPanStart = null;
-  const img = document.getElementById('lbImg');
-  if (img) img.style.transform = '';
-}
-
-function _lbApplyZoom() {
-  const img = document.getElementById('lbImg');
-  if (img) img.style.transform = `scale(${_lbScale}) translate(${_lbPanX/_lbScale}px, ${_lbPanY/_lbScale}px)`;
-}
-
-function lbRender() {
-  const img = document.getElementById('lbImg');
-  const counter = document.getElementById('lbCounter');
-  const dots = document.getElementById('lbDots');
-  const prev = document.getElementById('lbPrev');
-  const next = document.getElementById('lbNext');
-  _lbResetZoom();
-  img.src = _lbUrls[_lbIdx];
-  counter.textContent = _lbUrls.length > 1 ? (_lbIdx + 1) + ' / ' + _lbUrls.length : '';
-  prev.style.display = _lbUrls.length > 1 ? 'flex' : 'none';
-  next.style.display = _lbUrls.length > 1 ? 'flex' : 'none';
-  dots.innerHTML = _lbUrls.length > 1
-    ? _lbUrls.map((_, i) => `<div onclick="lbGo(${i})" style="width:${i===_lbIdx?'20px':'8px'};height:8px;border-radius:4px;background:${i===_lbIdx?'#fff':'rgba(255,255,255,.35)'};cursor:pointer;transition:all .2s"></div>`).join('')
-    : '';
-}
-
-function lbNav(dir) {
-  if (_lbScale > 1) return; // don't swipe between photos while zoomed
-  _lbIdx = (_lbIdx + dir + _lbUrls.length) % _lbUrls.length;
-  lbRender();
-}
-
-function lbGo(idx) { _lbIdx = idx; lbRender(); }
-
-function lbKeydown(e) {
-  if (e.key === 'ArrowLeft') lbNav(-1);
-  else if (e.key === 'ArrowRight') lbNav(1);
-  else if (e.key === 'Escape') closeLightbox();
-}
-
-function _pinchDist(touches) {
-  const dx = touches[0].clientX - touches[1].clientX;
-  const dy = touches[0].clientY - touches[1].clientY;
-  return Math.sqrt(dx*dx + dy*dy);
-}
-
-// Overlay swipe (only fires when not on the image)
-let _lbOverlayStartX = 0;
-function lbOverlayTouchStart(e) {
-  if (e.target === document.getElementById('lbImg')) return;
-  _lbOverlayStartX = e.touches[0].clientX;
-}
-function lbOverlayTouchEnd(e) {
-  if (e.target === document.getElementById('lbImg')) return;
-  if (_lbScale > 1) return;
-  const diff = _lbOverlayStartX - e.changedTouches[0].clientX;
-  if (Math.abs(diff) > 50) lbNav(diff > 0 ? 1 : -1);
-}
-
-// Image touch handlers — zoom + pan + double tap
-function lbTouchStart(e) {
-  if (e.touches.length === 2) {
-    e.preventDefault();
-    _lbPinchDist = _pinchDist(e.touches);
-    _lbPanStart = null;
-  } else if (e.touches.length === 1) {
-    const t = e.touches[0];
-    const now = Date.now();
-    // Double tap
-    if (now - _lbLastTap < 300) {
-      e.preventDefault();
-      if (_lbScale > 1) { _lbResetZoom(); }
-      else { _lbScale = 2.5; }
-      _lbApplyZoom();
-      _lbLastTap = 0;
-      return;
-    }
-    _lbLastTap = now;
-    if (_lbScale > 1) {
-      e.preventDefault();
-      _lbPanStart = { x: t.clientX - _lbPanX, y: t.clientY - _lbPanY };
-    } else {
-      _lbTouchStartX = t.clientX;
-    }
-  }
-}
-
-function lbTouchMove(e) {
-  if (e.touches.length === 2) {
-    e.preventDefault();
-    const dist = _pinchDist(e.touches);
-    if (_lbPinchDist) {
-      _lbScale = Math.min(5, Math.max(1, _lbScale * (dist / _lbPinchDist)));
-      _lbApplyZoom();
-    }
-    _lbPinchDist = dist;
-  } else if (e.touches.length === 1 && _lbScale > 1 && _lbPanStart) {
-    e.preventDefault();
-    _lbPanX = e.touches[0].clientX - _lbPanStart.x;
-    _lbPanY = e.touches[0].clientY - _lbPanStart.y;
-    _lbApplyZoom();
-  }
-}
-
-function lbTouchEnd(e) {
-  if (e.touches.length === 0) {
-    _lbPinchDist = null;
-    // Swipe on image when not zoomed
-    if (_lbScale <= 1 && !_lbPanStart) {
-      const diff = _lbTouchStartX - e.changedTouches[0].clientX;
-      if (Math.abs(diff) > 50) lbNav(diff > 0 ? 1 : -1);
-    }
-    if (_lbScale <= 1.05) _lbResetZoom();
-    _lbPanStart = null;
-  }
-}
-
-function openJobPhotos(photos, startIdx) {
-  const urls = photos.map(p => `${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}`);
-  openLightbox(urls, startIdx || 0);
-}
-</script>
-
 </body>
 </html>
