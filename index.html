@@ -1028,6 +1028,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
               <option value="5 hours">5 hours</option>
               <option value="Full day">Full day</option>
               <option value="2 days">2 days</option>
+              <option value="3 days">3 days</option>
+              <option value="4 days">4 days</option>
+              <option value="5 days">5 days</option>
               <option value="PDR">PDR (contracted out)</option>
               <option value="Alloys">Alloys (contracted out)</option>
             </select>
@@ -1295,6 +1298,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <option value="Full day">Full day</option>
           <option value="2 days">2 days</option>
           <option value="3 days">3 days</option>
+          <option value="4 days">4 days</option>
+          <option value="5 days">5 days</option>
           <option value="PDR">PDR (contracted out)</option>
           <option value="Alloys">Alloys (contracted out)</option>
         </select>
@@ -1529,6 +1534,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <option value="Full day">Full day</option>
           <option value="2 days">2 days</option>
           <option value="3 days">3 days</option>
+          <option value="4 days">4 days</option>
+          <option value="5 days">5 days</option>
           <option value="PDR">PDR (contracted out)</option>
           <option value="Alloys">Alloys (contracted out)</option>
         </select>
@@ -2234,10 +2241,7 @@ async function renderHomeAttention() {
       </div>
       <span class="badge" style="background:#fee2e2;color:#991b1b;flex-shrink:0">Review</span>
     </div>`);
-  const todayAttn = new Date().toISOString().split('T')[0];
-  const overdueJobs = allJobs.filter(j =>
-    j.status === 'booked' && j.booking_date && j.booking_date < todayAttn
-  );
+  const overdueJobs = allJobs.filter(j => isJobOverdue(j));
   if (overdueJobs.length) items.push(`
     <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:var(--radius-lg);padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:8px" onclick="switchTab('jobs');setFilter('booked',document.getElementById('fp-book'))">
       <div style="width:28px;height:28px;background:#fee2e2;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">⚠</div>
@@ -2513,8 +2517,7 @@ function buildJobCard(j) {
   const isExpired = j.status === 'quoted' && quoteAge > 45;
   const quotedLabel = isExpired ? '⚠ Quote expired ('+quoteAge+'d)' : j.quote_sent_to_customer ? 'Awaiting customer' : 'Approved — send quote';
   const completedLabel = (j.status === 'completed' && !j.invoiced_at) ? 'Needs invoice' : 'Completed ✓';
-  const todayD = new Date().toISOString().split('T')[0];
-  const isOverdue = j.status === 'booked' && j.booking_date && j.booking_date < todayD;
+  const isOverdue = isJobOverdue(j);
   const overdueLabel = isOverdue ? '⚠ Overdue — not completed' : 'Booked';
   const statusLabel = { pending:'Pending approval', quoted:quotedLabel, booked:overdueLabel, completed:completedLabel, declined:'Declined' }[j.status] || j.status;
   const statusExtra = j.status === 'quoted' && j.quote_sent_to_customer ? ' js-await'
@@ -3611,7 +3614,7 @@ function selectDiaryDay(ds, label) {
 
 function detJobCard(j, side) {
   const isDone = j.status === 'completed';
-  const isOverdueD = j.status === 'booked' && j.booking_date && j.booking_date < new Date().toISOString().split('T')[0];
+  const isOverdueD = isJobOverdue(j);
   const borderCol = isDone ? '#6ee7b7' : isOverdueD ? '#fca5a5' : '';
   const styleExtra = (isDone ? 'opacity:.65;' : '') + (borderCol ? `border-left:3px solid ${borderCol};` : '');
   return `<div class="djob djob-${side}" onclick="selectDiaryJob(${j.id})" style="cursor:pointer;${styleExtra}">
@@ -7287,6 +7290,30 @@ async function confirmMarkPaid(id) {
     if (btn) { btn.disabled = false; btn.textContent = 'Save payment'; }
     alert('Failed: ' + e.message);
   }
+}
+
+// ═══════════════════════════════════════════════════════════
+// OVERDUE JOB DETECTION
+// A job is overdue only when its LAST day has passed
+// Multi-day jobs: start + duration_days - 1 must be < today
+// Diary entries (holidays etc) are never overdue
+// ═══════════════════════════════════════════════════════════
+function isJobOverdue(j) {
+  if (j.status !== 'booked') return false;
+  if (!j.booking_date) return false;
+  // Exclude diary entries
+  var diarySources = ['Holiday','Appointment','Van day','Diary entry','Bank Holiday','Holiday_approved'];
+  if (diarySources.indexOf(j.source) > -1) return false;
+  // Calculate last day of job
+  var days = j.duration_days || 1;
+  if (days <= 1 && j.duration) {
+    var m = j.duration.match(/(\d+)\s*day/i);
+    if (m) days = parseInt(m[1]);
+  }
+  var startMs = new Date(j.booking_date + 'T12:00:00').getTime();
+  var endMs = startMs + (days - 1) * 86400000;
+  var todayMs = new Date(new Date().toISOString().split('T')[0] + 'T12:00:00').getTime();
+  return endMs < todayMs;
 }
 
 // ═══════════════════════════════════════════════════════════
