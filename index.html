@@ -1193,7 +1193,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 <!-- ADD JOB MODAL -->
-<div class="modal-overlay" id="addModal" onclick="if(event.target===this)closeAddModal()">
+<div class="modal-overlay" id="addModal">
   <div class="modal-box">
     <div class="modal-hd">Add job manually</div>
     <div class="modal-grid2">
@@ -1378,7 +1378,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 
 <!-- BOOK JOB MODAL -->
-<div class="modal-overlay" id="bookModal" onclick="if(event.target===this)closeBookModal()">
+<div class="modal-overlay" id="bookModal">
   <div class="modal-box">
     <div class="modal-hd">Book job</div>
     <div id="bookModalInfo" style="background:var(--blue-bg);border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;font-size:13px;color:var(--blue-txt);font-weight:500"></div>
@@ -1434,7 +1434,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 <!-- EDIT JOB MODAL -->
-<div class="modal-overlay" id="editModal" onclick="if(event.target===this)closeEditModal()">
+<div class="modal-overlay" id="editModal">
   <div class="modal-box" style="max-width:560px">
     <div class="modal-hd">Edit job</div>
     <input autocomplete="off" type="hidden" id="edit_jobId">
@@ -1605,6 +1605,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <label for="edit_rework" style="font-size:13px;font-weight:600;color:#991b1b;cursor:pointer">🔄 This is a rework job</label>
     </div>
     <span class="qlbl">Add photos</span>
+    <!-- Existing photos shown here -->
+    <div id="editExistingPhotos" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
     <label class="upzone" for="editPhotoInput" style="display:block;cursor:pointer;padding:14px;margin-bottom:10px">
       <div style="font-size:12px;color:var(--muted);font-weight:600" id="editUpLbl">Tap to add photos — tap again to add more</div>
       <div style="font-size:10px;color:var(--hint);margin-top:2px">📷 Camera or gallery · multiple ok · tap again to add more</div>
@@ -1621,7 +1623,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 
 <!-- COMPLETE JOB MODAL (jobs tab — no photo required) -->
-<div class="modal-overlay" id="completeModal" onclick="if(event.target===this)closeCompleteModal()">
+<div class="modal-overlay" id="completeModal">
   <div class="modal-box" style="max-width:420px">
     <div class="modal-hd">Mark job as complete</div>
     <div id="completeModalInfo" style="background:var(--blue-bg);border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;font-size:13px;color:var(--blue-txt);font-weight:500"></div>
@@ -2089,7 +2091,14 @@ function switchTab(t) {
   if (t === 'settings') { checkApiKey(); checkXeroStatus(); }
   // timesheets now embedded in staff tab
   if (t === 'customers') { renderCustomers(); }
-  if (t === 'staff') { renderStaffPortal(); }
+  if (t === 'staff') {
+    // Ensure diary jobs loaded so manual holidays count correctly
+    if (!diaryAllJobs.length) {
+      loadDiaryJobs().then(() => renderStaffPortal());
+    } else {
+      renderStaffPortal();
+    }
+  }
   if (t === 'analytics') {
     // Always load latest declined jobs so close rate is accurate
     loadDeclinedJobs().then(() => renderAnalytics());
@@ -4877,6 +4886,24 @@ async function openEditModal(jobId) {
   document.getElementById('edit_source').value = j.source || 'other';
   document.getElementById('edit_cd').checked = !!j.cd_required;
   document.getElementById('editUpLbl').textContent = 'Tap to add photos';
+  // Clear existing photo display
+  document.getElementById('editExistingPhotos').innerHTML = '';
+  // Load existing photos and display them
+  try {
+    const existingPhotos = await sbRaw('GET','job_photos',null,`?job_id=eq.${jobId}&order=created_at.asc`);
+    if (existingPhotos && existingPhotos.length) {
+      const container = document.getElementById('editExistingPhotos');
+      container.innerHTML = existingPhotos.map((p,pi) => `
+        <div style="position:relative;display:inline-block">
+          <img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}"
+            style="width:72px;height:72px;object-fit:cover;border-radius:var(--radius);border:2px solid var(--border);cursor:pointer"
+            onclick="event.stopPropagation();openLightbox(${JSON.stringify(existingPhotos.map(x=>SUPABASE_URL+'/storage/v1/object/public/job-photos/'+x.storage_path))},${pi})"
+            alt="photo">
+          <button onclick="event.stopPropagation();deletePhoto(${p.id},${jobId})"
+            style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--red);border:none;color:#fff;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;padding:0">✕</button>
+        </div>`).join('');
+    }
+  } catch(e) { console.warn('Could not load photos for edit modal', e); }
   // Load existing parts into edit modal parts list
   try {
     const existingParts = await sbRaw('GET','job_parts',null,`?job_id=eq.${jobId}&order=created_at.asc`);
@@ -6674,7 +6701,10 @@ async function renderStaffPortal() {
         j.source === 'Holiday' &&
         j.booking_date >= (calYear + '-01-01') &&
         j.booking_date <= (calYear + '-12-31') &&
-        jobBelongsTo(j.assigned_tech, staff.col)
+        // Match by col OR by name directly (handles "Tony — Holiday" etc)
+        (jobBelongsTo(j.assigned_tech, staff.col) ||
+         (j.assigned_tech||'').toLowerCase().includes(staff.name.toLowerCase()) ||
+         (j.customer_name||'').toLowerCase().includes(staff.name.toLowerCase()))
       ).length;
       const annualEntitlement = getStaffEntitlement(staff);
       const totalUsed = holDays + bhCount + manualHolDays;
