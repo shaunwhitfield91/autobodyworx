@@ -2524,6 +2524,8 @@ function buildJobCard(j) {
     : j.status === 'completed' && !j.invoiced_at ? ' js-inv'
     : isOverdue ? ' js-overdue' : '';
   const photos = j.job_photos || [];
+  // Cache photos on job object so openPhotoByJobId can find them
+  j._photos = photos;
   const parts = j.job_parts || [];
   const prog = statusToProgress(j.status, j);
 
@@ -2622,7 +2624,7 @@ function buildJobCard(j) {
     <div class="photos-row">
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
         ${photos.map((p,pi)=>`<div style="position:relative;display:inline-block">
-          <img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="photo-thumb" alt="damage" onclick="event.stopPropagation();openJobPhotos(${JSON.stringify(photos)},${pi})">
+          <img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="photo-thumb" alt="damage" onclick="event.stopPropagation();openPhotoByJobId(${j.id},${pi})" data-job-id="${j.id}" data-photo-idx="${pi}">
           ${currentProfile?.role==='admin'||currentProfile?.role==='admin_staff'?`<button onclick="event.stopPropagation();deletePhoto(${p.id})" style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--red);border:none;color:#fff;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;font-weight:700;padding:0">✕</button>`:''}
         </div>`).join('')}
       </div>
@@ -4528,7 +4530,7 @@ function buildTechCard(j) {
         <div class="tech-info-item full"><div class="tech-info-lbl">Panels / damage</div><div class="tech-info-val">${esc(j.panels||'—')}</div></div>
         ${j.notes?`<div class="tech-info-item full"><div class="tech-info-lbl">Notes</div><div class="tech-info-val">${esc(j.notes)}</div></div>`:''}
       </div>
-      ${bmq.length?`<div class="tech-photos-row">${bmq.map(p=>`<img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="tech-photo-thumb" alt="damage" onclick="window.open(this.src,'_blank')">`).join('')}</div>`:''}
+      ${bmq.length?`<div class="tech-photos-row">${bmq.map((p,pi)=>`<img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="tech-photo-thumb" alt="damage" onclick="event.stopPropagation();openPhotoByJobId(${j.id},${pi})" data-job-id="${j.id}" data-photo-idx="${pi}">`).join('')}</div>`:''}
       ${damagePhotosHtml}
       ${editBox}
       ${completeBox}
@@ -7519,6 +7521,19 @@ function lbTouchEnd(e) {
     if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) lbNav(dx < 0 ? 1 : -1);
   }
   _lbPinchDist = null;
+}
+
+function openPhotoByJobId(jobId, startIdx) {
+  // Find photos for this job from the loaded job data
+  const j = allJobs.find(x => x.id === jobId) || diaryAllJobs.find(x => x.id === jobId);
+  if (!j || !j._photos || !j._photos.length) {
+    // Fallback — find all photo-thumb elements with this job id
+    const imgs = document.querySelectorAll(`[data-job-id="${jobId}"]`);
+    const urls = Array.from(imgs).map(img => img.src);
+    if (urls.length) { openLightbox(urls, startIdx || 0); }
+    return;
+  }
+  openJobPhotos(j._photos, startIdx || 0);
 }
 
 function openJobPhotos(photos, startIdx) {
