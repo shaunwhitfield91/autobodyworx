@@ -1396,6 +1396,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <option value="Full day">Full day</option>
       <option value="2 days">2 days</option>
       <option value="3 days">3 days</option>
+      <option value="4 days">4 days</option>
+      <option value="5 days">5 days</option>
       <option value="PDR">PDR (contracted out)</option>
       <option value="Alloys">Alloys (contracted out)</option>
     </select>
@@ -1604,12 +1606,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <input autocomplete="off" type="checkbox" id="edit_rework" style="width:16px;height:16px;accent-color:var(--red);cursor:pointer">
       <label for="edit_rework" style="font-size:13px;font-weight:600;color:#991b1b;cursor:pointer">🔄 This is a rework job</label>
     </div>
-    <span class="qlbl">Add photos</span>
-    <!-- Existing photos shown here -->
-    <div id="editExistingPhotos" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
-    <label class="upzone" for="editPhotoInput" style="display:block;cursor:pointer;padding:14px;margin-bottom:10px">
-      <div style="font-size:12px;color:var(--muted);font-weight:600" id="editUpLbl">Tap to add photos — tap again to add more</div>
-      <div style="font-size:10px;color:var(--hint);margin-top:2px">📷 Camera or gallery · multiple ok · tap again to add more</div>
+    <span class="qlbl">Photos</span>
+    <!-- Existing photos — tap to view in lightbox -->
+    <div id="editExistingPhotos" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;min-height:0"></div>
+    <label class="upzone" for="editPhotoInput" style="display:block;cursor:pointer;padding:12px;margin-bottom:10px">
+      <div style="font-size:12px;color:var(--muted);font-weight:600" id="editUpLbl">Tap to add more photos</div>
+      <div style="font-size:10px;color:var(--hint);margin-top:2px">📷 Camera or gallery · tap again to add more</div>
       <div id="editPhotoPreview" style="display:flex;flex-wrap:wrap;margin-top:6px"></div>
       <input autocomplete="off" type="file" id="editPhotoInput" accept="image/*" multiple
         style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"
@@ -1783,7 +1785,7 @@ let diaryAllJobs = []; // includes diary entries (holidays etc) — for diary di
 async function loadDiaryJobs() {
   try {
     // Select only columns the diary needs — much faster than select=*
-    const cols = 'id,customer_name,vehicle,panels,booking_date,booking_time,duration,duration_days,assigned_tech,job_location,customer_address,quote_price,invoice_amount,status,source,notes,cd_required,signed_off_at,invoiced_at';
+    const cols = 'id,customer_name,vehicle,panels,booking_date,booking_time,duration,duration_days,assigned_tech,job_location,customer_address,quote_price,invoice_amount,status,source,notes,cd_required,parts_required,courtesy_car,signed_off_at,invoiced_at';
     const data = await sbRaw('GET', 'jobs', null,
       `?select=${cols}&archived=eq.false&status=neq.declined&order=booking_date.asc`);
     diaryAllJobs = data || [];
