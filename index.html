@@ -4892,18 +4892,22 @@ async function openEditModal(jobId) {
   document.getElementById('editExistingPhotos').innerHTML = '';
   // Load existing photos and display them
   try {
-    const existingPhotos = await sbRaw('GET','job_photos',null,`?job_id=eq.${jobId}&order=created_at.asc`);
+    const existingPhotos = await sbRaw('GET','job_photos',null,`?job_id=eq.${jobId}&order=id.asc`);
     if (existingPhotos && existingPhotos.length) {
       const container = document.getElementById('editExistingPhotos');
+      // Store URLs on window so onclick can reference without JSON in attribute
+      window._editModalPhotoUrls = existingPhotos.map(x => SUPABASE_URL+'/storage/v1/object/public/job-photos/'+x.storage_path);
       container.innerHTML = existingPhotos.map((p,pi) => `
         <div style="position:relative;display:inline-block">
           <img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}"
-            style="width:72px;height:72px;object-fit:cover;border-radius:var(--radius);border:2px solid var(--border);cursor:pointer"
-            onclick="event.stopPropagation();openLightbox(${JSON.stringify(existingPhotos.map(x=>SUPABASE_URL+'/storage/v1/object/public/job-photos/'+x.storage_path))},${pi})"
+            style="width:76px;height:76px;object-fit:cover;border-radius:var(--radius);border:2px solid var(--border);cursor:pointer"
+            onclick="event.stopPropagation();openLightbox(window._editModalPhotoUrls,${pi})"
             alt="photo">
           <button onclick="event.stopPropagation();deletePhoto(${p.id},${jobId})"
             style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--red);border:none;color:#fff;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;padding:0">✕</button>
         </div>`).join('');
+    } else {
+      document.getElementById('editExistingPhotos').innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0">No photos on this job</div>';
     }
   } catch(e) { console.warn('Could not load photos for edit modal', e); }
   // Load existing parts into edit modal parts list
@@ -6668,6 +6672,8 @@ async function renderStaffPortal() {
   const el = document.getElementById('staff-portal-content');
   if (!el) return;
   el.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">Loading...</div>';
+  // Always ensure diary jobs loaded so manual holidays count correctly
+  if (!diaryAllJobs.length) { await loadDiaryJobs(); }
 
   try {
     // Fetch all holiday requests
@@ -6782,9 +6788,7 @@ async function renderStaffPortal() {
           <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;color:var(--muted)">
             <span>Booked holidays</span><span>−${holDays} days</span>
           </div>
-          ${manualHolDays>0?`<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;color:var(--muted)">
-            <span>Manual diary holidays</span><span>−\${manualHolDays} days</span>
-          </div>`:''}
+          ${manualHolDays>0?('<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;color:var(--muted)"><span>Manual diary holidays</span><span>−'+manualHolDays+' days</span></div>'):''}
           <div style="border-top:1px solid var(--border);padding-top:6px;margin-top:4px;display:flex;justify-content:space-between;font-size:13px">
             <span style="font-weight:700">Remaining</span>
             <span style="font-weight:800;color:${remaining<=(annualEntitlement*0.2)?'var(--red)':'var(--teal)'}">${remaining} days</span>
