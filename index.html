@@ -4463,7 +4463,7 @@ function buildTechCard(j) {
         </label>
         <div class="tech-after-thumbs" id="taf-${j.id}">
           ${amq.map(p=>`<div style="position:relative;display:inline-block">
-          <img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="tech-after-thumb" alt="after" onclick="window.open(this.src,'_blank')">
+          <img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="tech-after-thumb" alt="after" onclick="event.stopPropagation();openPhotoByJobId(${j.id},${pi})" data-job-id="${j.id}" data-photo-idx="${pi}">
           <button onclick="event.stopPropagation();deletePhoto(${p.id},true)" style="position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--red);border:none;color:#fff;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;font-weight:700;padding:0">✕</button>
         </div>`).join('')}
         </div>
@@ -4487,7 +4487,7 @@ function buildTechCard(j) {
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           ${bmq.map(p=>`<img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}"
             style="width:80px;height:80px;object-fit:cover;border-radius:var(--radius);border:1px solid var(--border);cursor:pointer"
-            alt="damage" onclick="window.open(this.src,'_blank')">`).join('')}
+            alt="damage" onclick="event.stopPropagation();openLightbox([this.src],0)">`).join('')}
         </div>
       </div>`
     : '';
