@@ -235,6 +235,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .leg-dot-s{background:var(--blue)}.leg-dot-c{background:var(--amber)}.leg-dot-b{background:var(--teal)}
 .fl-wm{background:#000;color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;letter-spacing:.3px}
 .fl-cd{background:var(--accent);color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;letter-spacing:.3px}
+.fl-courtesy{background:#16a34a;color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;letter-spacing:.3px}
+.fl-parts{background:#d97706;color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;letter-spacing:.3px}
 
 /* Month view */
 .cal-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
@@ -829,6 +831,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <div class="leg-item"><div class="leg-dot leg-dot-b"></div><span style="color:var(--teal-txt);font-weight:600">Both</span></div>
           <div class="leg-item"><span class="fl-wm">W+M</span> Mixed day</div>
           <div class="leg-item"><span class="fl-cd">C&amp;D</span> Collection &amp; delivery</div>
+          <div class="leg-item"><span class="fl-courtesy">🚘 Courtesy</span> Courtesy car out</div>
+          <div class="leg-item"><span class="fl-parts">🔧 Parts</span> Parts required</div>
         </div>
       </div>
       <div id="diaryView"></div>
@@ -3435,10 +3439,16 @@ function renderMonthView() {
         if (diaryTechFilter === 'charles') return jobBelongsTo(e.assigned_tech, 'C');
         if (diaryTechFilter === 'tony') return jobBelongsTo(e.assigned_tech, 'T');
         return true;
+      }).sort((a,b) => {
+        // Courtesy car first, then parts, then by time
+        const aScore = (a.courtesy_car?2:0) + (a.parts_required?1:0);
+        const bScore = (b.courtesy_car?2:0) + (b.parts_required?1:0);
+        if (bScore !== aScore) return bScore - aScore;
+        return (a.booking_time||'99:99').localeCompare(b.booking_time||'99:99');
       });
       let shown = 0;
       filteredEvts.forEach(e => {
-        if (shown >= 3) return;
+        if (shown >= 4) return; // increased from 3 to 4
         const tc = techClass(e.assigned_tech);
         const firstName = esc((e.customer_name||'Unknown').split(' ')[0]);
         const lastName = esc((e.customer_name||'').split(' ')[1] || '');
@@ -3497,17 +3507,26 @@ function renderMonthView() {
         }
 
         const extraIcons = (hasParts?'🔧':'') + (hasCourtesy?'🚘':'');
-        html += `<div class="cal-evt ${evtClass}" style="${spanStyle}"
+        // Courtesy car gets green left border to stand out
+        const courtesyStyle = hasCourtesy ? 'border-left:3px solid #22c55e!important;' : '';
+        html += `<div class="cal-evt ${evtClass}" style="${spanStyle};${courtesyStyle}"
           onmouseenter="showDiaryTip(event,'${tipName}','${tipVeh}','${tipAddr}','${tipPrice}','${tipLoc}','${tipDur}','${tipCd}','${tipTech}')"
           onmouseleave="hideDiaryTip()"
         ><div class="cal-dot" style="background:#9ca3af;display:${isDiaryEnt?'none':'inline-block'}"></div>${evtIcon}${firstName}${days>1?' '+spanLabel:durShort}${extraIcons?' '+extraIcons:''}</div>`;
         shown++;
       });
-      if (filteredEvts.length > 3) html += `<div class="cal-more">+${filteredEvts.length-3} more</div>`;
-      if (cell.cur && (hasMix || hasCd)) {
+      // Count hidden jobs (non-courtesy-car ones beyond limit)
+      const hiddenCount = filteredEvts.length - shown;
+      if (hiddenCount > 0) html += `<div class="cal-more" onclick="selectDiaryDay('${ds}','${cell.label||''}')" style="cursor:pointer">+${hiddenCount} more — tap to view</div>`;
+      // Check if any job in this cell needs courtesy car
+      const hasCourtesyCar = filteredEvts.some(e => e.courtesy_car);
+      const hasPartsNeeded = filteredEvts.some(e => e.parts_required);
+      if (cell.cur && (hasMix || hasCd || hasCourtesyCar || hasPartsNeeded)) {
         html += '<div class="cal-flags">';
         if (hasMix) html += '<span class="fl-wm">W+M</span>';
         if (hasCd) html += '<span class="fl-cd">C&D</span>';
+        if (hasCourtesyCar) html += '<span class="fl-courtesy">🚘 Courtesy</span>';
+        if (hasPartsNeeded) html += '<span class="fl-parts">🔧 Parts</span>';
         html += '</div>';
       }
       html += '</div>';
