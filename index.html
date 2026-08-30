@@ -1638,6 +1638,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
     <span class="qlbl">Internal notes</span>
     <textarea autocomplete="off" class="minp" id="edit_notes" rows="2" placeholder="Notes visible to all staff..." style="resize:vertical"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px;margin-bottom:6px;align-items:center;background:var(--blue-bg);border:1px solid #bfdbfe;border-radius:var(--radius);padding:8px 12px">
+      <input autocomplete="off" type="checkbox" id="edit_cd" style="width:16px;height:16px;accent-color:var(--blue);cursor:pointer;flex-shrink:0">
+      <label for="edit_cd" style="font-size:13px;font-weight:600;color:var(--blue-txt);cursor:pointer">🚗 Collection &amp; Delivery required</label>
+    </div>
     <div style="display:flex;gap:8px;margin-top:10px;margin-bottom:6px;align-items:center;background:#fef9c3;border:1px solid #fde047;border-radius:var(--radius);padding:8px 12px">
       <input autocomplete="off" type="checkbox" id="edit_parts_required" style="width:16px;height:16px;accent-color:#92400e;cursor:pointer;flex-shrink:0">
       <label for="edit_parts_required" style="font-size:13px;font-weight:600;color:#713f12;cursor:pointer">🔧 Parts required — document in notes</label>
@@ -1678,7 +1682,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       </div>
     </div>
     <div class="modal-grid2">
-      >
+      <div>
         <span class="qlbl">Source</span>
         <select class="msel" id="edit_source">
           <option value="whatsapp">WhatsApp</option>
@@ -1690,6 +1694,36 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         </select>
       </div>
     </div>
+    <div style="display:flex;gap:8px;margin-top:10px;margin-bottom:6px;align-items:center;background:#fee2e2;border:1px solid #fca5a5;border-radius:var(--radius);padding:8px 12px">
+      <input autocomplete="off" type="checkbox" id="edit_rework" style="width:16px;height:16px;accent-color:#991b1b;cursor:pointer;flex-shrink:0">
+      <label for="edit_rework" style="font-size:13px;font-weight:600;color:#991b1b;cursor:pointer">⚠ Rework — redo of a previous job</label>
+    </div>
+    <span class="qlbl">Photos</span>
+    <label class="upzone" for="edit_photo_input" style="display:block;cursor:pointer;padding:12px;margin-bottom:8px">
+      <div style="font-size:12px;color:var(--muted);font-weight:600" id="editUpLbl">Tap to add photos</div>
+      <div style="font-size:10px;color:var(--hint);margin-top:2px">Camera or gallery</div>
+      <input autocomplete="off" type="file" id="edit_photo_input" accept="image/*" multiple
+        style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"
+        onchange="handleEditPhotos(this)">
+    </label>
+    <div id="editExistingPhotos" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
+    <span class="qlbl">Parts</span>
+    <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
+      <input autocomplete="off" class="minp" id="edit_pn" placeholder="Part name" style="flex:3;font-size:13px">
+      <input autocomplete="off" class="minp" id="edit_pq" placeholder="Qty" type="number" min="1" style="flex:1;min-width:50px;font-size:13px">
+      <div style="position:relative;flex:1;min-width:70px">
+        <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:12px;pointer-events:none">£</span>
+        <input autocomplete="off" class="minp" id="edit_pp" placeholder="0.00" type="number" min="0" step="0.01" style="padding-left:20px;font-size:13px">
+      </div>
+      <button onclick="addPartFromEdit()" style="background:var(--teal);color:#fff;border:none;border-radius:var(--radius);width:34px;height:34px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700">+</button>
+    </div>
+    <div id="edit_parts_list" style="margin-bottom:10px"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn-primary" onclick="saveEditJob()" style="flex:1;padding:10px">Save changes</button>
+      <button class="btn-secondary" onclick="closeEditModal()" style="flex:1;padding:10px">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <!-- COMPLETE JOB MODAL (jobs tab — no photo required) -->
 <div class="modal-overlay" id="completeModal">
@@ -5064,7 +5098,8 @@ async function openEditModal(jobId) {
   if (ccEl) ccEl.checked = j.courtesy_car || false;
   document.getElementById('edit_loc').value = j.job_location || 'workshop';
   document.getElementById('edit_source').value = j.source || 'other';
-  document.getElementById('edit_cd').checked = !!j.cd_required;
+  const cdEl = document.getElementById('edit_cd');
+  if (cdEl) cdEl.checked = !!j.cd_required;
   document.getElementById('editUpLbl').textContent = 'Tap to add photos';
   // Load quote lines into edit modal
   const existingLines = await sbRaw('GET','quote_lines',null,`?job_id=eq.${jobId}&order=sort_order.asc`).catch(()=>[]);
@@ -5152,7 +5187,7 @@ async function saveEditJob() {
     assigned_tech: document.getElementById('edit_tech').value,
     job_location: document.getElementById('edit_loc').value,
     source: document.getElementById('edit_source').value,
-    cd_required: document.getElementById('edit_cd').checked,
+    cd_required: document.getElementById('edit_cd')?.checked || false,
     is_rework: document.getElementById('edit_rework')?.checked || false,
     parts_required: document.getElementById('edit_parts_required')?.checked || false,
     courtesy_car: document.getElementById('edit_courtesy_car')?.checked || false,
