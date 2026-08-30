@@ -1020,10 +1020,33 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           </div>
           <!-- Manual entry panel -->
           <div id="manualWrap" style="display:none">
-            <div style="font-size:13px;font-weight:600;color:var(--txt);margin-bottom:14px">Manual quote</div>
-            <span class="qlbl">Price (inc VAT)</span>
-            <input autocomplete="off" class="qinp" id="m_price_manual" placeholder="e.g. £320" style="font-size:22px;font-weight:700;text-align:center;color:var(--teal)">
-            <span class="qlbl" style="margin-top:8px">Rung / complexity</span>
+            <div style="font-size:13px;font-weight:600;color:var(--txt);margin-bottom:14px">Quote breakdown (inc VAT)</div>
+            <!-- Line items -->
+            <div id="nq_quote_lines" style="margin-bottom:8px"></div>
+            <div style="display:flex;gap:6px;margin-bottom:4px;align-items:center">
+              <input autocomplete="off" class="qinp" id="nq_ql_desc" placeholder="Description e.g. OSF door repair" style="flex:3;font-size:13px;padding:8px 10px">
+              <div style="position:relative;flex:1;min-width:80px">
+                <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none">£</span>
+                <input autocomplete="off" class="qinp" id="nq_ql_price" placeholder="0.00" type="number" min="0" step="0.01" style="padding-left:24px;font-size:13px;padding-top:8px;padding-bottom:8px" oninput="nqCalcTotal()">
+              </div>
+              <button onclick="nqAddLine()" style="background:var(--teal);color:#fff;border:none;border-radius:var(--radius);width:38px;height:38px;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700">+</button>
+            </div>
+            <!-- Discount -->
+            <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
+              <span style="font-size:12px;color:var(--muted);flex:3">Multi-panel discount</span>
+              <div style="position:relative;flex:1;min-width:80px">
+                <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:12px;pointer-events:none">−£</span>
+                <input autocomplete="off" class="qinp" id="nq_ql_discount" placeholder="0.00" type="number" min="0" step="0.01" style="padding-left:28px;font-size:13px;padding-top:8px;padding-bottom:8px;border-color:#fde047" oninput="nqCalcTotal()" value="0">
+              </div>
+              <div style="width:38px"></div>
+            </div>
+            <!-- Total -->
+            <div style="background:var(--surface);border:2px solid var(--teal);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+              <span style="font-size:13px;font-weight:600;color:var(--muted)">Quote total (inc VAT)</span>
+              <span style="font-size:22px;font-weight:800;color:var(--teal)" id="nq_price_display">£0.00</span>
+            </div>
+            <input type="hidden" id="m_price_manual">
+            <span class="qlbl">Rung / complexity</span>
             <select class="qinp" id="m_rung_manual" style="margin-bottom:10px">
               <option value="1">Rung 1 — minor touch up</option>
               <option value="2" selected>Rung 2 — SMART 1 panel</option>
@@ -1489,7 +1512,32 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <div class="modal-grid2">
       <div><span class="qlbl">Colour</span><input autocomplete="off" class="minp" id="edit_colour" placeholder="Colour"></div>
-      <div><span class="qlbl">Quote price (inc VAT)</span><input autocomplete="off" class="minp" id="edit_price" placeholder="£ inc VAT"></div>
+      <div>
+        <span class="qlbl">Quote total (inc VAT)</span>
+        <div style="background:var(--surface);border:2px solid var(--teal);border-radius:var(--radius);padding:8px 12px;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11px;color:var(--muted)">Auto-calculated</span>
+          <span style="font-size:18px;font-weight:800;color:var(--teal)" id="edit_price_display">£0.00</span>
+        </div>
+        <input type="hidden" id="edit_price">
+      </div>
+    </div>
+    <span class="qlbl">Quote breakdown (inc VAT)</span>
+    <div id="edit_quote_lines" style="margin-bottom:6px"></div>
+    <div style="display:flex;gap:6px;margin-bottom:4px;align-items:center">
+      <input autocomplete="off" class="minp" id="edit_ql_desc" placeholder="e.g. OSF door repair" style="flex:3;font-size:13px">
+      <div style="position:relative;flex:1;min-width:70px">
+        <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:12px;pointer-events:none">£</span>
+        <input autocomplete="off" class="minp" id="edit_ql_price" placeholder="0.00" type="number" min="0" step="0.01" style="padding-left:20px;font-size:13px" oninput="editCalcTotal()">
+      </div>
+      <button onclick="editAddLine()" style="background:var(--teal);color:#fff;border:none;border-radius:var(--radius);width:34px;height:34px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700">+</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
+      <span style="font-size:12px;color:var(--muted);flex:3">Multi-panel discount</span>
+      <div style="position:relative;flex:1;min-width:70px">
+        <span style="position:absolute;left:6px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:11px;pointer-events:none">−£</span>
+        <input autocomplete="off" class="minp" id="edit_ql_discount" placeholder="0.00" type="number" min="0" step="0.01" style="padding-left:24px;font-size:13px;border-color:#fde047" oninput="editCalcTotal()" value="0">
+      </div>
+      <div style="width:34px"></div>
     </div>
     <span class="qlbl">Panels / damage</span>
     <input autocomplete="off" type="hidden" id="edit_panels">
@@ -4197,7 +4245,7 @@ async function saveManualQuote() {
   const dur = document.getElementById('m_dur_manual').value;
   const notes = document.getElementById('m_note_manual').value.trim();
 
-  if (!price) { showToast('Enter a price first'); return; }
+  if (!price || price === '£0.00') { showToast('Add at least one line item first'); return; }
 
   const mAddr = [
     document.getElementById('q_addr1')?.value?.trim(),
@@ -4237,6 +4285,11 @@ async function saveManualQuote() {
         });
         await sbRaw('POST', 'job_photos', { job_id: newJob.id, storage_path: storagePath, photo_type: 'damage' });
       }
+    }
+    // Save quote lines
+    if (_nqLines.length && newJob?.id) {
+      await saveQuoteLinesToDb(newJob.id);
+      nqResetLines();
     }
     document.getElementById('manualWrap').style.display = 'none';
     const msg = document.getElementById('approvedMsg');
@@ -4984,8 +5037,13 @@ async function openEditModal(jobId) {
   document.getElementById('edit_source').value = j.source || 'other';
   document.getElementById('edit_cd').checked = !!j.cd_required;
   document.getElementById('editUpLbl').textContent = 'Tap to add photos';
-  // Load quote lines for this job
-  await loadQuoteLinesFromDb(jobId);
+  // Load quote lines into edit modal
+  const existingLines = await sbRaw('GET','quote_lines',null,`?job_id=eq.${jobId}&order=sort_order.asc`).catch(()=>[]);
+  _editLines = (existingLines||[]).map(l => ({ id: l.id, desc: l.description, amount: parseFloat(l.amount), included: l.included }));
+  const disc = j.quote_discount || 0;
+  if (document.getElementById('edit_ql_discount')) document.getElementById('edit_ql_discount').value = disc || '0';
+  editRenderLines();
+  editCalcTotal();
   // Clear existing photo display
   document.getElementById('editExistingPhotos').innerHTML = '';
   // Load existing photos and display them
@@ -5022,6 +5080,10 @@ async function openEditModal(jobId) {
 }
 
 function closeEditModal() {
+  _editLines = [];
+  if (document.getElementById('edit_quote_lines')) document.getElementById('edit_quote_lines').innerHTML = '';
+  if (document.getElementById('edit_ql_discount')) document.getElementById('edit_ql_discount').value = '0';
+  if (document.getElementById('edit_price_display')) document.getElementById('edit_price_display').textContent = '£0.00';
   document.getElementById('editModal').classList.remove('show');
   _editJobId = null;
   _editPhotos = [];
@@ -5051,7 +5113,7 @@ async function saveEditJob() {
     customer_email: document.getElementById('edit_email').value.trim(),
     vehicle: document.getElementById('edit_vehicle').value.trim(),
     colour: document.getElementById('edit_colour').value.trim(),
-    quote_price: document.getElementById('edit_price').value.trim(),
+    quote_price: document.getElementById('edit_price').value.trim() || document.getElementById('edit_price_display')?.textContent || null,
     panels: document.getElementById('edit_panels').value.trim(),
     notes: document.getElementById('edit_notes').value.trim(),
     status: document.getElementById('edit_status').value,
@@ -5085,6 +5147,8 @@ async function saveEditJob() {
       }
     }
     _uploadInProgress = false;
+    // Save quote lines
+    if (_editLines.length) await editSaveQuoteLines(_editJobId);
     showToast('✓ Job updated');
     closeEditModal();
     const prevOpen = _editJobId;
@@ -7673,6 +7737,135 @@ function openPhotoByJobId(jobId, startIdx) {
 function openJobPhotos(photos, startIdx) {
   const urls = photos.map(p => `${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}`);
   openLightbox(urls, startIdx || 0);
+}
+
+// ═══════════════════════════════════════════════════════════
+// QUOTE LINE BUILDER — Edit Job Modal version
+// ═══════════════════════════════════════════════════════════
+let _editLines = [];
+
+function editAddLine() {
+  const desc = document.getElementById('edit_ql_desc')?.value.trim();
+  const amt  = parseFloat(document.getElementById('edit_ql_price')?.value) || 0;
+  if (!desc) { document.getElementById('edit_ql_desc').focus(); return; }
+  if (amt <= 0) { document.getElementById('edit_ql_price').focus(); return; }
+  _editLines.push({ id: Date.now(), desc, amount: amt, included: true, isNew: true });
+  document.getElementById('edit_ql_desc').value  = '';
+  document.getElementById('edit_ql_price').value = '';
+  document.getElementById('edit_ql_desc').focus();
+  editRenderLines();
+  editCalcTotal();
+}
+
+function editRemoveLine(id) {
+  _editLines = _editLines.filter(l => l.id !== id);
+  editRenderLines();
+  editCalcTotal();
+}
+
+function editToggleLine(id) {
+  const l = _editLines.find(x => x.id === id);
+  if (l) l.included = !l.included;
+  editRenderLines();
+  editCalcTotal();
+}
+
+function editRenderLines() {
+  const el = document.getElementById('edit_quote_lines');
+  if (!el) return;
+  el.innerHTML = _editLines.map(l => `
+    <div class="ql-row${l.included?'':' ql-excluded'}">
+      <input type="checkbox" class="ql-chk" ${l.included?'checked':''} onchange="editToggleLine(${l.id})">
+      <span class="ql-desc${l.included?'':' ql-excluded-txt'}">${esc(l.desc)}</span>
+      <span class="ql-amt${l.included?'':' ql-excluded-txt'}">£${parseFloat(l.amount).toFixed(2)}</span>
+      <button class="ql-del" onclick="editRemoveLine(${l.id})" title="Remove">✕</button>
+    </div>`).join('') || '<div style="font-size:11px;color:var(--muted);padding:4px 0">No lines yet — add items above</div>';
+}
+
+function editCalcTotal() {
+  const included = _editLines.filter(l => l.included).reduce((s,l) => s + l.amount, 0);
+  const discount = parseFloat(document.getElementById('edit_ql_discount')?.value) || 0;
+  const total = Math.max(0, included - discount);
+  const disp = document.getElementById('edit_price_display');
+  const hidden = document.getElementById('edit_price');
+  if (disp) disp.textContent = '£' + total.toFixed(2);
+  if (hidden) hidden.value = '£' + total.toFixed(2);
+}
+
+async function editSaveQuoteLines(jobId) {
+  // Delete all existing lines then re-insert
+  await sbRaw('DELETE','quote_lines',null,`?job_id=eq.${jobId}`).catch(()=>{});
+  for (let i=0; i<_editLines.length; i++) {
+    const l = _editLines[i];
+    await sbRaw('POST','quote_lines',{
+      job_id: jobId,
+      description: l.desc,
+      amount: l.amount,
+      included: l.included,
+      sort_order: i
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// QUOTE LINE BUILDER — New Quote Tab version
+// ═══════════════════════════════════════════════════════════
+let _nqLines = []; // separate from _quoteLines used in add modal
+
+function nqAddLine() {
+  const desc = document.getElementById('nq_ql_desc')?.value.trim();
+  const amt  = parseFloat(document.getElementById('nq_ql_price')?.value) || 0;
+  if (!desc) { document.getElementById('nq_ql_desc').focus(); return; }
+  if (amt <= 0) { document.getElementById('nq_ql_price').focus(); return; }
+  _nqLines.push({ id: Date.now(), desc, amount: amt, included: true });
+  document.getElementById('nq_ql_desc').value  = '';
+  document.getElementById('nq_ql_price').value = '';
+  document.getElementById('nq_ql_desc').focus();
+  nqRenderLines();
+  nqCalcTotal();
+}
+
+function nqRemoveLine(id) {
+  _nqLines = _nqLines.filter(l => l.id !== id);
+  nqRenderLines();
+  nqCalcTotal();
+}
+
+function nqToggleLine(id) {
+  const l = _nqLines.find(x => x.id === id);
+  if (l) l.included = !l.included;
+  nqRenderLines();
+  nqCalcTotal();
+}
+
+function nqRenderLines() {
+  const el = document.getElementById('nq_quote_lines');
+  if (!el) return;
+  el.innerHTML = _nqLines.map(l => `
+    <div class="ql-row${l.included?'':' ql-excluded'}">
+      <input type="checkbox" class="ql-chk" ${l.included?'checked':''} onchange="nqToggleLine(${l.id})">
+      <span class="ql-desc${l.included?'':' ql-excluded-txt'}">${esc(l.desc)}</span>
+      <span class="ql-amt${l.included?'':' ql-excluded-txt'}">£${l.amount.toFixed(2)}</span>
+      <button class="ql-del" onclick="nqRemoveLine(${l.id})" title="Remove">✕</button>
+    </div>`).join('');
+}
+
+function nqCalcTotal() {
+  const included = _nqLines.filter(l => l.included).reduce((s,l) => s + l.amount, 0);
+  const discount = parseFloat(document.getElementById('nq_ql_discount')?.value) || 0;
+  const total = Math.max(0, included - discount);
+  const disp = document.getElementById('nq_price_display');
+  const hidden = document.getElementById('m_price_manual');
+  if (disp) disp.textContent = '£' + total.toFixed(2);
+  if (hidden) hidden.value = '£' + total.toFixed(2);
+}
+
+function nqResetLines() {
+  _nqLines = [];
+  nqRenderLines();
+  nqCalcTotal();
+  const disc = document.getElementById('nq_ql_discount');
+  if (disc) disc.value = '0';
 }
 
 // ═══════════════════════════════════════════════════════════
