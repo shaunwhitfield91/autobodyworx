@@ -313,6 +313,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .djob-name{font-size:12px;font-weight:700}
 .djob-veh{font-size:11px;opacity:.75;margin-top:2px}
 .djob-tags{display:flex;gap:3px;margin-top:5px;flex-wrap:wrap}
+.ql-row{display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border)}
+.ql-row.ql-excluded{opacity:.45}
+.ql-desc{flex:3;font-size:13px;color:var(--txt)}
+.ql-desc.ql-excluded-txt{text-decoration:line-through}
+.ql-amt{font-size:13px;font-weight:700;color:var(--txt);min-width:60px;text-align:right}
+.ql-amt.ql-excluded-txt{color:var(--muted)}
+.ql-chk{width:16px;height:16px;cursor:pointer;accent-color:var(--teal);flex-shrink:0}
+.ql-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0;flex-shrink:0}
+.ql-del:hover{color:var(--red)}
 .det-empty{font-size:11px;color:var(--hint);padding:10px;font-style:italic}
 
 /* ═══════════════════════════
@@ -1274,8 +1283,34 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div style="padding:6px 10px 8px"><input autocomplete="off" class="panel-notes" id="m_picker_notes" placeholder="Additional notes, e.g. stress cracks, paint code, customer comments..." onkeyup="updatePanelText('m')" type="text"></div>
 </div>
     <span class="qlbl">Customer address</span><input autocomplete="off" class="minp" id="m_addr" placeholder="House, street, postcode">
+    <!-- QUOTE LINE BUILDER -->
+    <span class="qlbl">Quote breakdown (inc VAT)</span>
+    <div id="m_quote_lines" style="margin-bottom:8px"></div>
+    <div style="display:flex;gap:6px;margin-bottom:4px;align-items:center">
+      <input autocomplete="off" class="minp" id="m_ql_desc" placeholder="Description e.g. OSF door repair" style="flex:3;font-size:13px">
+      <div style="position:relative;flex:1;min-width:80px">
+        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none">£</span>
+        <input autocomplete="off" class="minp" id="m_ql_price" placeholder="0.00" type="number" min="0" step="0.01" style="padding-left:22px;font-size:13px" oninput="calcQuoteTotal()">
+      </div>
+      <button onclick="addQuoteLine()" style="background:var(--teal);color:#fff;border:none;border-radius:var(--radius);width:36px;height:36px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700">+</button>
+    </div>
+    <!-- Discount -->
+    <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
+      <span style="font-size:12px;color:var(--muted);flex:3">Multi-panel discount</span>
+      <div style="position:relative;flex:1;min-width:80px">
+        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none">−£</span>
+        <input autocomplete="off" class="minp" id="m_ql_discount" placeholder="0.00" type="number" min="0" step="0.01" style="padding-left:28px;font-size:13px;border-color:#fde047" oninput="calcQuoteTotal()" value="0">
+      </div>
+      <div style="width:36px"></div>
+    </div>
+    <!-- Total display -->
+    <div style="background:var(--surface);border:2px solid var(--teal);border-radius:var(--radius);padding:10px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:13px;font-weight:600;color:var(--muted)">Quote total (inc VAT)</span>
+      <span style="font-size:22px;font-weight:800;color:var(--teal)" id="m_price_display">£0.00</span>
+    </div>
+    <input type="hidden" id="m_price">
     <div class="modal-grid2">
-      <div><span class="qlbl">Price (inc VAT)</span><input autocomplete="off" class="minp" id="m_price" placeholder="£ inc VAT"></div>
+      <div style="display:none"><span class="qlbl">Price (inc VAT)</span></div>
       <div>
         <span class="qlbl">Status</span>
         <select class="msel" id="m_status">
@@ -2703,6 +2738,21 @@ function buildJobCard(j) {
           </div>`:''}
         </div>`:''}
         ${j.internal_breakdown&&currentProfile?.role==='admin'?`<div style="grid-column:1/-1"><div class="jbf" style="color:var(--muted)">Internal breakdown (admin only)</div><div class="jbv" style="font-size:11px;line-height:1.5;color:var(--muted)">${esc(j.internal_breakdown)}</div></div>`:''}
+        ${j._quoteLines&&j._quoteLines.length?`<div style="grid-column:1/-1">
+          <div class="jbf">Quote breakdown</div>
+          <div style="background:var(--surface);border-radius:var(--radius);padding:8px 10px;margin-top:4px">
+            ${j._quoteLines.map(l=>`<div class="ql-row${l.included?'':' ql-excluded'}">
+              <span class="ql-desc${l.included?'':' ql-excluded-txt'}">${esc(l.desc)}</span>
+              <span class="ql-amt${l.included?'':' ql-excluded-txt'}">£${parseFloat(l.amount).toFixed(2)}</span>
+            </div>`).join('')}
+            ${j._discount?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--amber-txt);padding:4px 0">
+              <span>Discount</span><span>−£${parseFloat(j._discount).toFixed(2)}</span>
+            </div>`:''}
+            <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:var(--teal);padding-top:6px;border-top:1px solid var(--border);margin-top:4px">
+              <span>Total (inc VAT)</span><span>${(()=>{const p=j.quote_price||'';return p.startsWith('£')?esc(p):'£'+esc(p);})()}</span>
+            </div>
+          </div>
+        </div>`:''}
       </div>
       <!-- Parts -->
       ${partsHtml}
@@ -2722,7 +2772,26 @@ function toggleJobCard(id) {
   if (!el) return;
   const wasOpen = el.classList.contains('open');
   document.querySelectorAll('.jcard.open').forEach(c => c.classList.remove('open'));
-  if (!wasOpen) { el.classList.add('open'); openJobId = id; }
+  if (!wasOpen) {
+    el.classList.add('open');
+    openJobId = id;
+    // Load quote lines lazily when card opens
+    const j = allJobs.find(x => x.id === id);
+    if (j && !j._quoteLinesLoaded) {
+      j._quoteLinesLoaded = true;
+      sbRaw('GET','quote_lines',null,`?job_id=eq.${id}&order=sort_order.asc`).then(lines => {
+        if (lines && lines.length) {
+          j._quoteLines = lines.map(l => ({ id: l.id, desc: l.description, amount: parseFloat(l.amount), included: l.included }));
+          // Re-render jobs to show quote lines
+          renderJobs();
+          // Re-open the card
+          const reEl = document.getElementById('jc-' + id);
+          if (reEl) reEl.classList.add('open');
+          openJobId = id;
+        }
+      }).catch(()=>{});
+    }
+  }
   else openJobId = null;
 }
 
@@ -3042,6 +3111,7 @@ async function deletePart(partId, jobId) {
 // ═══════════════════════════════════════════════════════════
 function openAddModal() { document.getElementById('addModal').classList.add('show'); setTimeout(initPriceInputs, 50); }
 function closeAddModal() {
+  resetQuoteLines();
   document.getElementById('addModal').classList.remove('show');
   resetPanelPicker('m');
 }
@@ -3100,6 +3170,11 @@ async function saveNewJob() {
     const prev = document.getElementById('mAddPrev');
     if (prev) prev.innerHTML = '';
     resetPanelPicker('m');
+    // Save quote lines to DB
+    if (_quoteLines.length && newJob?.id) {
+      await saveQuoteLinesToDb(newJob.id);
+    }
+    resetQuoteLines();
     closeAddModal();
     showToast('✓ Job saved successfully');
     await loadJobs();
@@ -4909,6 +4984,8 @@ async function openEditModal(jobId) {
   document.getElementById('edit_source').value = j.source || 'other';
   document.getElementById('edit_cd').checked = !!j.cd_required;
   document.getElementById('editUpLbl').textContent = 'Tap to add photos';
+  // Load quote lines for this job
+  await loadQuoteLinesFromDb(jobId);
   // Clear existing photo display
   document.getElementById('editExistingPhotos').innerHTML = '';
   // Load existing photos and display them
@@ -7596,6 +7673,102 @@ function openPhotoByJobId(jobId, startIdx) {
 function openJobPhotos(photos, startIdx) {
   const urls = photos.map(p => `${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}`);
   openLightbox(urls, startIdx || 0);
+}
+
+// ═══════════════════════════════════════════════════════════
+// QUOTE LINE BUILDER
+// ═══════════════════════════════════════════════════════════
+let _quoteLines = []; // { id, desc, amount, included }
+
+function addQuoteLine() {
+  const desc = document.getElementById('m_ql_desc')?.value.trim();
+  const amt  = parseFloat(document.getElementById('m_ql_price')?.value) || 0;
+  if (!desc) { document.getElementById('m_ql_desc').focus(); return; }
+  if (amt <= 0) { document.getElementById('m_ql_price').focus(); return; }
+  _quoteLines.push({ id: Date.now(), desc, amount: amt, included: true });
+  document.getElementById('m_ql_desc').value  = '';
+  document.getElementById('m_ql_price').value = '';
+  document.getElementById('m_ql_desc').focus();
+  renderQuoteLines();
+  calcQuoteTotal();
+}
+
+function removeQuoteLine(id) {
+  _quoteLines = _quoteLines.filter(l => l.id !== id);
+  renderQuoteLines();
+  calcQuoteTotal();
+}
+
+function toggleQuoteLine(id) {
+  const l = _quoteLines.find(x => x.id === id);
+  if (l) l.included = !l.included;
+  renderQuoteLines();
+  calcQuoteTotal();
+}
+
+function renderQuoteLines() {
+  const el = document.getElementById('m_quote_lines');
+  if (!el) return;
+  if (!_quoteLines.length) { el.innerHTML = ''; return; }
+  el.innerHTML = _quoteLines.map(l => `
+    <div class="ql-row${l.included?'':' ql-excluded'}">
+      <input type="checkbox" class="ql-chk" ${l.included?'checked':''} onchange="toggleQuoteLine(${l.id})">
+      <span class="ql-desc${l.included?'':' ql-excluded-txt'}">${esc(l.desc)}</span>
+      <span class="ql-amt${l.included?'':' ql-excluded-txt'}">£${l.amount.toFixed(2)}</span>
+      <button class="ql-del" onclick="removeQuoteLine(${l.id})" title="Remove">✕</button>
+    </div>`).join('');
+}
+
+function calcQuoteTotal() {
+  const included = _quoteLines.filter(l => l.included).reduce((s,l) => s + l.amount, 0);
+  const discount = parseFloat(document.getElementById('m_ql_discount')?.value) || 0;
+  const total = Math.max(0, included - discount);
+  const disp = document.getElementById('m_price_display');
+  const hidden = document.getElementById('m_price');
+  if (disp) disp.textContent = '£' + total.toFixed(2);
+  if (hidden) hidden.value = '£' + total.toFixed(2);
+}
+
+function resetQuoteLines() {
+  _quoteLines = [];
+  renderQuoteLines();
+  calcQuoteTotal();
+  const disc = document.getElementById('m_ql_discount');
+  if (disc) disc.value = '0';
+}
+
+// Allow Enter key on desc/price to add line
+document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && (e.target.id === 'm_ql_desc' || e.target.id === 'm_ql_price')) {
+      e.preventDefault();
+      addQuoteLine();
+    }
+  });
+});
+
+async function saveQuoteLinesToDb(jobId) {
+  if (!_quoteLines.length) return;
+  // Delete existing lines then insert new ones
+  await sbRaw('DELETE','quote_lines',null,`?job_id=eq.${jobId}`).catch(()=>{});
+  for (let i=0; i<_quoteLines.length; i++) {
+    const l = _quoteLines[i];
+    await sbRaw('POST','quote_lines',{
+      job_id: jobId,
+      description: l.desc,
+      amount: l.amount,
+      included: l.included,
+      sort_order: i
+    });
+  }
+}
+
+async function loadQuoteLinesFromDb(jobId) {
+  const lines = await sbRaw('GET','quote_lines',null,`?job_id=eq.${jobId}&order=sort_order.asc`);
+  _quoteLines = (lines||[]).map(l => ({ id: l.id, desc: l.description, amount: parseFloat(l.amount), included: l.included }));
+  renderQuoteLines();
+  calcQuoteTotal();
+  return _quoteLines;
 }
 
 // ═══════════════════════════════════════════════════════════
