@@ -1333,23 +1333,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <span style="font-size:22px;font-weight:800;color:var(--teal)" id="m_price_display">£0.00</span>
     </div>
     <input type="hidden" id="m_price">
-    <div class="modal-grid2">
-      <div style="display:none"><span class="qlbl">Price (inc VAT)</span></div>
-      <div>
-        <span class="qlbl">Status</span>
-        <select class="msel" id="m_status">
-          <option value="booked">Booked</option>
-          <option value="quoted">Quoted — awaiting booking</option>
-          <option value="pending">Pending approval</option>
-          <option value="completed">Completed</option>
-        </select>
-      </div>
-    </div>
-    <div class="modal-grid2">
-      <div><span class="qlbl">Booking date</span><input autocomplete="off" class="minp" type="date" id="m_date"></div>
-      <div><span class="qlbl">Time</span><input autocomplete="off" class="minp" type="time" id="m_time" value="09:00"></div>
-    </div>
-    <div class="modal-grid2">
+    <!-- Location / Duration / Tech moved here for quicker access -->
+    <div class="modal-grid2" style="margin-top:4px">
       <div>
         <span class="qlbl">Duration</span>
         <select class="msel" id="m_dur">
@@ -1368,24 +1353,40 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         </select>
       </div>
       <div>
-        <span class="qlbl">Assigned tech</span>
-        <div class="tech-cb-group" id="m_tech_cbg" onclick="event.stopPropagation()">
-          <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" class="tech-cb" name="m_tech" value="Shaun" onchange="onTechCbChange('m_tech')"> Shaun</label>
-          <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" class="tech-cb" name="m_tech" value="Tony" onchange="onTechCbChange('m_tech')"> Tony</label>
-          <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" class="tech-cb" name="m_tech" value="Charles" onchange="onTechCbChange('m_tech')"> Charles</label>
-          <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" class="tech-cb" name="m_tech" value="Both" onchange="onTechCbChange('m_tech')"> Both (see notes)</label>
-          <input autocomplete="off" type="hidden" id="m_tech" value="Shaun">
-        </div>
-      </div>
-    </div>
-    <div class="modal-grid2">
-      <div>
         <span class="qlbl">Location</span>
         <select class="msel" id="m_loc">
           <option value="workshop">Workshop</option>
           <option value="mobile">Mobile — customer site</option>
         </select>
       </div>
+    </div>
+    <div style="margin-bottom:10px">
+      <span class="qlbl">Assigned tech</span>
+      <div class="tech-cb-group" id="m_tech_cbg" onclick="event.stopPropagation()">
+        <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" class="tech-cb" name="m_tech" value="Shaun" onchange="onTechCbChange('m_tech')"> Shaun</label>
+        <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" class="tech-cb" name="m_tech" value="Tony" onchange="onTechCbChange('m_tech')"> Tony</label>
+        <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" class="tech-cb" name="m_tech" value="Charles" onchange="onTechCbChange('m_tech')"> Charles</label>
+        <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" class="tech-cb" name="m_tech" value="Both" onchange="onTechCbChange('m_tech')"> Both (see notes)</label>
+        <input autocomplete="off" type="hidden" id="m_tech" value="Shaun">
+      </div>
+    </div>
+    <div class="modal-grid2">
+      <div style="display:none"><span class="qlbl">Price (inc VAT)</span></div>
+      <div>
+        <span class="qlbl">Status</span>
+        <select class="msel" id="m_status">
+          <option value="booked">Booked</option>
+          <option value="quoted">Quoted — awaiting booking</option>
+          <option value="pending">Pending approval</option>
+          <option value="completed">Completed</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-grid2">
+      <div><span class="qlbl">Booking date</span><input autocomplete="off" class="minp" type="date" id="m_date"></div>
+      <div><span class="qlbl">Time</span><input autocomplete="off" class="minp" type="time" id="m_time" value="09:00"></div>
+    </div>
+    <div class="modal-grid2">
       <div>
         <span class="qlbl">Source</span>
         <select class="msel" id="m_source">
@@ -1540,6 +1541,43 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       </div>
       <div style="width:34px"></div>
     </div>
+    <!-- Duration, Location, Tech — moved up next to quote builder -->
+    <div class="modal-grid2" style="margin-top:6px">
+      <div>
+        <span class="qlbl">Duration</span>
+        <select class="msel" id="edit_duration">
+          <option value="1 hour">1 hour</option>
+          <option value="2 hours">2 hours</option>
+          <option value="3 hours">3 hours</option>
+          <option value="4 hours">4 hours</option>
+          <option value="5 hours">5 hours</option>
+          <option value="Full day">Full day</option>
+          <option value="2 days">2 days</option>
+          <option value="3 days">3 days</option>
+          <option value="4 days">4 days</option>
+          <option value="5 days">5 days</option>
+          <option value="PDR">PDR (contracted out)</option>
+          <option value="Alloys">Alloys (contracted out)</option>
+        </select>
+      </div>
+      <div>
+        <span class="qlbl">Location</span>
+        <select class="msel" id="edit_loc">
+          <option value="mobile">Mobile</option>
+          <option value="workshop">Workshop</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-bottom:8px">
+      <span class="qlbl">Assigned tech</span>
+      <div class="tech-cb-group" id="edit_tech_cbg" onclick="event.stopPropagation()">
+        <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" value="Shaun" onchange="onTechCbChange('edit_tech')"> Shaun</label>
+        <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" value="Tony" onchange="onTechCbChange('edit_tech')"> Tony</label>
+        <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" value="Charles" onchange="onTechCbChange('edit_tech')"> Charles</label>
+        <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" value="Both" onchange="onTechCbChange('edit_tech')"> Both (see notes)</label>
+        <input autocomplete="off" type="hidden" id="edit_tech" value="">
+      </div>
+    </div>
     <!-- Panels auto-filled from quote lines -->
     <input autocomplete="off" type="hidden" id="edit_panels">
 <div class="panel-picker" id="edit_picker" style="display:none">
@@ -1614,23 +1652,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <div class="modal-grid2">
       <div>
-        <span class="qlbl">Duration</span>
-        <select class="msel" id="edit_duration">
-          <option value="1 hour">1 hour</option>
-          <option value="2 hours">2 hours</option>
-          <option value="3 hours">3 hours</option>
-          <option value="4 hours">4 hours</option>
-          <option value="5 hours">5 hours</option>
-          <option value="Full day">Full day</option>
-          <option value="2 days">2 days</option>
-          <option value="3 days">3 days</option>
-          <option value="4 days">4 days</option>
-          <option value="5 days">5 days</option>
-          <option value="PDR">PDR (contracted out)</option>
-          <option value="Alloys">Alloys (contracted out)</option>
-        </select>
-      </div>
-      <div>
         <span class="qlbl">Status</span>
         <select class="msel" id="edit_status">
           <option value="pending">Pending approval</option>
@@ -1652,29 +1673,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <div class="modal-grid2">
       <div>
-        <span class="qlbl">Assigned tech</span>
-        <div class="tech-cb-group" id="edit_tech_cbg" onclick="event.stopPropagation()">
-          <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" value="Shaun" onchange="onTechCbChange('edit_tech')"> Shaun</label>
-          <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" value="Tony" onchange="onTechCbChange('edit_tech')"> Tony</label>
-          <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" value="Charles" onchange="onTechCbChange('edit_tech')"> Charles</label>
-          <label class="tech-cb-lbl"><input autocomplete="off" type="checkbox" value="Both" onchange="onTechCbChange('edit_tech')"> Both (see notes)</label>
-          <input autocomplete="off" type="hidden" id="edit_tech" value="">
-        </div>
-      </div>
-      <div>
         <span class="qlbl">Customer address</span>
         <input autocomplete="off" class="minp" id="edit_addr" placeholder="House, street, postcode">
       </div>
     </div>
     <div class="modal-grid2">
-      <div>
-        <span class="qlbl">Location</span>
-        <select class="msel" id="edit_loc">
-          <option value="mobile">Mobile</option>
-          <option value="workshop">Workshop</option>
-        </select>
-      </div>
-      <div>
+      >
         <span class="qlbl">Source</span>
         <select class="msel" id="edit_source">
           <option value="whatsapp">WhatsApp</option>
@@ -1686,31 +1690,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         </select>
       </div>
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
-      <input autocomplete="off" type="checkbox" id="edit_cd" style="width:16px;height:16px;cursor:pointer">
-      <label for="edit_cd" style="font-size:13px;color:var(--txt);cursor:pointer">Collection &amp; Delivery required</label>
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;background:#fef2f2;border:1px solid #fca5a5;border-radius:var(--radius);padding:8px 12px">
-      <input autocomplete="off" type="checkbox" id="edit_rework" style="width:16px;height:16px;accent-color:var(--red);cursor:pointer">
-      <label for="edit_rework" style="font-size:13px;font-weight:600;color:#991b1b;cursor:pointer">🔄 This is a rework job</label>
-    </div>
-    <span class="qlbl">Photos</span>
-    <!-- Existing photos — tap to view in lightbox -->
-    <div id="editExistingPhotos" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;min-height:0"></div>
-    <label class="upzone" for="editPhotoInput" style="display:block;cursor:pointer;padding:12px;margin-bottom:10px">
-      <div style="font-size:12px;color:var(--muted);font-weight:600" id="editUpLbl">Tap to add more photos</div>
-      <div style="font-size:10px;color:var(--hint);margin-top:2px">📷 Camera or gallery · tap again to add more</div>
-      <div id="editPhotoPreview" style="display:flex;flex-wrap:wrap;margin-top:6px"></div>
-      <input autocomplete="off" type="file" id="editPhotoInput" accept="image/*" multiple
-        style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"
-        onchange="handleEditPhotos(this)">
-    </label>
-    <div style="display:flex;gap:8px;margin-top:4px">
-      <button class="btn-primary" onclick="saveEditJob()" style="flex:1;padding:10px">Save changes</button>
-      <button class="btn-secondary" onclick="closeEditModal()" style="flex:1;padding:10px">Cancel</button>
-    </div>
-  </div>
-</div>
 
 <!-- COMPLETE JOB MODAL (jobs tab — no photo required) -->
 <div class="modal-overlay" id="completeModal">
@@ -2641,6 +2620,7 @@ function buildJobCard(j) {
         <button class="btn-primary" onclick="event.stopPropagation();markQuoteSent(${j.id})" style="background:#0ea5e9;font-size:11px;padding:7px 12px">&#10003; Quote sent to customer</button>
         <button class="btn-book" onclick="event.stopPropagation();openBookModal(${j.id})" style="font-size:11px">Book in</button>
         <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit</button>
+        <button class="btn-primary" onclick="event.stopPropagation();sendXeroQuote(${j.id})" style="background:#9333ea;font-size:11px">Xero quote</button>
         <button class="btn-danger" onclick="event.stopPropagation();declineJob(${j.id})" style="font-size:11px">Decline</button>
         <div style="width:100%;height:1px;background:var(--border);margin:4px 0"></div>
         <button class="btn-secondary" onclick="event.stopPropagation();deleteJob(${j.id})" style="font-size:10px;color:var(--muted);border-color:var(--border)">🗑 Delete job</button>`;
@@ -2681,6 +2661,7 @@ function buildJobCard(j) {
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn-primary" onclick="event.stopPropagation();doInvoice(${j.id},'invoice')" style="font-size:11px;flex:1">Send invoice</button>
         <button class="btn-primary" onclick="event.stopPropagation();doInvoice(${j.id},'receipt')" style="font-size:11px;flex:1;background:var(--teal)">Send receipt</button>
+        <button class="btn-approve" onclick="event.stopPropagation();sendXeroQuote(${j.id})" style="background:#7c3aed;font-size:11px">📋 Xero quote</button>
         <button class="btn-secondary" onclick="event.stopPropagation();doInvoice(${j.id},'none')" style="font-size:11px">Not needed</button>
       </div>
       <div style="margin-top:6px">
@@ -3241,9 +3222,72 @@ async function saveNewJob() {
 // ═══════════════════════════════════════════════════════════
 // doInvoice — called by Chloe from the Needs Invoice tab
 // type: 'invoice' (BACS/awaiting payment), 'receipt' (card/already paid), 'none' (no Xero needed)
+async function sendXeroQuote(jobId) {
+  const j = allJobs.find(x => x.id === jobId);
+  if (!j) return;
+  try {
+    showToast('Creating quote in Xero...');
+    const quoteLines = await sbRaw('GET','quote_lines',null,`?job_id=eq.${jobId}&order=sort_order.asc`).catch(()=>[]);
+    const res = await fetch(XERO_FN, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ job: j, payMethod: 'quote', quoteLines: quoteLines || [] })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    showToast('✓ Quote created in Xero — ' + (data.invoiceNum || ''));
+    await loadJobs();
+  } catch(e) {
+    alert('⚠ Xero error — quote was NOT created.\n\nError: ' + e.message);
+    await loadJobs();
+  }
+}
+
+async function sendXeroQuote(jobId) {
+  const j = allJobs.find(x => x.id === jobId);
+  if (!j) return;
+  // Load quote lines for this job
+  let lines = [];
+  try {
+    const raw = await sbRaw('GET','quote_lines',null,`?job_id=eq.${jobId}&order=sort_order.asc`);
+    lines = (raw||[]).filter(l => l.included);
+  } catch(e) {}
+  // Build description from lines or fall back to panels
+  const lineItems = lines.length
+    ? lines.map(l => ({ description: l.description, amount: l.amount }))
+    : [{ description: j.panels || 'Vehicle repair', amount: parseFloat((j.quote_price||'0').toString().replace(/[^0-9.]/g,''))||0 }];
+  try {
+    showToast('Creating Xero quote...');
+    const res = await fetch(XERO_FN, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jobId, type: 'quote', job: j, lineItems })
+    });
+    const data = await res.json();
+    if (data.error) { alert('Xero error: ' + data.error); return; }
+    const qMsg = '✓ Xero quote created' + (data.quoteNum || data.invoiceNum ? ' — ' + (data.quoteNum || data.invoiceNum) : '');
+    showToast(qMsg);
+    const qUrl = data.xeroUrl || data.quoteUrl;
+    if (qUrl) {
+      if (confirm(qMsg + '\n\nOpen in Xero now?')) {
+        window.open(qUrl, '_blank');
+      }
+    }
+  } catch(e) {
+    alert('⚠ Xero quote failed — ' + e.message);
+  }
+}
+
 async function doInvoice(jobId, type) {
   const j = allJobs.find(x => x.id === jobId);
   if (!j) { alert('Job not found — try refreshing'); return; }
+
+  // Load quote lines for line-by-line invoice
+  let quoteLines = [];
+  try {
+    const raw = await sbRaw('GET','quote_lines',null,`?job_id=eq.${jobId}&order=sort_order.asc`);
+    quoteLines = (raw||[]).filter(l => l.included);
+  } catch(e) { console.warn('Could not load quote lines', e); }
 
   if (type === 'none') {
     // No invoice needed — mark as paid/done without Xero
@@ -3279,10 +3323,12 @@ async function doInvoice(jobId, type) {
 
   try {
     showToast(type === 'invoice' ? 'Creating invoice in Xero...' : 'Creating receipt in Xero...');
+    // Load quote lines to send as line items to Xero
+    const quoteLines = await sbRaw('GET','quote_lines',null,`?job_id=eq.${jobId}&order=sort_order.asc`).catch(()=>[]);
     const res = await fetch(XERO_FN, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ job: j, payMethod })
+      body: JSON.stringify({ job: j, payMethod, quoteLines: quoteLines || [] })
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
@@ -3295,6 +3341,12 @@ async function doInvoice(jobId, type) {
       ? `✓ Invoice created in Xero — ${data.invoiceNum || ''}`
       : `✓ Receipt created in Xero — ${data.invoiceNum || ''}`;
     showToast(msg);
+    // Open Xero directly if we got a URL back
+    if (data.xeroUrl) {
+      if (confirm(msg + '\n\nOpen in Xero now?')) {
+        window.open(data.xeroUrl, '_blank');
+      }
+    }
     await loadJobs();
   } catch(e) {
     // DO NOT mark as invoiced if Xero failed — allow retry
