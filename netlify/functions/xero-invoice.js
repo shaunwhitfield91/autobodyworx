@@ -1,163 +1,158 @@
-// xero-invoice.js — creates invoice or receipt in Xero from a completed PanelPro job
+// xero-invoice.js — Creates invoices, receipts, and quotes in Xero
+// Now supports quoteLines for line-by-line breakdowns
 
-async function getTokens(supabaseUrl, supabaseKey) {
-  const res = await fetch(`${supabaseUrl}/rest/v1/xero_tokens?limit=1`, {
-    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
-  });
-  const data = await res.json();
-  if (!data || !data[0]) throw new Error('No Xero tokens found. Please reconnect Xero in Settings.');
-  return data[0];
-}
-
-async function refreshIfNeeded(tokens, supabaseUrl, supabaseKey) {
-  const expiresAt = new Date(tokens.expires_at);
-  if (expiresAt > new Date(Date.now() + 60000)) return tokens.access_token;
-  const creds = Buffer.from(`${process.env.XERO_CLIENT_ID}:${process.env.XERO_CLIENT_SECRET}`).toString('base64');
-  const res = await fetch('https://identity.xero.com/connect/token', {
-    method: 'POST',
-    headers: { 'Authorization': `Basic ${creds}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: tokens.refresh_token })
-  });
-  const tokenData = await res.json();
-  if (!tokenData.access_token) throw new Error('Token refresh failed: ' + JSON.stringify(tokenData));
-  const newExpiry = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
-  await fetch(`${supabaseUrl}/rest/v1/xero_tokens?tenant_id=eq.${tokens.tenant_id}`, {
-    method: 'PATCH',
-    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ access_token: tokenData.access_token, refresh_token: tokenData.refresh_token, expires_at: newExpiry, updated_at: new Date().toISOString() })
-  });
-  return tokenData.access_token;
-}
-
-function buildDescription(job) {
-  const panels = (job.panels || '').trim();
-  if (job._is_deposit) return panels ? `Parts deposit — ${panels}` : 'Parts deposit — Vehicle parts';
-  if (job._is_balance) return panels ? `Body repairs — ${panels} (balance after deposit)` : 'Body repairs — Vehicle bodywork repair (balance after deposit)';
-  return panels ? `Body repairs — ${panels}` : 'Body repairs — Vehicle bodywork repair';
-}
-
-function buildLineItems(job) {
-  // Price is inc VAT — divide by 1.2 to get ex-VAT amount
-  // Xero adds 20% OUTPUT2 tax back, so total on invoice matches the original quoted price
-  const incVat = parseFloat((job.quote_price || '0').toString().replace(/[^0-9.]/g, '')) || 0;
-  const exVat = Math.round((incVat / 1.2) * 100) / 100;
-  return [{
-    Description: buildDescription(job),
-    Quantity: 1,
-    UnitAmount: exVat,
-    AccountCode: '200',
-    TaxType: 'OUTPUT2'
-  }];
-}
-
-function buildContact(job) {
-  const c = { Name: job.customer_name || 'Unknown Customer' };
-  if (job.customer_email) c.EmailAddress = job.customer_email;
-  if (job.customer_phone) c.Phones = [{ PhoneType: 'MOBILE', PhoneNumber: job.customer_phone }];
-  if (job.customer_address) c.Addresses = [{ AddressType: 'STREET', AttentionTo: job.customer_name, AddressLine1: job.customer_address }];
-  return c;
-}
+const SUPABASE_URL = 'https://isxycoxqlummscxmdckj.supabase.co';
 
 exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+  if (event.httpMethod !== 'POST') return { statusCode: 405 };
 
-  const supabaseUrl = 'https://isxycoxqlummscxmdckj.supabase.co';
-  const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+  const { job, payMethod, quoteLines } = JSON.parse(event.body || '{}');
+  if (!job) return { statusCode: 400, body: 'Missing job' };
 
-  let job, payMethod;
-  try {
-    const p = JSON.parse(event.body);
-    job = p.job;
-    payMethod = p.payMethod;
-  } catch (e) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Invalid body' }) };
+  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+
+  // Get Xero tokens from Supabase
+  const tokRes = await fetch(`${SUPABASE_URL}/rest/v1/xero_tokens?order=id.desc&limit=1`, {
+    headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` }
+  });
+  const tokens = await tokRes.json();
+  if (!tokens || !tokens[0]) return { statusCode: 401, body: JSON.stringify({ error: 'Not connected to Xero — go to Settings and connect.' }) };
+
+  let { access_token, refresh_token, tenant_id } = tokens[0];
+
+  // Refresh token if needed
+  const refreshRes = await fetch('https://identity.xero.com/connect/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token,
+      client_id: process.env.XERO_CLIENT_ID,
+      client_secret: process.env.XERO_CLIENT_SECRET
+    })
+  });
+  const refreshData = await refreshRes.json();
+  if (refreshData.access_token) {
+    access_token = refreshData.access_token;
+    // Save new tokens
+    await fetch(`${SUPABASE_URL}/rest/v1/xero_tokens?order=id.desc&limit=1`, {
+      method: 'PATCH',
+      headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ access_token, refresh_token: refreshData.refresh_token || refresh_token })
+    });
   }
 
-  if (!job || !job.customer_name) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Job data missing — customer_name required' }) };
+  // Build line items from quoteLines if available, else fall back to single line
+  let lineItems;
+  if (quoteLines && quoteLines.length > 0) {
+    // Use actual quote lines (included ones only for invoice)
+    const lines = payMethod === 'quote'
+      ? quoteLines  // quotes show all lines
+      : quoteLines.filter(l => l.included !== false); // invoices only include checked lines
+
+    lineItems = lines.map(l => ({
+      Description: l.description || l.desc,
+      Quantity: 1,
+      UnitAmount: parseFloat(l.amount),
+      AccountCode: '200',
+      TaxType: 'OUTPUT2'
+    }));
+
+    // Add discount as negative line if present
+    const total = lines.reduce((s,l) => s + parseFloat(l.amount), 0);
+    const jobTotal = parseFloat((job.quote_price || job.invoice_amount || '0').toString().replace(/[^0-9.]/g,''));
+    const discount = Math.max(0, total - jobTotal);
+    if (discount > 0.01) {
+      lineItems.push({
+        Description: 'Multi-panel discount',
+        Quantity: 1,
+        UnitAmount: -discount,
+        AccountCode: '200',
+        TaxType: 'OUTPUT2'
+      });
+    }
+  } else {
+    // Fallback: single line with job description
+    const amount = parseFloat((job.quote_price || job.invoice_amount || '0').toString().replace(/[^0-9.]/g,''));
+    const desc = [job.vehicle, job.panels, job.notes].filter(Boolean).join(' — ') || 'Vehicle body repair';
+    lineItems = [{ Description: desc, Quantity: 1, UnitAmount: amount, AccountCode: '200', TaxType: 'OUTPUT2' }];
   }
 
-  if (payMethod === 'cash') return { statusCode: 200, body: JSON.stringify({ skipped: true }) };
+  const contactName = job.customer_name || 'Customer';
+  const ref = `ABW-${String(job.id).padStart(4,'0')}`;
 
-  try {
-    const tokens = await getTokens(supabaseUrl, supabaseKey);
-    const accessToken = await refreshIfNeeded(tokens, supabaseUrl, supabaseKey);
-    const tenantId = tokens.tenant_id;
+  // Determine if this is a Quote or Invoice
+  const isQuote = payMethod === 'quote';
 
-    const xH = {
-      'Authorization': `Bearer ${accessToken}`,
-      'Xero-tenant-id': tenantId,
+  let xeroPayload, endpoint;
+
+  if (isQuote) {
+    // Create a QUOTE in Xero
+    endpoint = 'https://api.xero.com/api.xro/2.0/Quotes';
+    xeroPayload = {
+      Quotes: [{
+        Contact: { Name: contactName },
+        LineItems: lineItems,
+        QuoteNumber: ref,
+        Title: `Vehicle repair — ${job.vehicle || ''}`,
+        Status: 'DRAFT',
+        LineAmountTypes: 'Inclusive'
+      }]
+    };
+  } else {
+    // Create an INVOICE in Xero
+    endpoint = 'https://api.xero.com/api.xro/2.0/Invoices';
+    const status = payMethod === 'nopay' ? 'DRAFT' : 'AUTHORISED';
+    xeroPayload = {
+      Invoices: [{
+        Type: 'ACCREC',
+        Contact: { Name: contactName },
+        LineItems: lineItems,
+        InvoiceNumber: ref,
+        Reference: `${job.vehicle || ''} — ${job.colour || ''}`.replace(/^ — | — $/g,''),
+        Status: status,
+        LineAmountTypes: 'Inclusive'
+      }]
+    };
+  }
+
+  const xeroRes = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${access_token}`,
+      'Xero-tenant-id': tenant_id,
       'Content-Type': 'application/json',
       'Accept': 'application/json'
-    };
+    },
+    body: JSON.stringify(xeroPayload)
+  });
 
-    // Upsert contact
-    const cRes = await fetch('https://api.xero.com/api.xro/2.0/Contacts', {
-      method: 'POST', headers: xH,
-      body: JSON.stringify({ Contacts: [buildContact(job)] })
-    });
-    const cData = await cRes.json();
-    const contact = cData?.Contacts?.[0];
+  const xeroData = await xeroRes.json();
 
-    const vehicleInfo = [job.vehicle, job.colour].filter(Boolean).join(' — ');
-    const reference = `PanelPro #${job.id}${vehicleInfo ? ' — ' + vehicleInfo : ''}`;
-
-    // AUTHORISED for card (paid immediately), DRAFT for bacs/nopay (awaiting payment)
-    const status = payMethod === 'card' ? 'AUTHORISED' : 'DRAFT';
-
-    const iRes = await fetch('https://api.xero.com/api.xro/2.0/Invoices', {
-      method: 'POST', headers: xH,
-      body: JSON.stringify({
-        Invoices: [{
-          Type: 'ACCREC',
-          Status: status,
-          Contact: contact ? { ContactID: contact.ContactID } : buildContact(job),
-          Reference: reference,
-          // No LineAmountTypes — let Xero use org default
-          LineItems: buildLineItems(job),
-          DueDate: new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0],
-          CurrencyCode: 'GBP'
-        }]
-      })
-    });
-    const iData = await iRes.json();
-    const invoice = iData?.Invoices?.[0];
-
-    if (!invoice || invoice.HasErrors) {
-      throw new Error('Xero invoice error: ' + JSON.stringify(iData?.Invoices?.[0]?.ValidationErrors || iData));
-    }
-
-    // Card — record payment against invoice
-    if (payMethod === 'card' && invoice.InvoiceID) {
-      const incVat = parseFloat((job.quote_price || '0').toString().replace(/[^0-9.]/g, '')) || 0;
-      if (incVat > 0) {
-        await fetch('https://api.xero.com/api.xro/2.0/Payments', {
-          method: 'PUT', headers: xH,
-          body: JSON.stringify({
-            Payments: [{
-              Invoice: { InvoiceID: invoice.InvoiceID },
-              Account: { Code: '090' },
-              Date: new Date().toISOString().split('T')[0],
-              Amount: incVat,
-              Reference: `Card — ${reference}`
-            }]
-          })
-        });
-      }
-    }
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        success: true,
-        invoiceId: invoice.InvoiceID,
-        invoiceNum: invoice.InvoiceNumber,
-        type: payMethod === 'card' ? 'receipt' : 'invoice'
-      })
-    };
-
-  } catch (e) {
-    console.error('Xero error:', e.message);
-    return { statusCode: 500, body: JSON.stringify({ error: e.message }) };
+  if (!xeroRes.ok || xeroData.ErrorNumber) {
+    return { statusCode: 400, body: JSON.stringify({ error: xeroData.Message || xeroData.Detail || 'Xero error' }) };
   }
+
+  const created = isQuote ? xeroData.Quotes?.[0] : xeroData.Invoices?.[0];
+  const num = created?.QuoteNumber || created?.InvoiceNumber || ref;
+  const xeroId = created?.QuoteID || created?.InvoiceID;
+
+  // Save Xero ID back to job
+  if (serviceKey && xeroId) {
+    await fetch(`${SUPABASE_URL}/rest/v1/jobs?id=eq.${job.id}`, {
+      method: 'PATCH',
+      headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ xero_invoice_id: xeroId, xero_invoice_number: num })
+    });
+  }
+
+  // Build direct deep-link URL to the invoice/quote in Xero
+  const xeroUrl = isQuote
+    ? `https://go.xero.com/Quotes/View/${xeroId}`
+    : `https://go.xero.com/AccountsReceivable/View.aspx?InvoiceID=${xeroId}`;
+
+  return {
+    statusCode: 200,
+    body: JSON.stringify({ success: true, invoiceNum: num, xeroId, xeroUrl, type: isQuote ? 'quote' : 'invoice' })
+  };
 };
