@@ -3225,9 +3225,14 @@ async function saveNewJob() {
 async function sendXeroQuote(jobId) {
   const j = allJobs.find(x => x.id === jobId);
   if (!j) return;
+  // Load quote lines for this job (all lines — quotes show everything, not just included)
+  let quoteLines = [];
+  try {
+    quoteLines = await sbRaw('GET','quote_lines',null,`?job_id=eq.${jobId}&order=sort_order.asc`);
+  } catch(e) { console.warn('Could not load quote lines', e); }
+
   try {
     showToast('Creating quote in Xero...');
-    const quoteLines = await sbRaw('GET','quote_lines',null,`?job_id=eq.${jobId}&order=sort_order.asc`).catch(()=>[]);
     const res = await fetch(XERO_FN, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -3235,46 +3240,17 @@ async function sendXeroQuote(jobId) {
     });
     const data = await res.json();
     if (data.error) throw new Error(data.error);
-    showToast('✓ Quote created in Xero — ' + (data.invoiceNum || ''));
-    await loadJobs();
-  } catch(e) {
-    alert('⚠ Xero error — quote was NOT created.\n\nError: ' + e.message);
-    await loadJobs();
-  }
-}
-
-async function sendXeroQuote(jobId) {
-  const j = allJobs.find(x => x.id === jobId);
-  if (!j) return;
-  // Load quote lines for this job
-  let lines = [];
-  try {
-    const raw = await sbRaw('GET','quote_lines',null,`?job_id=eq.${jobId}&order=sort_order.asc`);
-    lines = (raw||[]).filter(l => l.included);
-  } catch(e) {}
-  // Build description from lines or fall back to panels
-  const lineItems = lines.length
-    ? lines.map(l => ({ description: l.description, amount: l.amount }))
-    : [{ description: j.panels || 'Vehicle repair', amount: parseFloat((j.quote_price||'0').toString().replace(/[^0-9.]/g,''))||0 }];
-  try {
-    showToast('Creating Xero quote...');
-    const res = await fetch(XERO_FN, {
-      method: 'POST',
-      headers: { 'apikey': SUPABASE_ANON, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jobId, type: 'quote', job: j, lineItems })
-    });
-    const data = await res.json();
-    if (data.error) { alert('Xero error: ' + data.error); return; }
-    const qMsg = '✓ Xero quote created' + (data.quoteNum || data.invoiceNum ? ' — ' + (data.quoteNum || data.invoiceNum) : '');
+    const qMsg = '✓ Quote created in Xero' + (data.invoiceNum ? ' — ' + data.invoiceNum : '');
     showToast(qMsg);
-    const qUrl = data.xeroUrl || data.quoteUrl;
-    if (qUrl) {
+    await loadJobs();
+    if (data.xeroUrl) {
       if (confirm(qMsg + '\n\nOpen in Xero now?')) {
-        window.open(qUrl, '_blank');
+        window.open(data.xeroUrl, '_blank');
       }
     }
   } catch(e) {
-    alert('⚠ Xero quote failed — ' + e.message);
+    alert('⚠ Xero error — quote was NOT created.\n\nError: ' + e.message);
+    await loadJobs();
   }
 }
 
