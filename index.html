@@ -1247,9 +1247,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     </div>
     <span class="qlbl">Vehicle</span><input autocomplete="off" class="minp" id="m_vehicle" placeholder="Make, model, year">
     <span class="qlbl">Colour</span><input autocomplete="off" class="minp" id="m_colour" placeholder="Colour">
-    <span class="qlbl">Panels / damage</span>
+    <!-- Panels auto-filled from quote lines -->
     <input autocomplete="off" type="hidden" id="m_panels">
-<div class="panel-picker" id="m_picker">
+    <div id="m_panels_preview" style="display:none"></div>
+<div class="panel-picker" id="m_picker" style="display:none">
   <div class="panel-cat">Bumpers & corners</div>
   <div class="panel-items">
     <label class="panel-cb"><input autocomplete="off" type="checkbox" id="m_front_bumper" onchange="updatePanelText('m')"> Front bumper</label>
@@ -1539,9 +1540,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       </div>
       <div style="width:34px"></div>
     </div>
-    <span class="qlbl">Panels / damage</span>
+    <!-- Panels auto-filled from quote lines -->
     <input autocomplete="off" type="hidden" id="edit_panels">
-<div class="panel-picker" id="edit_picker">
+<div class="panel-picker" id="edit_picker" style="display:none">
   <div class="panel-cat">Bumpers & corners</div>
   <div class="panel-items">
     <label class="panel-cb"><input autocomplete="off" type="checkbox" id="edit_front_bumper" onchange="updatePanelText('edit')"> Front bumper</label>
@@ -7790,6 +7791,9 @@ function editCalcTotal() {
   const hidden = document.getElementById('edit_price');
   if (disp) disp.textContent = '£' + total.toFixed(2);
   if (hidden) hidden.value = '£' + total.toFixed(2);
+  // Auto-populate panels field from quote line descriptions (included lines only)
+  const panelsEl = document.getElementById('edit_panels');
+  if (panelsEl) panelsEl.value = _editLines.filter(l => l.included).map(l => l.desc).join(', ');
 }
 
 async function editSaveQuoteLines(jobId) {
@@ -7858,6 +7862,9 @@ function nqCalcTotal() {
   const hidden = document.getElementById('m_price_manual');
   if (disp) disp.textContent = '£' + total.toFixed(2);
   if (hidden) hidden.value = '£' + total.toFixed(2);
+  // Auto-populate panels field from quote line descriptions
+  const panelsEl = document.getElementById('q_panels');
+  if (panelsEl) panelsEl.value = _nqLines.map(l => l.desc).join(', ');
 }
 
 function nqResetLines() {
@@ -7920,6 +7927,9 @@ function calcQuoteTotal() {
   const hidden = document.getElementById('m_price');
   if (disp) disp.textContent = '£' + total.toFixed(2);
   if (hidden) hidden.value = '£' + total.toFixed(2);
+  // Auto-populate panels field from quote line descriptions
+  const panelsEl = document.getElementById('m_panels');
+  if (panelsEl) panelsEl.value = _quoteLines.map(l => l.desc).join(', ');
 }
 
 function resetQuoteLines() {
