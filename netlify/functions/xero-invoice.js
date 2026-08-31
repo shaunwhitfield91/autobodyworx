@@ -86,9 +86,12 @@ exports.handler = async (event) => {
 
   let xeroPayload, endpoint;
 
+  const today = new Date().toISOString().split('T')[0];
+
   if (isQuote) {
     // Create a QUOTE in Xero
     endpoint = 'https://api.xero.com/api.xro/2.0/Quotes';
+    const expiry = new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0];
     xeroPayload = {
       Quotes: [{
         Contact: { Name: contactName },
@@ -96,7 +99,9 @@ exports.handler = async (event) => {
         QuoteNumber: ref,
         Title: `Vehicle repair — ${job.vehicle || ''}`,
         Status: 'DRAFT',
-        LineAmountTypes: 'Inclusive'
+        LineAmountTypes: 'Inclusive',
+        Date: today,
+        ExpiryDate: expiry
       }]
     };
   } else {
@@ -111,7 +116,9 @@ exports.handler = async (event) => {
         InvoiceNumber: ref,
         Reference: `${job.vehicle || ''} — ${job.colour || ''}`.replace(/^ — | — $/g,''),
         Status: status,
-        LineAmountTypes: 'Inclusive'
+        LineAmountTypes: 'Inclusive',
+        Date: today,
+        DueDate: today
       }]
     };
   }
@@ -130,7 +137,12 @@ exports.handler = async (event) => {
   const xeroData = await xeroRes.json();
 
   if (!xeroRes.ok || xeroData.ErrorNumber) {
-    return { statusCode: 400, body: JSON.stringify({ error: xeroData.Message || xeroData.Detail || 'Xero error' }) };
+    // Surface Xero's actual field-level validation messages when present
+    const elementErrors = (xeroData.Elements || [])
+      .flatMap(el => (el.ValidationErrors || []).map(v => v.Message))
+      .filter(Boolean);
+    const detail = elementErrors.length ? elementErrors.join('; ') : (xeroData.Message || xeroData.Detail || 'Xero error');
+    return { statusCode: 400, body: JSON.stringify({ error: detail }) };
   }
 
   const created = isQuote ? xeroData.Quotes?.[0] : xeroData.Invoices?.[0];
