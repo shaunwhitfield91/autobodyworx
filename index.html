@@ -2780,8 +2780,8 @@ function buildJobCard(j) {
               <span class="ql-desc${l.included?'':' ql-excluded-txt'}">${esc(l.desc)}</span>
               <span class="ql-amt${l.included?'':' ql-excluded-txt'}">£${parseFloat(l.amount).toFixed(2)}</span>
             </div>`).join('')}
-            ${j._discount?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--amber-txt);padding:4px 0">
-              <span>Discount</span><span>−£${parseFloat(j._discount).toFixed(2)}</span>
+            ${j.quote_discount?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--amber-txt);padding:4px 0">
+              <span>Discount</span><span>−£${parseFloat(j.quote_discount).toFixed(2)}</span>
             </div>`:''}
             <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:var(--teal);padding-top:6px;border-top:1px solid var(--border);margin-top:4px">
               <span>Total (inc VAT)</span><span>${(()=>{const p=j.quote_price||'';return p.startsWith('£')?esc(p):'£'+esc(p);})()}</span>
@@ -4591,11 +4591,24 @@ function renderTechPortal() {
   }).join('');
 }
 
+let _techLines = {}; // { [jobId]: [{id,desc,amount,included}] } — tech portal quote-line editor state
+
 function buildTechCard(j) {
   const done = j.status === 'completed';
   const photos = j.job_photos || [];
   const bmq = photos.filter(p => p.photo_type === 'damage');
   const amq = photos.filter(p => p.photo_type === 'completion');
+
+  // Seed editable quote-line state for this job (once) from cached/loaded quote_lines,
+  // falling back to a single line built from the current flat price so nothing is lost.
+  if (!_techLines[j.id]) {
+    if (j._quoteLines && j._quoteLines.length) {
+      _techLines[j.id] = j._quoteLines.map(l => ({ ...l }));
+    } else {
+      const amt = parseFloat((j.quote_price||'0').toString().replace(/[^0-9.]/g,'')) || 0;
+      _techLines[j.id] = amt ? [{ id: Date.now(), desc: j.panels || 'Repair', amount: amt, included: true }] : [];
+    }
+  }
 
   const completeBox = done
     ? `<div class="tech-done-banner">✓ Completed · ${esc(j.payment_method||'')} · ${j.signed_off_by||''}</div>`
@@ -4640,10 +4653,33 @@ function buildTechCard(j) {
       </div>`
     : '';
 
-  // Editable fields for tech
+  // Editable fields for tech — full quote breakdown, same as admin Edit job
+  const tqDiscInit = parseFloat(j.quote_discount) || 0;
+  const tqIncludedInit = _techLines[j.id].filter(l=>l.included).reduce((s,l)=>s+l.amount,0);
+  const tqTotalInit = Math.max(0, tqIncludedInit - tqDiscInit);
   const editBox = !done ? `<div class="tech-edit-box">
-    <div class="tech-edit-hd">Edit job details</div>
-    <input autocomplete="off" class="tech-edit-inp" id="tep-${j.id}" placeholder="Price (£ inc VAT)" value="${esc(j.quote_price||'')}">
+    <div class="tech-edit-hd">Quote breakdown</div>
+    <div id="tq_lines_${j.id}" style="margin-bottom:6px">${techLineRowsHtml(j.id)}</div>
+    <div style="display:flex;gap:6px;margin-bottom:4px;align-items:center">
+      <input autocomplete="off" class="tech-edit-inp" id="tq_desc_${j.id}" placeholder="e.g. OSF door repair" style="flex:3;margin-bottom:0;font-size:13px">
+      <div style="position:relative;flex:1;min-width:70px">
+        <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:12px;pointer-events:none">£</span>
+        <input autocomplete="off" class="tech-edit-inp" id="tq_price_${j.id}" placeholder="0.00" type="number" min="0" step="0.01" style="padding-left:20px;margin-bottom:0;font-size:13px" oninput="techCalcTotal(${j.id})">
+      </div>
+      <button onclick="techAddLine(${j.id})" style="background:var(--teal);color:#fff;border:none;border-radius:var(--radius);width:34px;height:34px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700">+</button>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:10px;align-items:center">
+      <span style="font-size:12px;color:var(--muted);flex:3">Multi-panel discount</span>
+      <div style="position:relative;flex:1;min-width:70px">
+        <span style="position:absolute;left:6px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:11px;pointer-events:none">−£</span>
+        <input autocomplete="off" class="tech-edit-inp" id="tq_disc_${j.id}" placeholder="0.00" type="number" min="0" step="0.01" style="padding-left:24px;margin-bottom:0;font-size:13px;border-color:#fde047" oninput="techCalcTotal(${j.id})" value="${tqDiscInit||0}">
+      </div>
+      <div style="width:34px"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:8px 12px;margin-bottom:10px">
+      <span style="font-size:11px;color:var(--muted)">Total (inc VAT)</span>
+      <span style="font-size:16px;font-weight:800;color:var(--teal)" id="tq_total_${j.id}">£${tqTotalInit.toFixed(2)}</span>
+    </div>
     <input autocomplete="off" class="tech-edit-inp" id="ten-${j.id}" placeholder="Panel notes..." value="${esc(j.panels||'')}">
     <button class="btn-secondary" style="font-size:11px" onclick="saveTechEdit(${j.id})">Save changes</button>
   </div>` : '';
@@ -4699,7 +4735,75 @@ function buildTechCard(j) {
 
 function toggleTechCard(id) {
   const body = document.getElementById('tjb-' + id);
-  if (body) body.classList.toggle('open');
+  if (!body) return;
+  const opening = !body.classList.contains('open');
+  body.classList.toggle('open');
+  if (opening) {
+    const j = allJobs.find(x => x.id === id);
+    if (j && !j._quoteLinesLoaded) {
+      j._quoteLinesLoaded = true;
+      sbRaw('GET','quote_lines',null,`?job_id=eq.${id}&order=sort_order.asc`).then(lines => {
+        j._quoteLines = (lines||[]).map(l => ({ id: l.id, desc: l.description, amount: parseFloat(l.amount), included: l.included }));
+        if (lines && lines.length) _techLines[id] = j._quoteLines.map(l => ({ ...l }));
+        techRenderLines(id);
+        techCalcTotal(id);
+      }).catch(()=>{});
+    }
+  }
+}
+
+function techLineRowsHtml(jobId) {
+  const lines = _techLines[jobId] || [];
+  return lines.map(l => `
+    <div class="ql-row${l.included?'':' ql-excluded'}">
+      <input type="checkbox" class="ql-chk" ${l.included?'checked':''} onchange="techToggleLine(${jobId},${l.id})">
+      <span class="ql-desc${l.included?'':' ql-excluded-txt'}">${esc(l.desc)}</span>
+      <span class="ql-amt${l.included?'':' ql-excluded-txt'}">£${parseFloat(l.amount).toFixed(2)}</span>
+      <button class="ql-del" onclick="techRemoveLine(${jobId},${l.id})" title="Remove">✕</button>
+    </div>`).join('') || '<div style="font-size:11px;color:var(--muted);padding:4px 0">No lines yet — add items above</div>';
+}
+
+function techRenderLines(jobId) {
+  const el = document.getElementById('tq_lines_' + jobId);
+  if (el) el.innerHTML = techLineRowsHtml(jobId);
+}
+
+function techCalcTotal(jobId) {
+  const lines = _techLines[jobId] || [];
+  const included = lines.filter(l => l.included).reduce((s,l) => s + l.amount, 0);
+  const discount = parseFloat(document.getElementById('tq_disc_' + jobId)?.value) || 0;
+  const total = Math.max(0, included - discount);
+  const disp = document.getElementById('tq_total_' + jobId);
+  if (disp) disp.textContent = '£' + total.toFixed(2);
+}
+
+function techAddLine(jobId) {
+  const descEl = document.getElementById('tq_desc_' + jobId);
+  const priceEl = document.getElementById('tq_price_' + jobId);
+  const desc = descEl?.value.trim();
+  const amt = parseFloat(priceEl?.value) || 0;
+  if (!desc) { descEl?.focus(); return; }
+  if (amt <= 0) { priceEl?.focus(); return; }
+  if (!_techLines[jobId]) _techLines[jobId] = [];
+  _techLines[jobId].push({ id: Date.now(), desc, amount: amt, included: true });
+  if (descEl) descEl.value = '';
+  if (priceEl) priceEl.value = '';
+  descEl?.focus();
+  techRenderLines(jobId);
+  techCalcTotal(jobId);
+}
+
+function techRemoveLine(jobId, lineId) {
+  _techLines[jobId] = (_techLines[jobId] || []).filter(l => l.id !== lineId);
+  techRenderLines(jobId);
+  techCalcTotal(jobId);
+}
+
+function techToggleLine(jobId, lineId) {
+  const l = (_techLines[jobId] || []).find(x => x.id === lineId);
+  if (l) l.included = !l.included;
+  techRenderLines(jobId);
+  techCalcTotal(jobId);
 }
 
 function selectPayMethod(jobId, method, btn) {
@@ -4812,16 +4916,36 @@ async function completeTechJob(jobId) {
 }
 
 async function saveTechEdit(jobId) {
-  const price = document.getElementById('tep-' + jobId)?.value?.trim();
   const panels = document.getElementById('ten-' + jobId)?.value?.trim();
-  const updates = {};
-  if (price) updates.quote_price = price;
+  const lines = _techLines[jobId] || [];
+  const discount = parseFloat(document.getElementById('tq_disc_' + jobId)?.value) || 0;
+  const included = lines.filter(l => l.included).reduce((s,l) => s + l.amount, 0);
+  const total = Math.max(0, included - discount);
+  const updates = {
+    quote_price: '£' + total.toFixed(2),
+    quote_discount: discount
+  };
   if (panels) updates.panels = panels;
-  await sbRaw('PATCH', 'jobs', updates, `?id=eq.${jobId}`);
-  showToast('Saved');
-  await loadJobs();
-  const body = document.getElementById('tjb-' + jobId);
-  if (body) body.classList.add('open');
+  try {
+    await sbRaw('PATCH', 'jobs', updates, `?id=eq.${jobId}`);
+    // Save quote lines — delete all then re-insert, same as admin Edit job
+    await sbRaw('DELETE','quote_lines',null,`?job_id=eq.${jobId}`).catch(()=>{});
+    for (let i=0; i<lines.length; i++) {
+      const l = lines[i];
+      await sbRaw('POST','quote_lines',{
+        job_id: jobId,
+        description: l.desc,
+        amount: l.amount,
+        included: l.included,
+        sort_order: i
+      });
+    }
+    delete _techLines[jobId];
+    showToast('Saved');
+    await loadJobs();
+    const body = document.getElementById('tjb-' + jobId);
+    if (body) body.classList.add('open');
+  } catch(e) { alert('Save failed: ' + e.message); }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -5118,7 +5242,8 @@ async function saveEditJob() {
     parts_required: document.getElementById('edit_parts_required')?.checked || false,
     courtesy_car: document.getElementById('edit_courtesy_car')?.checked || false,
     customer_address: document.getElementById('edit_addr').value.trim() || null,
-    payment_method: document.getElementById('edit_payment_method')?.value || null
+    payment_method: document.getElementById('edit_payment_method')?.value || null,
+    quote_discount: parseFloat(document.getElementById('edit_ql_discount')?.value) || 0
   };
   try {
     await sbRaw('PATCH', 'jobs', updates, '?id=eq.' + _editJobId);
