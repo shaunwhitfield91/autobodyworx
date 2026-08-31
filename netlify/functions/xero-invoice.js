@@ -12,7 +12,7 @@ exports.handler = async (event) => {
   const serviceKey = process.env.SUPABASE_SERVICE_KEY;
 
   // Get Xero tokens from Supabase
-  const tokRes = await fetch(`${SUPABASE_URL}/rest/v1/xero_tokens?order=id.desc&limit=1`, {
+  const tokRes = await fetch(`${SUPABASE_URL}/rest/v1/xero_tokens?order=updated_at.desc&limit=1`, {
     headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` }
   });
   const tokens = await tokRes.json();
@@ -35,7 +35,7 @@ exports.handler = async (event) => {
   if (refreshData.access_token) {
     access_token = refreshData.access_token;
     // Save new tokens
-    await fetch(`${SUPABASE_URL}/rest/v1/xero_tokens?order=id.desc&limit=1`, {
+    await fetch(`${SUPABASE_URL}/rest/v1/xero_tokens?order=updated_at.desc&limit=1`, {
       method: 'PATCH',
       headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({ access_token, refresh_token: refreshData.refresh_token || refresh_token })
