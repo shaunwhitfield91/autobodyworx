@@ -5211,8 +5211,8 @@ async function saveEditJob() {
       }
     }
     _uploadInProgress = false;
-    // Save quote lines
-    if (_editLines.length) await editSaveQuoteLines(_editJobId);
+    // Save quote lines (always — this also clears the DB when the last line was removed)
+    await editSaveQuoteLines(_editJobId);
     showToast('✓ Job updated');
     closeEditModal();
     const prevOpen = _editJobId;
