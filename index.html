@@ -4932,8 +4932,7 @@ async function saveTechEdit(jobId) {
   const included = lines.filter(l => l.included).reduce((s,l) => s + l.amount, 0);
   const total = Math.max(0, included - discount);
   const updates = {
-    quote_price: '£' + total.toFixed(2),
-    quote_discount: discount
+    quote_price: '£' + total.toFixed(2)
   };
   if (panels) updates.panels = panels;
   try {
@@ -5252,8 +5251,7 @@ async function saveEditJob() {
     parts_required: document.getElementById('edit_parts_required')?.checked || false,
     courtesy_car: document.getElementById('edit_courtesy_car')?.checked || false,
     customer_address: document.getElementById('edit_addr').value.trim() || null,
-    payment_method: document.getElementById('edit_payment_method')?.value || null,
-    quote_discount: parseFloat(document.getElementById('edit_ql_discount')?.value) || 0
+    payment_method: document.getElementById('edit_payment_method')?.value || null
   };
   try {
     await sbRaw('PATCH', 'jobs', updates, '?id=eq.' + _editJobId);
