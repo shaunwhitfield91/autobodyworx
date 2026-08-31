@@ -79,6 +79,8 @@ exports.handler = async (event) => {
   }
 
   const contactName = job.customer_name || 'Customer';
+  const contactObj = { Name: contactName };
+  if (job.customer_email) contactObj.EmailAddress = job.customer_email;
   const ref = `ABW-${String(job.id).padStart(4,'0')}`;
 
   // Determine if this is a Quote or Invoice
@@ -94,7 +96,7 @@ exports.handler = async (event) => {
     const expiry = new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0];
     xeroPayload = {
       Quotes: [{
-        Contact: { Name: contactName },
+        Contact: contactObj,
         LineItems: lineItems,
         QuoteNumber: ref,
         Title: `Vehicle repair — ${job.vehicle || ''}`,
@@ -111,7 +113,7 @@ exports.handler = async (event) => {
     xeroPayload = {
       Invoices: [{
         Type: 'ACCREC',
-        Contact: { Name: contactName },
+        Contact: contactObj,
         LineItems: lineItems,
         InvoiceNumber: ref,
         Reference: `${job.vehicle || ''} — ${job.colour || ''}`.replace(/^ — | — $/g,''),
