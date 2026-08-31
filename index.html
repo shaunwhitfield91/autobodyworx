@@ -1707,17 +1707,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         onchange="handleEditPhotos(this)">
     </label>
     <div id="editExistingPhotos" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
-    <span class="qlbl">Parts</span>
-    <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
-      <input autocomplete="off" class="minp" id="edit_pn" placeholder="Part name" style="flex:3;font-size:13px">
-      <input autocomplete="off" class="minp" id="edit_pq" placeholder="Qty" type="number" min="1" style="flex:1;min-width:50px;font-size:13px">
-      <div style="position:relative;flex:1;min-width:70px">
-        <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:12px;pointer-events:none">£</span>
-        <input autocomplete="off" class="minp" id="edit_pp" placeholder="0.00" type="number" min="0" step="0.01" style="padding-left:20px;font-size:13px">
-      </div>
-      <button onclick="addPartFromEdit()" style="background:var(--teal);color:#fff;border:none;border-radius:var(--radius);width:34px;height:34px;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700">+</button>
-    </div>
-    <div id="edit_parts_list" style="margin-bottom:10px"></div>
     <div style="display:flex;gap:8px;margin-top:8px">
       <button class="btn-primary" onclick="saveEditJob()" style="flex:1;padding:10px">Save changes</button>
       <button class="btn-secondary" onclick="closeEditModal()" style="flex:1;padding:10px">Cancel</button>
@@ -2214,7 +2203,7 @@ function switchTab(t) {
 async function loadJobs() {
   try {
     const data = await sbRaw('GET', 'jobs', null,
-      `?select=*,job_parts(*),job_photos(*)&archived=eq.false&status=neq.declined&source=not.in.(Holiday,Appointment,Van%20day,Diary%20entry)&order=created_at.desc`);
+      `?select=*,job_photos(*)&archived=eq.false&status=neq.declined&source=not.in.(Holiday,Appointment,Van%20day,Diary%20entry)&order=created_at.desc`);
     const freshJobs = data || [];
     if (_notifsReady) checkForNewNotifs(freshJobs);
     allJobs = freshJobs;
@@ -2638,7 +2627,6 @@ function buildJobCard(j) {
   const photos = j.job_photos || [];
   // Cache photos on job object so openPhotoByJobId can find them
   j._photos = photos;
-  const parts = j.job_parts || [];
   const prog = statusToProgress(j.status, j);
 
   let actions = '';
@@ -2713,23 +2701,6 @@ function buildJobCard(j) {
         <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>
                  <button class="btn-secondary" onclick="event.stopPropagation();printJobCard(${j.id})" style="font-size:11px">🖨 Job card</button>
       </div>
-    </div>`;
-  }
-
-  // Parts summary
-  let partsHtml = '';
-  if (parts.length) {
-    partsHtml = `<div style="margin-bottom:12px">
-      <div class="jbf" style="margin-bottom:6px">Parts</div>
-      <table class="parts-table">
-        <thead><tr><th>Part</th><th>Qty</th><th style="text-align:right">Price</th><th></th></tr></thead>
-        <tbody>${parts.map(p=>`<tr>
-          <td>${esc(p.part_name||'')}</td>
-          <td>${p.quantity||1}</td>
-          <td style="text-align:right">£${p.unit_price||0}</td>
-          <td><button style="background:none;border:none;color:var(--red);cursor:pointer;font-size:11px" onclick="event.stopPropagation();deletePart(${p.id},${j.id})">✕</button></td>
-        </tr>`).join('')}</tbody>
-      </table>
     </div>`;
   }
 
@@ -2818,9 +2789,6 @@ function buildJobCard(j) {
           </div>
         </div>`:''}
       </div>
-      <!-- Parts -->
-      ${partsHtml}
-      ${parts.length === 0 ? '<div style="font-size:11px;color:var(--hint);margin-top:4px;padding:4px 0">No parts added — use Edit Job to add parts</div>' : ''}
       <!-- Photos -->
       <div style="margin-top:14px">${photosHtml}</div>
       <!-- Actions -->
@@ -3136,38 +3104,6 @@ async function unmarkQuoteSent(jobId) {
       if (el) el.classList.add('open');
     }, 50);
   } catch(e) { alert('Failed: ' + e.message); }
-}
-
-// ═══════════════════════════════════════════════════════════
-// PARTS
-// ═══════════════════════════════════════════════════════════
-async function addPart(jobId) {
-  const name = document.getElementById('pn-' + jobId)?.value?.trim();
-  const qty = parseInt(document.getElementById('pq-' + jobId)?.value) || 1;
-  const price = parseFloat(document.getElementById('pp-' + jobId)?.value?.replace(/[^0-9.]/g,'')) || 0;
-  if (!name) { showToast('Enter a part name'); return; }
-  try {
-    await sbRaw('POST', 'job_parts', { job_id: jobId, part_name: name, quantity: qty, unit_price: price });
-    showToast('Part added');
-    await loadJobs();
-    setTimeout(() => {
-      const el = document.getElementById('jc-' + jobId);
-      if (el) el.classList.add('open');
-      openJobId = jobId;
-    }, 100);
-  } catch(e) { alert('Failed: ' + e.message); }
-}
-
-async function deletePart(partId, jobId) {
-  if (!confirm('Remove this part?')) return;
-  await sbRaw('DELETE', 'job_parts', null, `?id=eq.${partId}`);
-  showToast('Part removed');
-  await loadJobs();
-  setTimeout(() => {
-    const el = document.getElementById('jc-' + jobId);
-    if (el) el.classList.add('open');
-    openJobId = jobId;
-  }, 100);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -5130,16 +5066,6 @@ async function openEditModal(jobId) {
       document.getElementById('editExistingPhotos').innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0">No photos on this job</div>';
     }
   } catch(e) { console.warn('Could not load photos for edit modal', e); }
-  // Load existing parts into edit modal parts list
-  try {
-    const existingParts = await sbRaw('GET','job_parts',null,`?job_id=eq.${jobId}&order=created_at.asc`);
-    const listEl = document.getElementById('edit_parts_list');
-    if (listEl) listEl.innerHTML = (existingParts||[]).map(p => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
-      <span>${esc(p.part_name||'')} × ${p.quantity||1}</span>
-      <span style="display:flex;gap:8px;align-items:center">£${p.unit_price||0}
-        <button onclick="deletePart(${p.id},${jobId})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:11px">✕</button>
-      </span></div>`).join('') || '<div style="font-size:11px;color:var(--muted)">No parts yet</div>';
-  } catch(e) {}
   document.getElementById('editModal').classList.add('show');
 }
 
@@ -6498,32 +6424,6 @@ function handleAddJobPhotos(input) {
       r.readAsDataURL(f);
     });
   }
-}
-
-// ADD PARTS FROM EDIT MODAL
-async function addPartFromEdit() {
-  const name = document.getElementById('edit_pn')?.value.trim();
-  const qty = parseInt(document.getElementById('edit_pq')?.value) || 1;
-  const price = parseFloat(document.getElementById('edit_pp')?.value?.replace(/[^0-9.]/g,'')) || 0;
-  if (!name || !_editJobId) return;
-  try {
-    await sbRaw('POST', 'job_parts', { job_id: _editJobId, part_name: name, quantity: qty, unit_price: price });
-    document.getElementById('edit_pn').value = '';
-    document.getElementById('edit_pq').value = '';
-    document.getElementById('edit_pp').value = '';
-    showToast('Part added ✓');
-    // Refresh parts list in edit modal
-    const parts = await sbRaw('GET','job_parts',null,`?job_id=eq.${_editJobId}&order=created_at.asc`);
-    const listEl = document.getElementById('edit_parts_list');
-    if (listEl) {
-      listEl.innerHTML = (parts||[]).map(p => `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
-        <span>${esc(p.part_name||'')} × ${p.quantity||1}</span>
-        <span style="display:flex;gap:8px;align-items:center">£${p.unit_price||0}
-          <button onclick="deletePart(${p.id},${_editJobId})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:11px">✕</button>
-        </span></div>`).join('') || '<div style="font-size:11px;color:var(--muted)">No parts yet</div>';
-    }
-    await loadJobs();
-  } catch(e) { alert('Failed: ' + e.message); }
 }
 
 // ═══════════════════════════════════════════════════════════
