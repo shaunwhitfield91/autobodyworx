@@ -237,6 +237,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .fl-cd{background:var(--accent);color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;letter-spacing:.3px}
 .fl-courtesy{background:#16a34a;color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;letter-spacing:.3px}
 .fl-parts{background:#d97706;color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;letter-spacing:.3px}
+.fl-pdr{background:#2563eb;color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;letter-spacing:.3px}
+.fl-alloy{background:#db2777;color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;letter-spacing:.3px}
 
 /* Month view */
 .cal-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
@@ -842,6 +844,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <div class="leg-item"><span class="fl-cd">C&amp;D</span> Collection &amp; delivery</div>
           <div class="leg-item"><span class="fl-courtesy">🚘 Courtesy</span> Courtesy car out</div>
           <div class="leg-item"><span class="fl-parts">🔧 Parts</span> Parts required</div>
+          <div class="leg-item"><span class="fl-pdr">🔨 PDR</span> PDR contractor</div>
+          <div class="leg-item"><span class="fl-alloy">⚙️ Alloy</span> Alloy contractor</div>
         </div>
       </div>
       <div id="diaryView"></div>
@@ -3643,12 +3647,16 @@ function renderMonthView() {
       // Check if any job in this cell needs courtesy car
       const hasCourtesyCar = filteredEvts.some(e => e.courtesy_car);
       const hasPartsNeeded = filteredEvts.some(e => e.parts_required);
-      if (cell.cur && (hasMix || hasCd || hasCourtesyCar || hasPartsNeeded)) {
+      const hasPDR = filteredEvts.some(e => e.duration === 'PDR');
+      const hasAlloy = filteredEvts.some(e => e.duration === 'Alloys');
+      if (cell.cur && (hasMix || hasCd || hasCourtesyCar || hasPartsNeeded || hasPDR || hasAlloy)) {
         html += '<div class="cal-flags">';
         if (hasMix) html += '<span class="fl-wm">W+M</span>';
         if (hasCd) html += '<span class="fl-cd">C&D</span>';
         if (hasCourtesyCar) html += '<span class="fl-courtesy">🚘 Courtesy</span>';
         if (hasPartsNeeded) html += '<span class="fl-parts">🔧 Parts</span>';
+        if (hasPDR) html += '<span class="fl-pdr">🔨 PDR</span>';
+        if (hasAlloy) html += '<span class="fl-alloy">⚙️ Alloy</span>';
         html += '</div>';
       }
       html += '</div>';
@@ -3780,7 +3788,9 @@ function detJobCard(j, side) {
 
 function buildDetTags(j) {
   let t = j.job_location==='mobile'?'<span class="tag wtag wtag-mob">Mobile</span>':'<span class="tag wtag wtag-ws">Workshop</span>';
-  if (j.duration) t += `<span class="tag wtag wtag-dur">${esc(j.duration)}</span>`;
+  if (j.duration && j.duration !== 'PDR' && j.duration !== 'Alloys') t += `<span class="tag wtag wtag-dur">${esc(j.duration)}</span>`;
+  if (j.duration === 'PDR') t += '<span class="tag" style="background:#dbeafe;color:#1e3a8a;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;border:1px solid #93c5fd">🔨 PDR</span>';
+  if (j.duration === 'Alloys') t += '<span class="tag" style="background:#fce7f3;color:#831843;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;border:1px solid #f9a8d4">⚙️ Alloy</span>';
   if (j.cd_required) t += '<span class="tag wtag wtag-cd">C&D</span>';
   if (j.courtesy_car) t += '<span class="tag" style="background:#dcfce7;color:#14532d;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;border:1px solid #86efac">🚘 Courtesy car</span>';
   if (j.parts_required) t += '<span class="tag" style="background:#fef9c3;color:#713f12;font-size:10px;font-weight:700;padding:1px 5px;border-radius:3px;border:1px solid #fde047">🔧 Parts</span>';
