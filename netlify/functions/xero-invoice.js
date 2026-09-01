@@ -45,12 +45,21 @@ exports.handler = async (event) => {
         retryable: wasConsumedByConcurrentRequest
       };
     }
-    // Save new tokens
-    await fetch(`${SUPABASE_URL}/rest/v1/xero_tokens?order=updated_at.desc&limit=1`, {
+    // Save new tokens — must filter on a real column; order/limit are not a WHERE
+    // clause and PostgREST rejects an unfiltered UPDATE outright.
+    const saveRes = await fetch(`${SUPABASE_URL}/rest/v1/xero_tokens?tenant_id=eq.${encodeURIComponent(tenant_id)}`, {
       method: 'PATCH',
       headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
       body: JSON.stringify({ access_token: refreshData.access_token, refresh_token: refreshData.refresh_token || refresh_token, updated_at: new Date().toISOString(), expires_at: new Date(Date.now() + (refreshData.expires_in||1800)*1000).toISOString() })
     });
+    if (!saveRes.ok) {
+      const saveErr = await saveRes.text();
+      // The refresh itself succeeded (we have a valid access_token for THIS request)
+      // but persisting it failed — flag this clearly rather than silently losing the
+      // rotated token, which would just break the next request in the same way.
+      console.error('Failed to save refreshed Xero token:', saveErr);
+      return { error: `Token refreshed but failed to save — will break next time. (${saveErr})`, retryable: false, needsReconnect: false };
+    }
     return { access_token: refreshData.access_token, tenant_id };
   }
 
