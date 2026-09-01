@@ -2781,21 +2781,33 @@ function buildJobCard(j) {
           </div>`:''}
         </div>`:''}
         ${j.internal_breakdown&&currentProfile?.role==='admin'?`<div style="grid-column:1/-1"><div class="jbf" style="color:var(--muted)">Internal breakdown (admin only)</div><div class="jbv" style="font-size:11px;line-height:1.5;color:var(--muted)">${esc(j.internal_breakdown)}</div></div>`:''}
-        ${j._quoteLines&&j._quoteLines.length?`<div style="grid-column:1/-1">
+        ${(() => {
+          const hasItemized = j._quoteLines && j._quoteLines.length;
+          const flatAmt = (j.quote_price||'').toString().trim();
+          if (!hasItemized && !flatAmt) return ''; // genuinely no price yet — nothing to show
+          const totalDisp = flatAmt ? (flatAmt.startsWith('£')?esc(flatAmt):'£'+esc(flatAmt)) : '£0.00';
+          const lineRows = hasItemized
+            ? j._quoteLines.map(l=>`<div class="ql-row${l.included?'':' ql-excluded'}">
+                <span class="ql-desc${l.included?'':' ql-excluded-txt'}">${esc(l.desc)}</span>
+                <span class="ql-amt${l.included?'':' ql-excluded-txt'}">£${parseFloat(l.amount).toFixed(2)}</span>
+              </div>`).join('')
+            // Fallback while the itemised lines are loading (or if there simply aren't any) —
+            // shows the flat total immediately instead of nothing, using data that's already
+            // on hand with no async round-trip required.
+            : `<div class="ql-row"><span class="ql-desc">${esc(j.panels || 'Vehicle repair')}</span><span class="ql-amt">${totalDisp}</span></div>`;
+          return `<div style="grid-column:1/-1">
           <div class="jbf">Quote breakdown</div>
           <div style="background:var(--surface);border-radius:var(--radius);padding:8px 10px;margin-top:4px">
-            ${j._quoteLines.map(l=>`<div class="ql-row${l.included?'':' ql-excluded'}">
-              <span class="ql-desc${l.included?'':' ql-excluded-txt'}">${esc(l.desc)}</span>
-              <span class="ql-amt${l.included?'':' ql-excluded-txt'}">£${parseFloat(l.amount).toFixed(2)}</span>
-            </div>`).join('')}
+            ${lineRows}
             ${j.quote_discount?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--amber-txt);padding:4px 0">
               <span>Discount</span><span>−£${parseFloat(j.quote_discount).toFixed(2)}</span>
             </div>`:''}
             <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:var(--teal);padding-top:6px;border-top:1px solid var(--border);margin-top:4px">
-              <span>Total (inc VAT)</span><span>${(()=>{const p=j.quote_price||'';return p.startsWith('£')?esc(p):'£'+esc(p);})()}</span>
+              <span>Total (inc VAT)</span><span>${totalDisp}</span>
             </div>
           </div>
-        </div>`:''}
+        </div>`;
+        })()}
       </div>
       <!-- Photos -->
       <div style="margin-top:14px">${photosHtml}</div>
