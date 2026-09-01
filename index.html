@@ -2070,11 +2070,11 @@ async function initApp() {
     const profiles = await sbRaw('GET', 'profiles', null, `?id=eq.${uid}&limit=1`);
     if (profiles && profiles.length) {
       currentProfile = profiles[0];
-      // Correct role from email if the DB has it wrong
-      // (email is the truth — Chloe is admin@, Charles is charleshurst)
+      // Correct role from email only for these two accounts, where the profiles
+      // table has historically stored the wrong role — everyone else (including
+      // any new staff added later) uses whatever is actually in their profile row.
       if (em.includes('charleshurst')) currentProfile.role = 'tech';
       else if (em.includes('admin@')) { currentProfile.role = 'admin_staff'; currentProfile.full_name = currentProfile.full_name || 'Chloe'; }
-      else { currentProfile.role = 'admin'; currentProfile.full_name = currentProfile.full_name || 'Shaun'; }
     } else {
       // Fallback: derive from email
       currentProfile = {
