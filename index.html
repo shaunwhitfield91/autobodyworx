@@ -3220,9 +3220,13 @@ async function saveNewJob() {
 // ═══════════════════════════════════════════════════════════
 // doInvoice — called by Chloe from the Needs Invoice tab
 // type: 'invoice' (BACS/awaiting payment), 'receipt' (card/already paid), 'none' (no Xero needed)
+let _xeroInFlight = new Set(); // job ids currently mid-Xero-request, to prevent double-clicks racing the refresh token
+
 async function sendXeroQuote(jobId) {
+  if (_xeroInFlight.has(jobId)) { showToast('Already sending — please wait'); return; }
   const j = allJobs.find(x => x.id === jobId);
   if (!j) return;
+  _xeroInFlight.add(jobId);
   // Load quote lines for this job (all lines — quotes show everything, not just included)
   let quoteLines = [];
   try {
@@ -3249,10 +3253,13 @@ async function sendXeroQuote(jobId) {
   } catch(e) {
     alert('⚠ Xero error — quote was NOT created.\n\nError: ' + e.message);
     await loadJobs();
+  } finally {
+    _xeroInFlight.delete(jobId);
   }
 }
 
 async function doInvoice(jobId, type) {
+  if (_xeroInFlight.has(jobId)) { showToast('Already sending — please wait'); return; }
   const j = allJobs.find(x => x.id === jobId);
   if (!j) { alert('Job not found — try refreshing'); return; }
 
@@ -3295,6 +3302,7 @@ async function doInvoice(jobId, type) {
     return;
   }
 
+  _xeroInFlight.add(jobId);
   try {
     showToast(type === 'invoice' ? 'Creating invoice in Xero...' : 'Creating receipt in Xero...');
     // Load quote lines to send as line items to Xero
@@ -3327,6 +3335,8 @@ async function doInvoice(jobId, type) {
     alert('⚠ Xero error — invoice was NOT created.\n\nError: ' + e.message + '\n\nYou can try sending again. The job has not been marked as invoiced.');
     // Force refresh so the Send Invoice button reappears
     await loadJobs();
+  } finally {
+    _xeroInFlight.delete(jobId);
   }
 }
 
@@ -3336,8 +3346,10 @@ async function openInvoiceFlow(jobId) {
 }
 
 async function sendXeroInvoice(jobId, type) {
+  if (_xeroInFlight.has(jobId)) { showToast('Already sending — please wait'); return; }
   const j = allJobs.find(x => x.id === jobId);
   if (!j) { alert('Job not found'); return; }
+  _xeroInFlight.add(jobId);
   try {
     showToast('Sending parts deposit invoice...');
     // Mark job as deposit type so buildDescription in Xero function uses right text
@@ -3349,7 +3361,7 @@ async function sendXeroInvoice(jobId, type) {
     await sbRaw('PATCH', 'jobs', { deposit_invoice_sent: true }, `?id=eq.${jobId}`);
     showToast('✓ Deposit invoice sent to Xero');
     await loadJobs();
-  } catch(e) { alert('Xero error: ' + e.message); }
+  } catch(e) { alert('Xero error: ' + e.message); } finally { _xeroInFlight.delete(jobId); }
 }
 
 // ═══════════════════════════════════════════════════════════
