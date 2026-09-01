@@ -20,7 +20,7 @@ exports.handler = async (event) => {
 
   let { access_token, refresh_token, tenant_id } = tokens[0];
 
-  // Refresh token if needed
+  // Refresh the access token (Xero access tokens last 30 mins, so always refresh)
   const refreshRes = await fetch('https://identity.xero.com/connect/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -32,15 +32,26 @@ exports.handler = async (event) => {
     })
   });
   const refreshData = await refreshRes.json();
-  if (refreshData.access_token) {
-    access_token = refreshData.access_token;
-    // Save new tokens
-    await fetch(`${SUPABASE_URL}/rest/v1/xero_tokens?order=updated_at.desc&limit=1`, {
-      method: 'PATCH',
-      headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-      body: JSON.stringify({ access_token, refresh_token: refreshData.refresh_token || refresh_token })
-    });
+  if (!refreshRes.ok || !refreshData.access_token) {
+    // Refresh genuinely failed — do NOT silently fall back to the old (expired) token.
+    const reason = refreshData.error_description || refreshData.error || 'Unknown error refreshing Xero token';
+    const needsReconnect = refreshData.error === 'invalid_grant';
+    return {
+      statusCode: 401,
+      body: JSON.stringify({
+        error: needsReconnect
+          ? `Xero connection has expired and needs reconnecting — go to Settings, Disconnect, then Connect to Xero again. (${reason})`
+          : `Failed to refresh Xero token: ${reason}`
+      })
+    };
   }
+  access_token = refreshData.access_token;
+  // Save new tokens
+  await fetch(`${SUPABASE_URL}/rest/v1/xero_tokens?order=updated_at.desc&limit=1`, {
+    method: 'PATCH',
+    headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ access_token, refresh_token: refreshData.refresh_token || refresh_token, updated_at: new Date().toISOString(), expires_at: new Date(Date.now() + (refreshData.expires_in||1800)*1000).toISOString() })
+  });
 
   // Build line items from quoteLines if available, else fall back to single line
   let lineItems;
