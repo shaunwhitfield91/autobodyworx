@@ -55,10 +55,13 @@ exports.handler = async (event) => {
   }
 
   let tokenResult = await getFreshAccessToken();
-  if (tokenResult.error && tokenResult.retryable) {
-    // A concurrent request consumed this token and already rotated it — brief pause
-    // then re-read + retry once against whatever was just saved.
-    await new Promise(r => setTimeout(r, 800));
+  // A concurrent request (possibly from a different browser/user) consumed this
+  // token and already rotated it — it's not dead, just mid-handover. Retry a few
+  // times with increasing backoff to give that request room to finish saving
+  // its replacement before we give up and tell the user to reconnect.
+  const retryDelaysMs = [500, 1200, 2500];
+  for (let i = 0; tokenResult.error && tokenResult.retryable && i < retryDelaysMs.length; i++) {
+    await new Promise(r => setTimeout(r, retryDelaysMs[i]));
     tokenResult = await getFreshAccessToken();
   }
   if (tokenResult.error) {
