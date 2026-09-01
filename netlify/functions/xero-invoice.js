@@ -11,47 +11,69 @@ exports.handler = async (event) => {
 
   const serviceKey = process.env.SUPABASE_SERVICE_KEY;
 
-  // Get Xero tokens from Supabase
-  const tokRes = await fetch(`${SUPABASE_URL}/rest/v1/xero_tokens?order=updated_at.desc&limit=1`, {
-    headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` }
-  });
-  const tokens = await tokRes.json();
-  if (!tokens || !tokens[0]) return { statusCode: 401, body: JSON.stringify({ error: 'Not connected to Xero — go to Settings and connect.' }) };
+  // Fetches the current stored token and attempts to refresh it. Returns
+  // { access_token } on success, or { error, needsReconnect } on failure.
+  async function getFreshAccessToken() {
+    const tokRes = await fetch(`${SUPABASE_URL}/rest/v1/xero_tokens?order=updated_at.desc&limit=1`, {
+      headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}` }
+    });
+    const tokens = await tokRes.json();
+    if (!tokens || !tokens[0]) return { error: 'Not connected to Xero — go to Settings and connect.' };
 
-  let { access_token, refresh_token, tenant_id } = tokens[0];
+    const { refresh_token, tenant_id } = tokens[0];
 
-  // Refresh the access token (Xero access tokens last 30 mins, so always refresh)
-  const refreshRes = await fetch('https://identity.xero.com/connect/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'refresh_token',
-      refresh_token,
-      client_id: process.env.XERO_CLIENT_ID,
-      client_secret: process.env.XERO_CLIENT_SECRET
-    })
-  });
-  const refreshData = await refreshRes.json();
-  if (!refreshRes.ok || !refreshData.access_token) {
-    // Refresh genuinely failed — do NOT silently fall back to the old (expired) token.
-    const reason = refreshData.error_description || refreshData.error || 'Unknown error refreshing Xero token';
-    const needsReconnect = refreshData.error === 'invalid_grant';
+    const refreshRes = await fetch('https://identity.xero.com/connect/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token,
+        client_id: process.env.XERO_CLIENT_ID,
+        client_secret: process.env.XERO_CLIENT_SECRET
+      })
+    });
+    const refreshData = await refreshRes.json();
+    if (!refreshRes.ok || !refreshData.access_token) {
+      const reason = refreshData.error_description || refreshData.error || 'Unknown error refreshing Xero token';
+      // "Refresh token has been consumed" means a concurrent request already used this
+      // exact token and rotated it — not a genuinely dead connection. Signal so the
+      // caller can retry once against whatever the concurrent request just saved.
+      const wasConsumedByConcurrentRequest = /consumed/i.test(reason);
+      return {
+        error: reason,
+        needsReconnect: refreshData.error === 'invalid_grant' && !wasConsumedByConcurrentRequest,
+        retryable: wasConsumedByConcurrentRequest
+      };
+    }
+    // Save new tokens
+    await fetch(`${SUPABASE_URL}/rest/v1/xero_tokens?order=updated_at.desc&limit=1`, {
+      method: 'PATCH',
+      headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ access_token: refreshData.access_token, refresh_token: refreshData.refresh_token || refresh_token, updated_at: new Date().toISOString(), expires_at: new Date(Date.now() + (refreshData.expires_in||1800)*1000).toISOString() })
+    });
+    return { access_token: refreshData.access_token, tenant_id };
+  }
+
+  let tokenResult = await getFreshAccessToken();
+  if (tokenResult.error && tokenResult.retryable) {
+    // A concurrent request consumed this token and already rotated it — brief pause
+    // then re-read + retry once against whatever was just saved.
+    await new Promise(r => setTimeout(r, 800));
+    tokenResult = await getFreshAccessToken();
+  }
+  if (tokenResult.error) {
     return {
       statusCode: 401,
       body: JSON.stringify({
-        error: needsReconnect
-          ? `Xero connection has expired and needs reconnecting — go to Settings, Disconnect, then Connect to Xero again. (${reason})`
-          : `Failed to refresh Xero token: ${reason}`
+        error: tokenResult.needsReconnect
+          ? `Xero connection has expired and needs reconnecting — go to Settings, Disconnect, then Connect to Xero again. (${tokenResult.error})`
+          : tokenResult.error.includes('Not connected')
+            ? tokenResult.error
+            : `Failed to refresh Xero token: ${tokenResult.error}`
       })
     };
   }
-  access_token = refreshData.access_token;
-  // Save new tokens
-  await fetch(`${SUPABASE_URL}/rest/v1/xero_tokens?order=updated_at.desc&limit=1`, {
-    method: 'PATCH',
-    headers: { 'apikey': serviceKey, 'Authorization': `Bearer ${serviceKey}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ access_token, refresh_token: refreshData.refresh_token || refresh_token, updated_at: new Date().toISOString(), expires_at: new Date(Date.now() + (refreshData.expires_in||1800)*1000).toISOString() })
-  });
+  const { access_token, tenant_id } = tokenResult;
 
   // Build line items from quoteLines if available, else fall back to single line
   let lineItems;
