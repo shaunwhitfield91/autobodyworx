@@ -2648,7 +2648,7 @@ function buildJobCard(j) {
     if (!j.quote_sent_to_customer) {
       actions = `
         <button class="btn-primary" onclick="event.stopPropagation();markQuoteSent(${j.id})" style="background:#0ea5e9;font-size:11px;padding:7px 12px">&#10003; Quote sent to customer</button>
-        <button class="btn-book" onclick="event.stopPropagation();openBookModal(${j.id})" style="font-size:11px">Book in</button>
+        <button class="btn-book" onclick="event.stopPropagation();openBookInModal(${j.id})" style="font-size:11px">Book in</button>
         <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit</button>
         <button class="btn-primary" onclick="event.stopPropagation();sendXeroQuote(${j.id})" style="background:#9333ea;font-size:11px">Xero quote</button>
         <button class="btn-danger" onclick="event.stopPropagation();declineJob(${j.id})" style="font-size:11px">Decline</button>
@@ -2664,7 +2664,7 @@ function buildJobCard(j) {
           <div class="awaiting-bar">
             <div class="awaiting-txt"><div class="awaiting-dot"></div>Awaiting customer response &nbsp;<span class="awaiting-age">${ageStr}</span></div>
             <div style="display:flex;gap:6px;flex-wrap:wrap">
-              <button class="btn-book" onclick="event.stopPropagation();openBookModal(${j.id})" style="font-size:11px">They said yes — book in</button>
+              <button class="btn-book" onclick="event.stopPropagation();openBookInModal(${j.id})" style="font-size:11px">They said yes — book in</button>
               <button class="btn-danger" onclick="event.stopPropagation();declineJob(${j.id})" style="font-size:11px">They said no</button>
             </div>
           </div>
@@ -5133,6 +5133,15 @@ function showToast(msg) {
 // BOOK JOB MODAL
 // ═══════════════════════════════════════════════════════════
 let _bookJobId = null;
+// Used when booking a job in from a "customer confirmed" or general "book in" action —
+// opens the full Edit job modal (every field, not just date/time/duration/tech/location)
+// and defaults Status to Booked, since that's the intent of clicking this button.
+async function openBookInModal(jobId) {
+  await openEditModal(jobId);
+  const statusEl = document.getElementById('edit_status');
+  if (statusEl) statusEl.value = 'booked';
+}
+
 function openBookModal(jobId) {
   _bookJobId = jobId;
   const j = allJobs.find(x => x.id === jobId);
