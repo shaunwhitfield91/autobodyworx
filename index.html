@@ -5710,6 +5710,15 @@ async function confirmComplete() {
 // HOLIDAY SYSTEM
 // ═══════════════════════════════════════════════════════════
 const HOL_ENTITLEMENT = 28;
+
+// Resolves the logged-in tech's actual entitlement for the current year —
+// uses the pro-rated first-year figure from STAFF_MEMBERS if they have one
+// (e.g. a new starter), falling back to the flat default for everyone else.
+function getMyEntitlement() {
+  const techName = currentProfile?.full_name || '';
+  const staff = (typeof STAFF_MEMBERS !== 'undefined' ? STAFF_MEMBERS : []).find(s => s.name === techName);
+  return staff ? getStaffEntitlement(staff) : HOL_ENTITLEMENT;
+}
 let _holRequests = [];
 let _holApproveId = null;
 
@@ -5757,7 +5766,7 @@ function renderHolidayCard() {
   const bhCount = bhThisYear.length;
 
   const totalUsed = holUsedDays + bhCount;
-  const left = HOL_ENTITLEMENT - totalUsed;
+  const left = getMyEntitlement() - totalUsed;
   const el = id => document.getElementById(id);
   if (el('holUsed')) el('holUsed').textContent = totalUsed;
   if (el('holLeft')) el('holLeft').textContent = Math.max(0, left);
@@ -5828,7 +5837,7 @@ function updateHolDayCount() {
   const to = document.getElementById('hol_to').value;
   if (from && to && to >= from) {
     const days = countWorkingDays(from, to);
-    const left = HOL_ENTITLEMENT - (_holRequests.filter(r=>r.status==='approved').reduce((s,r)=>s+(r.days_count||0),0));
+    const left = getMyEntitlement() - (_holRequests.filter(r=>r.status==='approved').reduce((s,r)=>s+(r.days_count||0),0));
     document.getElementById('holDaysCount').textContent = days + ' working day' + (days!==1?'s':'') + ' · ' + left + ' remaining';
     document.getElementById('holDaysCount').style.color = days > left ? 'var(--red)' : 'var(--blue-txt)';
   }
