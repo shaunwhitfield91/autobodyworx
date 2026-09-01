@@ -2213,8 +2213,15 @@ async function loadJobs() {
     if (_notifsReady) checkForNewNotifs(freshJobs);
     allJobs = freshJobs;
   } catch(e) { allJobs = []; }
-  // diaryAllJobs is loaded separately via loadDiaryJobs() — do NOT seed from allJobs
-  // as allJobs excludes diary entries (holidays, appointments etc)
+  // diaryAllJobs is a separate cache (it includes diary-only entries like holidays
+  // that allJobs excludes) — keep it in sync here too, so any edit made elsewhere
+  // (reassigning a tech, changing a date, etc.) shows on the diary immediately
+  // rather than waiting for the next background poll to catch up.
+  if (diaryAllJobs.length) {
+    loadDiaryJobs().then(() => {
+      if (document.getElementById('pg-diary')?.classList.contains('on')) { renderDiary(); renderRevBar(); }
+    }).catch(()=>{});
+  }
   renderJobs();
   updateHomeStats();
   renderHome();
@@ -5518,7 +5525,6 @@ function startAutoRefresh() {
     if (isUserTyping()) return;
     try {
       await loadJobs();
-      if (diaryAllJobs.length) loadDiaryJobs().catch(()=>{});
       // Keep declined jobs fresh for analytics and Chloe notifications
       loadDeclinedJobs().catch(()=>{});
       // Check for notifications (new declined jobs for Chloe)
