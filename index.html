@@ -5023,8 +5023,12 @@ function connectXero() { window.location.href = '/.netlify/functions/xero-auth';
 
 async function disconnectXero() {
   if (!confirm('Disconnect Xero? Invoicing will stop working.')) return;
-  await sbRaw('DELETE', 'xero_tokens', null, '?id=gte.0');
-  showToast('Xero disconnected');
+  try {
+    await sbRaw('DELETE', 'xero_tokens', null, '?tenant_id=not.is.null');
+    showToast('Xero disconnected');
+  } catch(e) {
+    alert('Failed to disconnect: ' + e.message);
+  }
   checkXeroStatus();
 }
 
