@@ -1899,6 +1899,7 @@ let diaryJobIdForPopup = null;
 let payMethodSelected = null;
 let techAfterPhotos = [];
 let openJobId = null;
+let openTechJobId = null;
 
 // ═══════════════════════════════════════════════════════════
 // SUPABASE HELPER
@@ -2611,7 +2612,10 @@ function renderJobs() {
   // Re-open any previously open card
   if (openJobId) {
     const el = document.getElementById('jc-' + openJobId);
-    if (el) el.classList.add('open');
+    if (el) {
+      el.classList.add('open');
+      loadQuoteLinesForCard(openJobId);
+    }
   }
 }
 
@@ -2803,6 +2807,29 @@ function buildJobCard(j) {
   </div>`;
 }
 
+// Loads (and caches) quote lines for a job card. Safe to call repeatedly —
+// no-ops once loaded, and only marks as loaded on a successful fetch so a
+// failed/interrupted attempt can retry. Re-render picks this up automatically
+// whenever the job card is (re)opened, including after a background refresh.
+function loadQuoteLinesForCard(id) {
+  const j = allJobs.find(x => x.id === id);
+  if (!j || j._quoteLinesLoaded || j._quoteLinesFetching) return;
+  j._quoteLinesFetching = true;
+  sbRaw('GET','quote_lines',null,`?job_id=eq.${id}&order=sort_order.asc`).then(lines => {
+    j._quoteLinesFetching = false;
+    j._quoteLinesLoaded = true;
+    if (lines && lines.length) {
+      j._quoteLines = lines.map(l => ({ id: l.id, desc: l.description, amount: parseFloat(l.amount), included: l.included }));
+      // Re-render jobs to show quote lines
+      renderJobs();
+      // Re-open the card
+      const reEl = document.getElementById('jc-' + id);
+      if (reEl) reEl.classList.add('open');
+      openJobId = id;
+    }
+  }).catch(() => { j._quoteLinesFetching = false; });
+}
+
 function toggleJobCard(id) {
   const el = document.getElementById('jc-' + id);
   if (!el) return;
@@ -2811,22 +2838,7 @@ function toggleJobCard(id) {
   if (!wasOpen) {
     el.classList.add('open');
     openJobId = id;
-    // Load quote lines lazily when card opens
-    const j = allJobs.find(x => x.id === id);
-    if (j && !j._quoteLinesLoaded) {
-      j._quoteLinesLoaded = true;
-      sbRaw('GET','quote_lines',null,`?job_id=eq.${id}&order=sort_order.asc`).then(lines => {
-        if (lines && lines.length) {
-          j._quoteLines = lines.map(l => ({ id: l.id, desc: l.description, amount: parseFloat(l.amount), included: l.included }));
-          // Re-render jobs to show quote lines
-          renderJobs();
-          // Re-open the card
-          const reEl = document.getElementById('jc-' + id);
-          if (reEl) reEl.classList.add('open');
-          openJobId = id;
-        }
-      }).catch(()=>{});
-    }
+    loadQuoteLinesForCard(id);
   }
   else openJobId = null;
 }
@@ -4599,9 +4611,19 @@ function renderTechPortal() {
         return buildTechCard(j);
       }).join('')}`;
   }).join('');
+  // Re-open any previously open tech card, and re-sync its quote lines
+  // in case this render was triggered by a background refresh
+  if (openTechJobId) {
+    const body = document.getElementById('tjb-' + openTechJobId);
+    if (body) {
+      body.classList.add('open');
+      loadQuoteLinesForTechCard(openTechJobId);
+    }
+  }
 }
 
 let _techLines = {}; // { [jobId]: [{id,desc,amount,included}] } — tech portal quote-line editor state
+let _techLinesTouched = {}; // { [jobId]: true } — set once a tech manually edits, so a background refresh never overwrites their in-progress changes
 
 function buildTechCard(j) {
   const done = j.status === 'completed';
@@ -4743,23 +4765,31 @@ function buildTechCard(j) {
   </div>`;
 }
 
+// Loads (and caches) quote lines for a tech repair card. Safe to call
+// repeatedly — no-ops once loaded, only marks as loaded on success so a
+// failed attempt can retry, and works whether triggered by a manual tap
+// or by the card being auto-reopened after a background data refresh.
+function loadQuoteLinesForTechCard(id) {
+  const j = allJobs.find(x => x.id === id);
+  if (!j || j._quoteLinesLoaded || j._quoteLinesFetching) return;
+  j._quoteLinesFetching = true;
+  sbRaw('GET','quote_lines',null,`?job_id=eq.${id}&order=sort_order.asc`).then(lines => {
+    j._quoteLinesFetching = false;
+    j._quoteLinesLoaded = true;
+    j._quoteLines = (lines||[]).map(l => ({ id: l.id, desc: l.description, amount: parseFloat(l.amount), included: l.included }));
+    if (lines && lines.length && !_techLinesTouched[id]) _techLines[id] = j._quoteLines.map(l => ({ ...l }));
+    techRenderLines(id);
+    techCalcTotal(id);
+  }).catch(() => { j._quoteLinesFetching = false; });
+}
+
 function toggleTechCard(id) {
   const body = document.getElementById('tjb-' + id);
   if (!body) return;
   const opening = !body.classList.contains('open');
   body.classList.toggle('open');
-  if (opening) {
-    const j = allJobs.find(x => x.id === id);
-    if (j && !j._quoteLinesLoaded) {
-      j._quoteLinesLoaded = true;
-      sbRaw('GET','quote_lines',null,`?job_id=eq.${id}&order=sort_order.asc`).then(lines => {
-        j._quoteLines = (lines||[]).map(l => ({ id: l.id, desc: l.description, amount: parseFloat(l.amount), included: l.included }));
-        if (lines && lines.length) _techLines[id] = j._quoteLines.map(l => ({ ...l }));
-        techRenderLines(id);
-        techCalcTotal(id);
-      }).catch(()=>{});
-    }
-  }
+  openTechJobId = opening ? id : null;
+  if (opening) loadQuoteLinesForTechCard(id);
 }
 
 function techLineRowsHtml(jobId) {
@@ -4796,6 +4826,7 @@ function techAddLine(jobId) {
   if (amt <= 0) { priceEl?.focus(); return; }
   if (!_techLines[jobId]) _techLines[jobId] = [];
   _techLines[jobId].push({ id: Date.now(), desc, amount: amt, included: true });
+  _techLinesTouched[jobId] = true;
   if (descEl) descEl.value = '';
   if (priceEl) priceEl.value = '';
   descEl?.focus();
@@ -4805,6 +4836,7 @@ function techAddLine(jobId) {
 
 function techRemoveLine(jobId, lineId) {
   _techLines[jobId] = (_techLines[jobId] || []).filter(l => l.id !== lineId);
+  _techLinesTouched[jobId] = true;
   techRenderLines(jobId);
   techCalcTotal(jobId);
 }
@@ -4812,6 +4844,7 @@ function techRemoveLine(jobId, lineId) {
 function techToggleLine(jobId, lineId) {
   const l = (_techLines[jobId] || []).find(x => x.id === lineId);
   if (l) l.included = !l.included;
+  _techLinesTouched[jobId] = true;
   techRenderLines(jobId);
   techCalcTotal(jobId);
 }
@@ -4950,6 +4983,7 @@ async function saveTechEdit(jobId) {
       });
     }
     delete _techLines[jobId];
+    delete _techLinesTouched[jobId];
     showToast('Saved');
     await loadJobs();
     const body = document.getElementById('tjb-' + jobId);
@@ -5434,6 +5468,11 @@ function isUserTyping() {
   if (tag === 'input' || tag === 'textarea' || tag === 'select' || active.isContentEditable) return true;
   // Pause if any modal is open
   if (document.querySelector('.modal-overlay.show') !== null) return true;
+  // Pause if a job card, tech card, or diary popup is expanded — a refresh would
+  // re-render the list and silently close whatever the user has open to read
+  if (document.querySelector('.jcard.open') !== null) return true;
+  if (document.querySelector('.tech-job-body.open') !== null) return true;
+  if (document.querySelector('.diary-popup.show') !== null) return true;
   // Pause if a photo upload is in progress
   if (_uploadInProgress) return true;
   return false;
