@@ -1876,14 +1876,20 @@ let revPanelOpen = false;
 let diaryView = 'month';
 let diaryAllJobs = []; // includes diary entries (holidays etc) — for diary display only
 
+let _diaryLoadToken = 0; // guards against overlapping loadDiaryJobs() calls resolving out of order
 async function loadDiaryJobs() {
+  const myToken = ++_diaryLoadToken;
   try {
     // Select only columns the diary needs — much faster than select=*
     const cols = 'id,customer_name,vehicle,panels,booking_date,booking_time,duration,duration_days,assigned_tech,job_location,customer_address,quote_price,invoice_amount,status,source,notes,cd_required,parts_required,courtesy_car,signed_off_at,invoiced_at';
     const data = await sbRaw('GET', 'jobs', null,
       `?select=${cols}&archived=eq.false&status=neq.declined&order=booking_date.asc`);
+    // If a newer call has started since this one began, its result (once it lands)
+    // is the one that should win — discard this now-stale response rather than
+    // let it clobber fresher data that may have already arrived.
+    if (myToken !== _diaryLoadToken) return;
     diaryAllJobs = data || [];
-  } catch(e) { diaryAllJobs = allJobs; }
+  } catch(e) { /* keep showing the last successfully loaded diary data — a failed refresh shouldn't blank it */ }
 }
 let revBarYear = new Date().getFullYear();
 let revBarMonth = new Date().getMonth();
@@ -1923,12 +1929,27 @@ async function sbRaw(method, table, body, query = '') {
     return fetch(url, { ...opts, signal: controller.signal })
       .finally(() => clearTimeout(timer));
   };
-  let res;
-  try {
-    res = await fetchWithTimeout(makeOpts());
-  } catch(e) {
-    if (e.name === 'AbortError') throw new Error('Request timed out — please check your connection and try again');
-    throw e;
+  // Auto-retry transient network failures (timeout, dropped connection) for
+  // GET/PATCH/DELETE — safe because repeating them has the same end result.
+  // POST is deliberately NOT retried: a "timeout" doesn't always mean the
+  // request failed server-side, so retrying it could create a duplicate row.
+  const maxAttempts = (method === 'GET' || method === 'PATCH' || method === 'DELETE') ? 3 : 1;
+  let res, lastErr;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      res = await fetchWithTimeout(makeOpts());
+      lastErr = null;
+      break;
+    } catch(e) {
+      lastErr = e;
+      const isNetworkIssue = e.name === 'AbortError' || e.name === 'TypeError';
+      if (!isNetworkIssue || attempt === maxAttempts) break;
+      await new Promise(r => setTimeout(r, attempt * 700)); // brief backoff before retrying
+    }
+  }
+  if (lastErr) {
+    if (lastErr.name === 'AbortError') throw new Error('Request timed out — please check your connection and try again');
+    throw lastErr;
   }
   // If JWT expired, try refreshing once then retry
   if (res.status === 401 || res.status === 403 || res.status === 400) {
@@ -2205,14 +2226,20 @@ function switchTab(t) {
 // ═══════════════════════════════════════════════════════════
 // LOAD JOBS
 // ═══════════════════════════════════════════════════════════
+let _jobsLoadToken = 0; // guards against overlapping loadJobs() calls resolving out of order
 async function loadJobs() {
+  const myToken = ++_jobsLoadToken;
   try {
     const data = await sbRaw('GET', 'jobs', null,
       `?select=*,job_photos(*)&archived=eq.false&status=neq.declined&source=not.in.(Holiday,Appointment,Van%20day,Diary%20entry)&order=created_at.desc`);
+    // A newer call has since started — its result will supersede this one, so
+    // discard this now-stale response rather than let it overwrite fresher data.
+    if (myToken !== _jobsLoadToken) return;
     const freshJobs = data || [];
     if (_notifsReady) checkForNewNotifs(freshJobs);
     allJobs = freshJobs;
-  } catch(e) { allJobs = []; }
+  } catch(e) { /* keep showing the last successfully loaded jobs — a failed refresh shouldn't blank the list */ }
+  if (myToken !== _jobsLoadToken) return; // stale even on the error path — a newer call is already handling this
   // diaryAllJobs is a separate cache (it includes diary-only entries like holidays
   // that allJobs excludes) — keep it in sync here too, so any edit made elsewhere
   // (reassigning a tech, changing a date, etc.) shows on the diary immediately
@@ -2238,7 +2265,7 @@ async function loadDeclinedJobs() {
     const data = await sbRaw('GET', 'jobs', null, `?archived=eq.false&status=eq.declined&order=created_at.desc`);
   window._lastDeclinedJobs = data || [];
     declinedJobs = data || [];
-  } catch(e) { declinedJobs = []; }
+  } catch(e) { /* keep showing the last successfully loaded declined jobs — a failed refresh shouldn't blank the list */ }
   renderDeclined();
   document.getElementById('dec-count').textContent = declinedJobs.filter(j => !j.customer_contacted).length || declinedJobs.length;
 }
@@ -2259,11 +2286,15 @@ function startTokenRefreshTimer() {
   }, 45 * 60 * 1000); // 45 minutes
 }
 
+let _realtimeReconnectAttempt = 0;
+let _realtimeReconnectTimer = null;
+
 function setupRealtime() {
   if (_realtimeChannel) return;
   const ws = new WebSocket(`${SUPABASE_URL.replace('https','wss')}/realtime/v1/websocket?apikey=${SUPABASE_ANON}&vsn=1.0.0`);
   ws.onopen = () => {
     ws.send(JSON.stringify({ topic: 'realtime:public:jobs', event: 'phx_join', payload: {}, ref: '1' }));
+    _realtimeReconnectAttempt = 0; // connected cleanly — reset backoff
   };
   ws.onmessage = (ev) => {
     const msg = JSON.parse(ev.data);
@@ -2271,8 +2302,42 @@ function setupRealtime() {
       if (!window._suppressReload) loadJobs();
     }
   };
+  // Mobile connections drop this constantly — screen lock, backgrounding, switching
+  // between wifi and mobile data. Without this, the app silently loses live updates
+  // for the rest of the session and falls back entirely on the 30s poll.
+  const scheduleReconnect = () => {
+    if (_realtimeChannel !== ws) return; // a newer connection already took over
+    _realtimeChannel = null;
+    if (_realtimeReconnectTimer) return;
+    const delay = Math.min(30000, 1000 * Math.pow(2, _realtimeReconnectAttempt++)); // 1s,2s,4s...capped at 30s
+    _realtimeReconnectTimer = setTimeout(() => {
+      _realtimeReconnectTimer = null;
+      setupRealtime();
+    }, delay);
+  };
+  ws.onclose = scheduleReconnect;
+  ws.onerror = scheduleReconnect;
   _realtimeChannel = ws;
 }
+
+// Reconnect immediately when the tab becomes visible/online again, rather than
+// waiting for the backoff timer — covers the common "phone was locked" case.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && !_realtimeChannel) {
+    _realtimeReconnectAttempt = 0;
+    if (_realtimeReconnectTimer) { clearTimeout(_realtimeReconnectTimer); _realtimeReconnectTimer = null; }
+    setupRealtime();
+    loadJobs().catch(()=>{});
+  }
+});
+window.addEventListener('online', () => {
+  if (!_realtimeChannel) {
+    _realtimeReconnectAttempt = 0;
+    if (_realtimeReconnectTimer) { clearTimeout(_realtimeReconnectTimer); _realtimeReconnectTimer = null; }
+    setupRealtime();
+  }
+  loadJobs().catch(()=>{});
+});
 
 function updatePendingBadge() {
   const pending = allJobs.filter(j => j.status === 'pending').length;
@@ -2679,6 +2744,7 @@ function buildJobCard(j) {
           <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
             <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>
                  <button class="btn-secondary" onclick="event.stopPropagation();printJobCard(${j.id})" style="font-size:11px">🖨 Job card</button>
+            <button class="btn-primary" onclick="event.stopPropagation();sendXeroQuote(${j.id})" style="background:#9333ea;font-size:11px">Xero quote</button>
             <button class="btn-secondary" onclick="event.stopPropagation();unmarkQuoteSent(${j.id})" style="font-size:11px;color:var(--muted)">Undo — not sent yet</button>
           </div>
         </div>`;
@@ -2686,6 +2752,7 @@ function buildJobCard(j) {
   } else if (j.status === 'booked' && currentProfile?.role !== 'tech') {
     actions = `<button class="btn-approve" onclick="event.stopPropagation();openCompleteModal(${j.id})" style="background:#ea580c;font-size:11px;font-weight:800;letter-spacing:.3px">✓ JOB COMPLETE</button>
                <button class="btn-primary" onclick="event.stopPropagation();sendXeroInvoice(${j.id},'deposit')" style="font-size:11px">Parts deposit</button>
+               <button class="btn-primary" onclick="event.stopPropagation();sendXeroQuote(${j.id})" style="background:#9333ea;font-size:11px">Xero quote</button>
                <button class="btn-secondary" onclick="event.stopPropagation();openEditModal(${j.id})" style="font-size:11px">Edit job</button>
                  <button class="btn-secondary" onclick="event.stopPropagation();printJobCard(${j.id})" style="font-size:11px">🖨 Job card</button>
                <button class="btn-danger" onclick="event.stopPropagation();customerCancelled(${j.id})" style="font-size:11px">Customer cancelled</button>
