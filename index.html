@@ -2793,8 +2793,12 @@ function buildJobCard(j) {
           const flatAmt = (j.quote_price||'').toString().trim();
           if (!hasItemized && !flatAmt) return ''; // genuinely no price yet — nothing to show
           const totalDisp = flatAmt ? (flatAmt.startsWith('£')?esc(flatAmt):'£'+esc(flatAmt)) : '£0.00';
+          // Discount is stored as a negative line item marked DISCOUNT_LINE_DESC —
+          // pull it out of the itemized rows and show it with its own styled row.
+          const discLine = hasItemized ? j._quoteLines.find(l => l.desc === DISCOUNT_LINE_DESC && l.amount < 0) : null;
+          const itemLines = hasItemized ? j._quoteLines.filter(l => l !== discLine) : [];
           const lineRows = hasItemized
-            ? j._quoteLines.map(l=>`<div class="ql-row${l.included?'':' ql-excluded'}">
+            ? itemLines.map(l=>`<div class="ql-row${l.included?'':' ql-excluded'}">
                 <span class="ql-desc${l.included?'':' ql-excluded-txt'}">${esc(l.desc)}</span>
                 <span class="ql-amt${l.included?'':' ql-excluded-txt'}">£${parseFloat(l.amount).toFixed(2)}</span>
               </div>`).join('')
@@ -2806,8 +2810,8 @@ function buildJobCard(j) {
           <div class="jbf">Quote breakdown</div>
           <div style="background:var(--surface);border-radius:var(--radius);padding:8px 10px;margin-top:4px">
             ${lineRows}
-            ${j.quote_discount?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--amber-txt);padding:4px 0">
-              <span>Discount</span><span>−£${parseFloat(j.quote_discount).toFixed(2)}</span>
+            ${discLine?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--amber-txt);padding:4px 0">
+              <span>Discount</span><span>−£${Math.abs(discLine.amount).toFixed(2)}</span>
             </div>`:''}
             <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:var(--teal);padding-top:6px;border-top:1px solid var(--border);margin-top:4px">
               <span>Total (inc VAT)</span><span>${totalDisp}</span>
@@ -3207,7 +3211,7 @@ async function saveNewJob() {
     resetPanelPicker('m');
     // Save quote lines to DB
     if (_quoteLines.length && newJob?.id) {
-      await saveQuoteLinesToDb(newJob.id);
+      await saveQuoteLinesToDb(newJob.id, _quoteLines, 'm_ql_discount');
     }
     resetQuoteLines();
     closeAddModal();
@@ -4340,7 +4344,7 @@ async function saveManualQuote() {
     }
     // Save quote lines
     if (_nqLines.length && newJob?.id) {
-      await saveQuoteLinesToDb(newJob.id);
+      await saveQuoteLinesToDb(newJob.id, _nqLines, 'nq_ql_discount');
       nqResetLines();
     }
     document.getElementById('manualWrap').style.display = 'none';
@@ -4656,6 +4660,15 @@ function renderTechPortal() {
 let _techLines = {}; // { [jobId]: [{id,desc,amount,included}] } — tech portal quote-line editor state
 let _techLinesTouched = {}; // { [jobId]: true } — set once a tech manually edits, so a background refresh never overwrites their in-progress changes
 
+// Splits a discount marker line (if present) out of a quote_lines array.
+// Returns the remaining item lines and the discount amount (0 if none).
+function splitDiscountLine(lines) {
+  const discLine = (lines||[]).find(l => l.desc === DISCOUNT_LINE_DESC && l.amount < 0);
+  return { items: (lines||[]).filter(l => l !== discLine), discount: discLine ? Math.abs(discLine.amount) : 0 };
+}
+
+let _techDiscount = {}; // { [jobId]: number } — tech portal discount editor state, mirrors _techLines
+
 function buildTechCard(j) {
   const done = j.status === 'completed';
   const photos = j.job_photos || [];
@@ -4666,10 +4679,13 @@ function buildTechCard(j) {
   // falling back to a single line built from the current flat price so nothing is lost.
   if (!_techLines[j.id]) {
     if (j._quoteLines && j._quoteLines.length) {
-      _techLines[j.id] = j._quoteLines.map(l => ({ ...l }));
+      const { items, discount } = splitDiscountLine(j._quoteLines);
+      _techLines[j.id] = items.map(l => ({ ...l }));
+      _techDiscount[j.id] = discount;
     } else {
       const amt = parseFloat((j.quote_price||'0').toString().replace(/[^0-9.]/g,'')) || 0;
       _techLines[j.id] = amt ? [{ id: Date.now(), desc: j.panels || 'Repair', amount: amt, included: true }] : [];
+      _techDiscount[j.id] = 0;
     }
   }
 
@@ -4717,7 +4733,7 @@ function buildTechCard(j) {
     : '';
 
   // Editable fields for tech — full quote breakdown, same as admin Edit job
-  const tqDiscInit = parseFloat(j.quote_discount) || 0;
+  const tqDiscInit = _techDiscount[j.id] || 0;
   const tqIncludedInit = _techLines[j.id].filter(l=>l.included).reduce((s,l)=>s+l.amount,0);
   const tqTotalInit = Math.max(0, tqIncludedInit - tqDiscInit);
   const editBox = !done ? `<div class="tech-edit-box">
@@ -4735,7 +4751,7 @@ function buildTechCard(j) {
       <span style="font-size:12px;color:var(--muted);flex:3">Multi-panel discount</span>
       <div style="position:relative;flex:1;min-width:70px">
         <span style="position:absolute;left:6px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:11px;pointer-events:none">−£</span>
-        <input autocomplete="off" class="tech-edit-inp" id="tq_disc_${j.id}" placeholder="0.00" type="number" min="0" step="0.01" style="padding-left:24px;margin-bottom:0;font-size:13px;border-color:#fde047" oninput="techCalcTotal(${j.id})" value="${tqDiscInit||0}">
+        <input autocomplete="off" class="tech-edit-inp" id="tq_disc_${j.id}" placeholder="0.00" type="number" min="0" step="0.01" style="padding-left:24px;margin-bottom:0;font-size:13px;border-color:#fde047" oninput="_techLinesTouched[${j.id}]=true;techCalcTotal(${j.id})" value="${tqDiscInit||0}">
       </div>
       <div style="width:34px"></div>
     </div>
@@ -4808,7 +4824,13 @@ function loadQuoteLinesForTechCard(id) {
     j._quoteLinesFetching = false;
     j._quoteLinesLoaded = true;
     j._quoteLines = (lines||[]).map(l => ({ id: l.id, desc: l.description, amount: parseFloat(l.amount), included: l.included }));
-    if (lines && lines.length && !_techLinesTouched[id]) _techLines[id] = j._quoteLines.map(l => ({ ...l }));
+    if (lines && lines.length && !_techLinesTouched[id]) {
+      const { items, discount } = splitDiscountLine(j._quoteLines);
+      _techLines[id] = items.map(l => ({ ...l }));
+      _techDiscount[id] = discount;
+      const discEl = document.getElementById('tq_disc_' + id);
+      if (discEl) discEl.value = discount || 0;
+    }
     techRenderLines(id);
     techCalcTotal(id);
   }).catch(() => { j._quoteLinesFetching = false; });
@@ -5001,10 +5023,14 @@ async function saveTechEdit(jobId) {
   if (panels) updates.panels = panels;
   try {
     await sbRaw('PATCH', 'jobs', updates, `?id=eq.${jobId}`);
-    // Save quote lines — delete all then re-insert, same as admin Edit job
+    // Save quote lines — delete all then re-insert, same as admin Edit job.
+    // The discount isn't in `lines` — append it back as a marker line item
+    // (no dedicated DB column exists for it) so it survives a reload.
+    const linesToSave = lines.slice();
+    if (discount > 0) linesToSave.push({ desc: DISCOUNT_LINE_DESC, amount: -discount, included: true });
     await sbRaw('DELETE','quote_lines',null,`?job_id=eq.${jobId}`).catch(()=>{});
-    for (let i=0; i<lines.length; i++) {
-      const l = lines[i];
+    for (let i=0; i<linesToSave.length; i++) {
+      const l = linesToSave[i];
       await sbRaw('POST','quote_lines',{
         job_id: jobId,
         description: l.desc,
@@ -5015,6 +5041,7 @@ async function saveTechEdit(jobId) {
     }
     delete _techLines[jobId];
     delete _techLinesTouched[jobId];
+    delete _techDiscount[jobId];
     showToast('Saved');
     await loadJobs();
     const body = document.getElementById('tjb-' + jobId);
@@ -5250,8 +5277,12 @@ async function openEditModal(jobId) {
   document.getElementById('editUpLbl').textContent = 'Tap to add photos';
   // Load quote lines into edit modal
   const existingLines = await sbRaw('GET','quote_lines',null,`?job_id=eq.${jobId}&order=sort_order.asc`).catch(()=>[]);
-  _editLines = (existingLines||[]).map(l => ({ id: l.id, desc: l.description, amount: parseFloat(l.amount), included: l.included }));
-  const disc = j.quote_discount || 0;
+  const allLoadedLines = (existingLines||[]).map(l => ({ id: l.id, desc: l.description, amount: parseFloat(l.amount), included: l.included }));
+  // The discount is stored as a negative line item marked DISCOUNT_LINE_DESC — pull
+  // it out into the discount field rather than showing it as a normal line.
+  const discLine = allLoadedLines.find(l => l.desc === DISCOUNT_LINE_DESC && l.amount < 0);
+  _editLines = allLoadedLines.filter(l => l !== discLine);
+  const disc = discLine ? Math.abs(discLine.amount) : 0;
   if (document.getElementById('edit_ql_discount')) document.getElementById('edit_ql_discount').value = disc || '0';
   editRenderLines();
   editCalcTotal();
@@ -7930,6 +7961,10 @@ function openJobPhotos(photos, startIdx) {
 // ═══════════════════════════════════════════════════════════
 // QUOTE LINE BUILDER — Edit Job Modal version
 // ═══════════════════════════════════════════════════════════
+// There's no dedicated database column for a job's discount amount, so it's stored
+// as an ordinary quote_lines row with this exact description and a negative amount —
+// every place that loads/saves quote lines needs to recognise and round-trip it.
+const DISCOUNT_LINE_DESC = 'Multi-panel discount';
 let _editLines = [];
 
 function editAddLine() {
@@ -7984,10 +8019,15 @@ function editCalcTotal() {
 }
 
 async function editSaveQuoteLines(jobId) {
+  // The discount input isn't part of _editLines — append it back as a marker
+  // line item (there's no dedicated DB column for it) so it survives a reload.
+  const discVal = parseFloat(document.getElementById('edit_ql_discount')?.value) || 0;
+  const linesToSave = _editLines.slice();
+  if (discVal > 0) linesToSave.push({ desc: DISCOUNT_LINE_DESC, amount: -discVal, included: true });
   // Delete all existing lines then re-insert
   await sbRaw('DELETE','quote_lines',null,`?job_id=eq.${jobId}`).catch(()=>{});
-  for (let i=0; i<_editLines.length; i++) {
-    const l = _editLines[i];
+  for (let i=0; i<linesToSave.length; i++) {
+    const l = linesToSave[i];
     await sbRaw('POST','quote_lines',{
       job_id: jobId,
       description: l.desc,
@@ -8137,12 +8177,17 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-async function saveQuoteLinesToDb(jobId) {
-  if (!_quoteLines.length) return;
+async function saveQuoteLinesToDb(jobId, lines, discountElId) {
+  if (!lines || !lines.length) return;
+  // The discount input isn't part of `lines` — append it back as a marker
+  // line item (there's no dedicated DB column for it) so it survives a reload.
+  const discVal = parseFloat(document.getElementById(discountElId)?.value) || 0;
+  const linesToSave = lines.slice();
+  if (discVal > 0) linesToSave.push({ desc: DISCOUNT_LINE_DESC, amount: -discVal, included: true });
   // Delete existing lines then insert new ones
   await sbRaw('DELETE','quote_lines',null,`?job_id=eq.${jobId}`).catch(()=>{});
-  for (let i=0; i<_quoteLines.length; i++) {
-    const l = _quoteLines[i];
+  for (let i=0; i<linesToSave.length; i++) {
+    const l = linesToSave[i];
     await sbRaw('POST','quote_lines',{
       job_id: jobId,
       description: l.desc,
