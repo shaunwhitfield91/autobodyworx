@@ -2878,7 +2878,7 @@ function buildJobCard(j) {
           <div style="background:var(--surface);border-radius:var(--radius);padding:8px 10px;margin-top:4px">
             ${lineRows}
             ${discLine?`<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--amber-txt);padding:4px 0">
-              <span>Discount</span><span>−£${Math.abs(discLine.amount).toFixed(2)}</span>
+              <span>Multi-panel discount</span><span>−£${Math.abs(discLine.amount).toFixed(2)}</span>
             </div>`:''}
             <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:var(--teal);padding-top:6px;border-top:1px solid var(--border);margin-top:4px">
               <span>Total (inc VAT)</span><span>${totalDisp}</span>
@@ -4912,20 +4912,58 @@ function toggleTechCard(id) {
   if (opening) loadQuoteLinesForTechCard(id);
 }
 
+let _techEditingLine = {}; // { [jobId]: lineId } — which line (if any) is being edited inline per job
+
 function techLineRowsHtml(jobId) {
   const lines = _techLines[jobId] || [];
-  return lines.map(l => `
+  return lines.map(l => {
+    if (l.id === _techEditingLine[jobId]) {
+      return `
+      <div class="ql-row" style="gap:6px">
+        <input type="text" class="tech-edit-inp" id="techln_desc_${jobId}_${l.id}" value="${esc(l.desc)}" style="flex:3;margin-bottom:0;font-size:12px;padding:4px 6px" onkeydown="if(event.key==='Enter')techSaveLineEdit(${jobId},${l.id});if(event.key==='Escape')techCancelLineEdit(${jobId})">
+        <input type="number" class="tech-edit-inp" id="techln_amt_${jobId}_${l.id}" value="${l.amount}" step="0.01" min="0" style="flex:1;min-width:60px;margin-bottom:0;font-size:12px;padding:4px 6px" onkeydown="if(event.key==='Enter')techSaveLineEdit(${jobId},${l.id});if(event.key==='Escape')techCancelLineEdit(${jobId})">
+        <button onclick="techSaveLineEdit(${jobId},${l.id})" title="Save" style="background:var(--teal);color:#fff;border:none;border-radius:4px;width:24px;height:24px;cursor:pointer;font-size:12px;flex-shrink:0">✓</button>
+        <button onclick="techCancelLineEdit(${jobId})" title="Cancel" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;flex-shrink:0">✕</button>
+      </div>`;
+    }
+    return `
     <div class="ql-row${l.included?'':' ql-excluded'}">
       <input type="checkbox" class="ql-chk" ${l.included?'checked':''} onchange="techToggleLine(${jobId},${l.id})">
-      <span class="ql-desc${l.included?'':' ql-excluded-txt'}">${esc(l.desc)}</span>
-      <span class="ql-amt${l.included?'':' ql-excluded-txt'}">£${parseFloat(l.amount).toFixed(2)}</span>
+      <span class="ql-desc${l.included?'':' ql-excluded-txt'}" onclick="techStartEditLine(${jobId},${l.id})" style="cursor:pointer" title="Tap to edit">${esc(l.desc)}</span>
+      <span class="ql-amt${l.included?'':' ql-excluded-txt'}" onclick="techStartEditLine(${jobId},${l.id})" style="cursor:pointer" title="Tap to edit">£${parseFloat(l.amount).toFixed(2)}</span>
       <button class="ql-del" onclick="techRemoveLine(${jobId},${l.id})" title="Remove">✕</button>
-    </div>`).join('') || '<div style="font-size:11px;color:var(--muted);padding:4px 0">No lines yet — add items above</div>';
+    </div>`;
+  }).join('') || '<div style="font-size:11px;color:var(--muted);padding:4px 0">No lines yet — add items above</div>';
 }
 
 function techRenderLines(jobId) {
   const el = document.getElementById('tq_lines_' + jobId);
   if (el) el.innerHTML = techLineRowsHtml(jobId);
+}
+
+function techStartEditLine(jobId, lineId) {
+  _techEditingLine[jobId] = lineId;
+  techRenderLines(jobId);
+}
+
+function techCancelLineEdit(jobId) {
+  delete _techEditingLine[jobId];
+  techRenderLines(jobId);
+}
+
+function techSaveLineEdit(jobId, lineId) {
+  const descEl = document.getElementById(`techln_desc_${jobId}_${lineId}`);
+  const amtEl = document.getElementById(`techln_amt_${jobId}_${lineId}`);
+  const desc = descEl?.value.trim();
+  const amt = parseFloat(amtEl?.value) || 0;
+  if (!desc) { descEl?.focus(); return; }
+  if (amt <= 0) { amtEl?.focus(); return; }
+  const l = (_techLines[jobId] || []).find(x => x.id === lineId);
+  if (l) { l.desc = desc; l.amount = amt; }
+  _techLinesTouched[jobId] = true;
+  delete _techEditingLine[jobId];
+  techRenderLines(jobId);
+  techCalcTotal(jobId);
 }
 
 function techCalcTotal(jobId) {
@@ -6136,7 +6174,7 @@ async function saveDiaryEntry() {
   if (!title) { showToast('Enter a title'); return; }
 
   const toDate = to && to >= from ? to : from;
-  const typeLabels = {holiday:'Holiday',appt:'Appointment',van:'Van day',other:'Entry'};
+  const typeLabels = {holiday:'Holiday',appt:'Appointment',van:'Van day',other:'Diary entry'};
 
   try {
     // Insert one job row per working day
@@ -7562,7 +7600,12 @@ function renderAnalytics() {
 
   // ── REVENUE ───────────────────────────────────────────────
   const totalRev = completedJobs.reduce((s,j) => s + getPrice(j), 0);
-  const avgJobVal = completedJobs.length > 0 ? Math.round(totalRev/completedJobs.length) : 0;
+  // Jobs with no recorded price (data-entry gaps, void jobs, etc.) shouldn't
+  // count toward "average job value" — they'd drag the average down without
+  // reflecting a real transaction. Total revenue above is unaffected either
+  // way since £0 contributes nothing to that sum regardless.
+  const completedJobsWithValue = completedJobs.filter(j => getPrice(j) > 0);
+  const avgJobVal = completedJobsWithValue.length > 0 ? Math.round(totalRev/completedJobsWithValue.length) : 0;
   const paidRev = paid.reduce((s,j) => s + getPrice(j), 0);
   const outstandingRev = invoiced.filter(j=>!j.paid_at).reduce((s,j) => s + getPrice(j), 0);
 
@@ -7659,7 +7702,7 @@ function renderAnalytics() {
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px">
         <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Avg job value</div>
         <div style="font-size:24px;font-weight:800;color:var(--txt)">${fmt(avgJobVal)}</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:2px">per completed job</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">across ${completedJobsWithValue.length} priced job${completedJobsWithValue.length===1?'':'s'}${completedJobs.length!==completedJobsWithValue.length?` (${completedJobs.length-completedJobsWithValue.length} £0 job${completedJobs.length-completedJobsWithValue.length===1?'':'s'} excluded)`:''}</div>
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px">
         <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Outstanding</div>
@@ -8034,6 +8077,8 @@ function openJobPhotos(photos, startIdx) {
 const DISCOUNT_LINE_DESC = 'Multi-panel discount';
 let _editLines = [];
 
+let _editingLineId = null; // id of the line currently being edited inline, or null
+
 function editAddLine() {
   const desc = document.getElementById('edit_ql_desc')?.value.trim();
   const amt  = parseFloat(document.getElementById('edit_ql_price')?.value) || 0;
@@ -8060,16 +8105,51 @@ function editToggleLine(id) {
   editCalcTotal();
 }
 
+function editStartEditLine(id) {
+  _editingLineId = id;
+  editRenderLines();
+}
+
+function editCancelLineEdit() {
+  _editingLineId = null;
+  editRenderLines();
+}
+
+function editSaveLineEdit(id) {
+  const descEl = document.getElementById('editln_desc_' + id);
+  const amtEl = document.getElementById('editln_amt_' + id);
+  const desc = descEl?.value.trim();
+  const amt = parseFloat(amtEl?.value) || 0;
+  if (!desc) { descEl?.focus(); return; }
+  if (amt <= 0) { amtEl?.focus(); return; }
+  const l = _editLines.find(x => x.id === id);
+  if (l) { l.desc = desc; l.amount = amt; }
+  _editingLineId = null;
+  editRenderLines();
+  editCalcTotal();
+}
+
 function editRenderLines() {
   const el = document.getElementById('edit_quote_lines');
   if (!el) return;
-  el.innerHTML = _editLines.map(l => `
+  el.innerHTML = _editLines.map(l => {
+    if (l.id === _editingLineId) {
+      return `
+      <div class="ql-row" style="gap:6px">
+        <input type="text" class="minp" id="editln_desc_${l.id}" value="${esc(l.desc)}" style="flex:3;font-size:12px;padding:4px 6px" onkeydown="if(event.key==='Enter')editSaveLineEdit(${l.id});if(event.key==='Escape')editCancelLineEdit()">
+        <input type="number" class="minp" id="editln_amt_${l.id}" value="${l.amount}" step="0.01" min="0" style="flex:1;min-width:60px;font-size:12px;padding:4px 6px" onkeydown="if(event.key==='Enter')editSaveLineEdit(${l.id});if(event.key==='Escape')editCancelLineEdit()">
+        <button onclick="editSaveLineEdit(${l.id})" title="Save" style="background:var(--teal);color:#fff;border:none;border-radius:4px;width:24px;height:24px;cursor:pointer;font-size:12px;flex-shrink:0">✓</button>
+        <button onclick="editCancelLineEdit()" title="Cancel" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;flex-shrink:0">✕</button>
+      </div>`;
+    }
+    return `
     <div class="ql-row${l.included?'':' ql-excluded'}">
       <input type="checkbox" class="ql-chk" ${l.included?'checked':''} onchange="editToggleLine(${l.id})">
-      <span class="ql-desc${l.included?'':' ql-excluded-txt'}">${esc(l.desc)}</span>
-      <span class="ql-amt${l.included?'':' ql-excluded-txt'}">£${parseFloat(l.amount).toFixed(2)}</span>
+      <span class="ql-desc${l.included?'':' ql-excluded-txt'}" onclick="editStartEditLine(${l.id})" style="cursor:pointer" title="Tap to edit">${esc(l.desc)}</span>
+      <span class="ql-amt${l.included?'':' ql-excluded-txt'}" onclick="editStartEditLine(${l.id})" style="cursor:pointer" title="Tap to edit">£${parseFloat(l.amount).toFixed(2)}</span>
       <button class="ql-del" onclick="editRemoveLine(${l.id})" title="Remove">✕</button>
-    </div>`).join('') || '<div style="font-size:11px;color:var(--muted);padding:4px 0">No lines yet — add items above</div>';
+    </div>`;
+  }).join('') || '<div style="font-size:11px;color:var(--muted);padding:4px 0">No lines yet — add items above</div>';
 }
 
 function editCalcTotal() {
@@ -8110,6 +8190,8 @@ async function editSaveQuoteLines(jobId) {
 // ═══════════════════════════════════════════════════════════
 let _nqLines = []; // separate from _quoteLines used in add modal
 
+let _nqQlEditingId = null;
+
 function nqAddLine() {
   const desc = document.getElementById('nq_ql_desc')?.value.trim();
   const amt  = parseFloat(document.getElementById('nq_ql_price')?.value) || 0;
@@ -8136,16 +8218,51 @@ function nqToggleLine(id) {
   nqCalcTotal();
 }
 
+function nqQlStartEdit(id) {
+  _nqQlEditingId = id;
+  nqRenderLines();
+}
+
+function nqQlCancelEdit() {
+  _nqQlEditingId = null;
+  nqRenderLines();
+}
+
+function nqQlSaveEdit(id) {
+  const descEl = document.getElementById('nqlln_desc_' + id);
+  const amtEl = document.getElementById('nqlln_amt_' + id);
+  const desc = descEl?.value.trim();
+  const amt = parseFloat(amtEl?.value) || 0;
+  if (!desc) { descEl?.focus(); return; }
+  if (amt <= 0) { amtEl?.focus(); return; }
+  const l = _nqLines.find(x => x.id === id);
+  if (l) { l.desc = desc; l.amount = amt; }
+  _nqQlEditingId = null;
+  nqRenderLines();
+  nqCalcTotal();
+}
+
 function nqRenderLines() {
   const el = document.getElementById('nq_quote_lines');
   if (!el) return;
-  el.innerHTML = _nqLines.map(l => `
+  el.innerHTML = _nqLines.map(l => {
+    if (l.id === _nqQlEditingId) {
+      return `
+      <div class="ql-row" style="gap:6px">
+        <input type="text" class="minp" id="nqlln_desc_${l.id}" value="${esc(l.desc)}" style="flex:3;font-size:12px;padding:4px 6px" onkeydown="if(event.key==='Enter')nqQlSaveEdit(${l.id});if(event.key==='Escape')nqQlCancelEdit()">
+        <input type="number" class="minp" id="nqlln_amt_${l.id}" value="${l.amount}" step="0.01" min="0" style="flex:1;min-width:60px;font-size:12px;padding:4px 6px" onkeydown="if(event.key==='Enter')nqQlSaveEdit(${l.id});if(event.key==='Escape')nqQlCancelEdit()">
+        <button onclick="nqQlSaveEdit(${l.id})" title="Save" style="background:var(--teal);color:#fff;border:none;border-radius:4px;width:24px;height:24px;cursor:pointer;font-size:12px;flex-shrink:0">✓</button>
+        <button onclick="nqQlCancelEdit()" title="Cancel" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;flex-shrink:0">✕</button>
+      </div>`;
+    }
+    return `
     <div class="ql-row${l.included?'':' ql-excluded'}">
       <input type="checkbox" class="ql-chk" ${l.included?'checked':''} onchange="nqToggleLine(${l.id})">
-      <span class="ql-desc${l.included?'':' ql-excluded-txt'}">${esc(l.desc)}</span>
-      <span class="ql-amt${l.included?'':' ql-excluded-txt'}">£${l.amount.toFixed(2)}</span>
+      <span class="ql-desc${l.included?'':' ql-excluded-txt'}" onclick="nqQlStartEdit(${l.id})" style="cursor:pointer" title="Tap to edit">${esc(l.desc)}</span>
+      <span class="ql-amt${l.included?'':' ql-excluded-txt'}" onclick="nqQlStartEdit(${l.id})" style="cursor:pointer" title="Tap to edit">£${l.amount.toFixed(2)}</span>
       <button class="ql-del" onclick="nqRemoveLine(${l.id})" title="Remove">✕</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function nqCalcTotal() {
@@ -8174,6 +8291,8 @@ function nqResetLines() {
 // ═══════════════════════════════════════════════════════════
 let _quoteLines = []; // { id, desc, amount, included }
 
+let _mQlEditingId = null;
+
 function addQuoteLine() {
   const desc = document.getElementById('m_ql_desc')?.value.trim();
   const amt  = parseFloat(document.getElementById('m_ql_price')?.value) || 0;
@@ -8200,17 +8319,52 @@ function toggleQuoteLine(id) {
   calcQuoteTotal();
 }
 
+function mQlStartEdit(id) {
+  _mQlEditingId = id;
+  renderQuoteLines();
+}
+
+function mQlCancelEdit() {
+  _mQlEditingId = null;
+  renderQuoteLines();
+}
+
+function mQlSaveEdit(id) {
+  const descEl = document.getElementById('mqlln_desc_' + id);
+  const amtEl = document.getElementById('mqlln_amt_' + id);
+  const desc = descEl?.value.trim();
+  const amt = parseFloat(amtEl?.value) || 0;
+  if (!desc) { descEl?.focus(); return; }
+  if (amt <= 0) { amtEl?.focus(); return; }
+  const l = _quoteLines.find(x => x.id === id);
+  if (l) { l.desc = desc; l.amount = amt; }
+  _mQlEditingId = null;
+  renderQuoteLines();
+  calcQuoteTotal();
+}
+
 function renderQuoteLines() {
   const el = document.getElementById('m_quote_lines');
   if (!el) return;
   if (!_quoteLines.length) { el.innerHTML = ''; return; }
-  el.innerHTML = _quoteLines.map(l => `
+  el.innerHTML = _quoteLines.map(l => {
+    if (l.id === _mQlEditingId) {
+      return `
+      <div class="ql-row" style="gap:6px">
+        <input type="text" class="minp" id="mqlln_desc_${l.id}" value="${esc(l.desc)}" style="flex:3;font-size:12px;padding:4px 6px" onkeydown="if(event.key==='Enter')mQlSaveEdit(${l.id});if(event.key==='Escape')mQlCancelEdit()">
+        <input type="number" class="minp" id="mqlln_amt_${l.id}" value="${l.amount}" step="0.01" min="0" style="flex:1;min-width:60px;font-size:12px;padding:4px 6px" onkeydown="if(event.key==='Enter')mQlSaveEdit(${l.id});if(event.key==='Escape')mQlCancelEdit()">
+        <button onclick="mQlSaveEdit(${l.id})" title="Save" style="background:var(--teal);color:#fff;border:none;border-radius:4px;width:24px;height:24px;cursor:pointer;font-size:12px;flex-shrink:0">✓</button>
+        <button onclick="mQlCancelEdit()" title="Cancel" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;flex-shrink:0">✕</button>
+      </div>`;
+    }
+    return `
     <div class="ql-row${l.included?'':' ql-excluded'}">
       <input type="checkbox" class="ql-chk" ${l.included?'checked':''} onchange="toggleQuoteLine(${l.id})">
-      <span class="ql-desc${l.included?'':' ql-excluded-txt'}">${esc(l.desc)}</span>
-      <span class="ql-amt${l.included?'':' ql-excluded-txt'}">£${l.amount.toFixed(2)}</span>
+      <span class="ql-desc${l.included?'':' ql-excluded-txt'}" onclick="mQlStartEdit(${l.id})" style="cursor:pointer" title="Tap to edit">${esc(l.desc)}</span>
+      <span class="ql-amt${l.included?'':' ql-excluded-txt'}" onclick="mQlStartEdit(${l.id})" style="cursor:pointer" title="Tap to edit">£${l.amount.toFixed(2)}</span>
       <button class="ql-del" onclick="removeQuoteLine(${l.id})" title="Remove">✕</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function calcQuoteTotal() {
