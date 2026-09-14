@@ -5420,9 +5420,18 @@ function toggleCourtesyCarDetails(prefix) {
   // The checkbox id differs between the two forms this is used on
   const checkboxId = prefix === 'bk' ? 'bk_courtesy' : 'edit_courtesy_car';
   const detailsId = prefix === 'bk' ? 'bk_courtesy_details' : 'edit_courtesy_details';
-  const checked = document.getElementById(checkboxId)?.checked;
+  const checkboxEl = document.getElementById(checkboxId);
   const detailsEl = document.getElementById(detailsId);
-  if (detailsEl) detailsEl.style.display = checked ? 'block' : 'none';
+  // TEMP DIAGNOSTIC — tells us exactly what this function sees on your device.
+  // Safe to ignore/remove once we've confirmed the real fix works.
+  if (typeof showToast === 'function') {
+    showToast('DEBUG: checkbox found=' + (!!checkboxEl) + ', details found=' + (!!detailsEl) + ', checked=' + (checkboxEl && checkboxEl.checked));
+  }
+  const checked = checkboxEl?.checked;
+  if (detailsEl) {
+    detailsEl.style.display = checked ? 'block' : 'none';
+    if (checked) setTimeout(() => detailsEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+  }
 }
 
 function closeBookModal() {
