@@ -7970,6 +7970,33 @@ function renderAnalytics() {
   const paidRev = paid.reduce((s,j) => s + getPrice(j), 0);
   const outstandingRev = invoiced.filter(j=>!j.paid_at).reduce((s,j) => s + getPrice(j), 0);
 
+  // ── MOBILE vs WORKSHOP ──────────────────────────────────────
+  const mobileJobs = completedJobsWithValue.filter(j => (j.job_location||'').toLowerCase() === 'mobile');
+  const workshopJobs = completedJobsWithValue.filter(j => (j.job_location||'').toLowerCase() === 'workshop');
+  const mobileRev = mobileJobs.reduce((s,j)=>s+getPrice(j),0);
+  const workshopRev = workshopJobs.reduce((s,j)=>s+getPrice(j),0);
+  const mobileAvg = mobileJobs.length ? mobileRev/mobileJobs.length : 0;
+  const workshopAvg = workshopJobs.length ? workshopRev/workshopJobs.length : 0;
+  // Illustrative only: if every mobile job had instead been a workshop job at
+  // the workshop's own average value, this is the extra revenue that slot
+  // would have produced. Not a prediction — a rough sense of the gap.
+  const mobileOpportunityCost = mobileJobs.length * Math.max(0, workshopAvg - mobileAvg);
+  // Per-tech mobile/workshop split (a tech can appear on more than one job's
+  // assigned_tech list, so these are independent counts per person, not a
+  // strict partition of total revenue)
+  const techMobWs = {};
+  ['Shaun','Tony','Charles'].forEach(t => { techMobWs[t] = { mobile: 0, workshop: 0, mobileCount: 0, workshopCount: 0 }; });
+  completedJobsWithValue.forEach(j => {
+    const at = (j.assigned_tech||'').toLowerCase();
+    const loc = (j.job_location||'').toLowerCase();
+    Object.keys(techMobWs).forEach(t => {
+      if (at.includes(t.toLowerCase())) {
+        if (loc === 'mobile') { techMobWs[t].mobile += getPrice(j); techMobWs[t].mobileCount++; }
+        else if (loc === 'workshop') { techMobWs[t].workshop += getPrice(j); techMobWs[t].workshopCount++; }
+      }
+    });
+  });
+
   // ── PAYMENT METHOD BREAKDOWN ───────────────────────────────
   // Same "genuinely paid" criteria as Cash Collection above (paid_at set) —
   // this is money actually collected, not just invoiced.
@@ -8106,6 +8133,42 @@ function renderAnalytics() {
           </div>
         </div>`;
       }).join('') || '<div style="font-size:12px;color:var(--muted)">No paid jobs in this period yet</div>'}
+    </div>
+
+    <!-- Mobile vs Workshop -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Mobile vs Workshop</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div style="background:var(--bg);border-radius:var(--radius);padding:10px 12px">
+          <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">🏭 Workshop</div>
+          <div style="font-size:20px;font-weight:800;color:var(--txt)">${fmt(workshopRev)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${workshopJobs.length} jobs · avg ${fmt(Math.round(workshopAvg))}</div>
+        </div>
+        <div style="background:var(--bg);border-radius:var(--radius);padding:10px 12px">
+          <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:4px">🚐 Mobile</div>
+          <div style="font-size:20px;font-weight:800;color:var(--txt)">${fmt(mobileRev)}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${mobileJobs.length} jobs · avg ${fmt(Math.round(mobileAvg))}</div>
+        </div>
+      </div>
+      ${mobileJobs.length ? `<div style="background:#fef9c3;border:1px solid #fde047;border-radius:var(--radius);padding:8px 12px;margin-bottom:12px;font-size:12px;color:#713f12">
+        <b>Illustrative opportunity cost:</b> ${mobileJobs.length} mobile job${mobileJobs.length===1?'':'s'} at the workshop's own average value (${fmt(Math.round(workshopAvg))}) would have been worth <b>${fmt(Math.round(mobileJobs.length*workshopAvg))}</b> — a gap of <b>${fmt(Math.round(mobileOpportunityCost))}</b> versus what mobile actually brought in. Not a prediction — just a sense of the gap if that time had gone into the workshop instead.
+      </div>` : ''}
+      <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Per-tech split</div>
+      ${['Shaun','Tony','Charles'].map(t => {
+        const d = techMobWs[t];
+        const total = d.mobile + d.workshop;
+        if (!total) return '';
+        const wsPct = total > 0 ? Math.round((d.workshop/total)*100) : 0;
+        return `<div style="margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+            <span style="font-weight:600;color:var(--txt)">${t}</span>
+            <span style="font-size:11px;color:var(--muted)">🏭 ${fmt(d.workshop)} (${d.workshopCount}) · 🚐 ${fmt(d.mobile)} (${d.mobileCount})</span>
+          </div>
+          <div style="background:#fed7aa;border-radius:4px;height:6px;overflow:hidden">
+            <div style="background:#0d9488;height:100%;width:${wsPct}%"></div>
+          </div>
+        </div>`;
+      }).join('') || '<div style="font-size:12px;color:var(--muted)">No completed jobs with a tech assigned in this period</div>'}
     </div>
 
     <!-- Decline breakdown -->
