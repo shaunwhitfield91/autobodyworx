@@ -577,6 +577,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="ttab on" id="t-home" onclick="switchTab('home')">Home<span id="declinedBadge" style="display:none;background:var(--red);color:#fff;border-radius:50%;font-size:9px;padding:1px 5px;margin-left:4px;vertical-align:middle;font-weight:700"></span></div>
       <div class="ttab" id="t-jobs" onclick="switchTab('jobs')">Jobs <span class="ttab-badge tb-warn" id="tb-jobs" style="display:none">0</span></div>
       <div class="ttab" id="t-diary" onclick="switchTab('diary')">Diary</div>
+      <div class="ttab" id="t-courtesy" onclick="switchTab('courtesy')">🚘 Courtesy car</div>
       <div class="ttab" id="t-quote" onclick="switchTab('quote')">New quote</div>
       <div class="ttab" id="t-tech" onclick="switchTab('tech')">My repairs</div>
       <div class="ttab role-admin" id="t-staff" onclick="switchTab('staff')">Staff</div>
@@ -655,6 +656,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         </div>
       </div>
       <div id="analytics-content"></div>
+    </div>
+  </div>
+
+  <!-- COURTESY CAR PAGE -->
+  <div class="page" id="pg-courtesy">
+    <div class="page-wrap">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:20px;font-weight:800;color:var(--txt)">Courtesy car</div>
+      </div>
+      <div id="courtesy-list"></div>
     </div>
   </div>
 
@@ -2265,6 +2276,7 @@ function switchTab(t) {
   if (t === 'settings') { checkApiKey(); checkXeroStatus(); }
   // timesheets now embedded in staff tab
   if (t === 'customers') { renderCustomers(); }
+  if (t === 'courtesy') { renderCourtesyPage(); }
   if (t === 'staff') {
     // Ensure diary jobs loaded so manual holidays count correctly
     if (!diaryAllJobs.length) {
@@ -2314,6 +2326,7 @@ async function loadJobs() {
   if (currentProfile?.role === 'tech') renderTechPortal();
   // Update revenue bar if diary is visible
   if (document.getElementById('pg-diary')?.classList.contains('on')) renderRevBar();
+  if (document.getElementById('pg-courtesy')?.classList.contains('on')) renderCourtesyPage();
 }
 
 async function loadDeclinedJobs() {
@@ -5422,11 +5435,6 @@ function toggleCourtesyCarDetails(prefix) {
   const detailsId = prefix === 'bk' ? 'bk_courtesy_details' : 'edit_courtesy_details';
   const checkboxEl = document.getElementById(checkboxId);
   const detailsEl = document.getElementById(detailsId);
-  // TEMP DIAGNOSTIC — tells us exactly what this function sees on your device.
-  // Safe to ignore/remove once we've confirmed the real fix works.
-  if (typeof showToast === 'function') {
-    showToast('DEBUG: checkbox found=' + (!!checkboxEl) + ', details found=' + (!!detailsEl) + ', checked=' + (checkboxEl && checkboxEl.checked));
-  }
   const checked = checkboxEl?.checked;
   if (detailsEl) {
     detailsEl.style.display = checked ? 'block' : 'none';
@@ -5452,6 +5460,61 @@ function courtesyCarLabel(reg) {
   if (reg === 'CA18HFL') return 'Car 1 — MG, Manual, CA18HFL';
   if (reg === 'S25WHT') return 'Car 2 — Audi A6, Automatic, S25WHT';
   return reg ? ('Courtesy car — ' + reg) : 'Courtesy car';
+}
+
+function renderCourtesyPage() {
+  const el = document.getElementById('courtesy-list');
+  if (!el) return;
+  const ccJobs = allJobs.filter(j => j.courtesy_car && j.status !== 'declined');
+
+  const active = ccJobs.filter(j => j.courtesy_car_out_at && !j.courtesy_car_back_at)
+    .sort((a,b) => new Date(a.courtesy_car_out_at) - new Date(b.courtesy_car_out_at));
+  const upcoming = ccJobs.filter(j => !j.courtesy_car_out_at)
+    .sort((a,b) => (a.booking_date||'9999-99-99').localeCompare(b.booking_date||'9999-99-99'));
+  const returned = ccJobs.filter(j => j.courtesy_car_out_at && j.courtesy_car_back_at)
+    .sort((a,b) => new Date(b.courtesy_car_back_at) - new Date(a.courtesy_car_back_at))
+    .slice(0, 10); // most recent 10 only, to keep this page focused on what's live/upcoming
+
+  function renderRow(j) {
+    const statusBadge = j.courtesy_car_back_at
+      ? '<span style="background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">Returned</span>'
+      : j.courtesy_car_out_at
+      ? '<span style="background:#dcfce7;color:#14532d;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">Out</span>'
+      : '<span style="background:#fef9c3;color:#713f12;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700">Upcoming</span>';
+
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+        <div>
+          <div style="font-weight:700;font-size:15px;color:var(--txt)">${esc(j.customer_name||'Unknown')} ${statusBadge}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">${esc(j.vehicle||'')}${j.booking_date ? ' · ' + fmtDate(j.booking_date) : ''}</div>
+          <div style="font-size:13px;font-weight:600;color:#065f46;margin-top:6px">🚘 ${esc(courtesyCarLabel(j.courtesy_car_reg))}</div>
+          ${j.courtesy_car_license ? `<div style="font-size:12px;color:var(--muted)">Licence: ${esc(j.courtesy_car_license)}</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;min-width:160px">
+          ${j.courtesy_car_out_at
+            ? `<div style="font-size:11px;color:#065f46">✓ Collected — ${fmtDate(j.courtesy_car_out_at.split('T')[0])} ${new Date(j.courtesy_car_out_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</div>`
+            : `<button class="btn-primary" onclick="openSignaturePad(${j.id},'out')" style="font-size:12px;background:#065f46">✍️ Sign for collection</button>`}
+          ${j.courtesy_car_out_at ? (
+            j.courtesy_car_back_at
+              ? `<div style="font-size:11px;color:#065f46">✓ Returned — ${fmtDate(j.courtesy_car_back_at.split('T')[0])} ${new Date(j.courtesy_car_back_at).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</div>`
+              : `<button class="btn-secondary" onclick="openSignaturePad(${j.id},'back')" style="font-size:12px">✍️ Sign for return</button>`
+          ) : ''}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function section(title, jobs, emptyMsg) {
+    return `<div style="margin-bottom:22px">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">${title} (${jobs.length})</div>
+      ${jobs.length ? jobs.map(renderRow).join('') : `<div style="font-size:13px;color:var(--muted);padding:8px 0">${emptyMsg}</div>`}
+    </div>`;
+  }
+
+  el.innerHTML =
+    section('🚗 Currently out', active, 'No courtesy cars currently out') +
+    section('📅 Upcoming', upcoming, 'No upcoming courtesy car bookings') +
+    (returned.length ? section('✓ Recently returned', returned, '') : '');
 }
 
 function openSignaturePad(jobId, type) {
