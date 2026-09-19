@@ -3461,13 +3461,6 @@ async function doInvoice(jobId, type) {
   const j = allJobs.find(x => x.id === jobId);
   if (!j) { alert('Job not found — try refreshing'); return; }
 
-  // Load quote lines for line-by-line invoice
-  let quoteLines = [];
-  try {
-    const raw = await sbRaw('GET','quote_lines',null,`?job_id=eq.${jobId}&order=sort_order.asc`);
-    quoteLines = (raw||[]).filter(l => l.included);
-  } catch(e) { console.warn('Could not load quote lines', e); }
-
   if (type === 'none') {
     // No invoice needed — mark as paid/done without Xero
     if (!confirm(`Mark ${j.customer_name||'this job'} as invoiced without sending to Xero?`)) return;
@@ -5701,6 +5694,15 @@ async function openEditModal(jobId) {
   const cdEl = document.getElementById('edit_cd');
   if (cdEl) cdEl.checked = !!j.cd_required;
   document.getElementById('editUpLbl').textContent = 'Tap to add photos';
+
+  // Show the modal now — everything above is already populated from data we
+  // already had in memory. The quote breakdown and photos below need a
+  // network fetch, which on a slow connection could take a while; the modal
+  // shouldn't sit invisible and unresponsive-looking while that happens.
+  document.getElementById('edit_quote_lines').innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0">Loading quote breakdown…</div>';
+  document.getElementById('editExistingPhotos').innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0">Loading photos…</div>';
+  document.getElementById('editModal').classList.add('show');
+
   // Load quote lines into edit modal
   const existingLines = await sbRaw('GET','quote_lines',null,`?job_id=eq.${jobId}&order=sort_order.asc`).catch(()=>[]);
   const allLoadedLines = (existingLines||[]).map(l => ({ id: l.id, desc: l.description, amount: parseFloat(l.amount), included: l.included }));
@@ -5712,8 +5714,6 @@ async function openEditModal(jobId) {
   if (document.getElementById('edit_ql_discount')) document.getElementById('edit_ql_discount').value = disc || '0';
   editRenderLines();
   editCalcTotal();
-  // Clear existing photo display
-  document.getElementById('editExistingPhotos').innerHTML = '';
   // Load existing photos and display them
   try {
     const existingPhotos = await sbRaw('GET','job_photos',null,`?job_id=eq.${jobId}&order=id.asc`);
@@ -5734,7 +5734,6 @@ async function openEditModal(jobId) {
       document.getElementById('editExistingPhotos').innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0">No photos on this job</div>';
     }
   } catch(e) { console.warn('Could not load photos for edit modal', e); }
-  document.getElementById('editModal').classList.add('show');
 }
 
 function closeEditModal() {
