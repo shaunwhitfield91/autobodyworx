@@ -3620,7 +3620,11 @@ function renderRevBar() {
   const monthJobs = allJobs.filter(j => {
     if (!j.booking_date) return false;
     if (diarySourcesExclude.includes(j.source)) return false;
-    const d = new Date(j.booking_date);
+    // Use localDate() (parses "YYYY-MM-DD" from its own y/m/d components) rather
+    // than new Date(str), which parses a bare date string as UTC midnight and can
+    // shift boundary-date jobs into the wrong month depending on the viewing
+    // device's timezone offset.
+    const d = localDate(j.booking_date);
     return d.getFullYear() === revBarYear && d.getMonth() === revBarMonth
       && j.status !== 'declined';
   });
