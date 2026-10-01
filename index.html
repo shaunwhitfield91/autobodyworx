@@ -1603,7 +1603,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="modal-grid2" style="margin-top:6px">
       <div>
         <span class="qlbl">Duration</span>
-        <select class="msel" id="edit_duration">
+        <select class="msel" id="edit_duration" onchange="syncCourtesyCarLine()">
           <option value="1 hour">1 hour</option>
           <option value="2 hours">2 hours</option>
           <option value="3 hours">3 hours</option>
@@ -1706,7 +1706,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <label for="edit_parts_required" style="font-size:13px;font-weight:600;color:#713f12;cursor:pointer">🔧 Parts required — document in notes</label>
     </div>
     <div onclick="if(event.target.tagName!=='INPUT'&&event.target.tagName!=='LABEL'){document.getElementById('edit_courtesy_car').click();}" style="display:flex;gap:8px;margin-bottom:10px;align-items:center;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--radius);padding:8px 12px;cursor:pointer">
-      <input autocomplete="off" type="checkbox" id="edit_courtesy_car" onchange="toggleCourtesyCarDetails('edit')" onclick="toggleCourtesyCarDetails('edit')" style="width:16px;height:16px;accent-color:#065f46;cursor:pointer;flex-shrink:0">
+      <input autocomplete="off" type="checkbox" id="edit_courtesy_car" onchange="toggleCourtesyCarDetails('edit');syncCourtesyCarLine()" onclick="toggleCourtesyCarDetails('edit');syncCourtesyCarLine()" style="width:16px;height:16px;accent-color:#065f46;cursor:pointer;flex-shrink:0">
       <label for="edit_courtesy_car" style="font-size:13px;font-weight:600;color:#065f46;cursor:pointer">🚘 Courtesy car required</label>
     </div>
     <div id="edit_courtesy_details" style="display:none;margin-top:-4px;margin-bottom:10px;padding:8px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--radius)">
@@ -5716,8 +5716,11 @@ async function openEditModal(jobId) {
   _editLines = allLoadedLines.filter(l => l !== discLine);
   const disc = discLine ? Math.abs(discLine.amount) : 0;
   if (document.getElementById('edit_ql_discount')) document.getElementById('edit_ql_discount').value = disc || '0';
-  editRenderLines();
-  editCalcTotal();
+  // Reset the auto-amount tracker for this job's freshly-loaded lines, then sync
+  // the courtesy car line so it's added/updated/removed to match this job's
+  // current checkbox + duration state (covers jobs saved before this existed too).
+  _editCourtesyAutoAmount = null;
+  syncCourtesyCarLine();
   // Load existing photos and display them
   try {
     const existingPhotos = await sbRaw('GET','job_photos',null,`?job_id=eq.${jobId}&order=id.asc`);
@@ -8603,6 +8606,88 @@ function openJobPhotos(photos, startIdx) {
 const DISCOUNT_LINE_DESC = 'Multi-panel discount';
 let _editLines = [];
 
+// ─── Courtesy car auto-line (Edit Job modal) ───────────────────────────────
+// Same trick as the discount line above: no dedicated DB column, so it's an
+// ordinary quote_lines row identified by its description prefix. Kept in sync
+// with the Courtesy car checkbox + Duration dropdown — £20/day, 5 hours or
+// under still counts as 1 day.
+const COURTESY_CAR_DAILY_RATE = 20;
+const COURTESY_CAR_LINE_PREFIX = 'Courtesy car — ';
+// Charging for courtesy car use starts from this date — bookings that already
+// existed before this (identified by the job's system-set created_at, which
+// nobody can edit) stay free, however the checkbox is set on them. Change this
+// if the start date ever needs moving.
+const COURTESY_CAR_CHARGE_FROM = new Date(2026, 9, 1); // 1 Oct 2026, local time
+
+function courtesyCarDays(durationStr) {
+  if (!durationStr) return 1;
+  const m = durationStr.match(/(\d+)\s*day/i);
+  if (m) return Math.max(1, parseInt(m[1], 10));
+  // "Full day", any "N hours" (5 or under), PDR/Alloys, etc. all count as 1 day
+  return 1;
+}
+
+function courtesyCarLineDesc(days) {
+  return COURTESY_CAR_LINE_PREFIX + days + ' day' + (days > 1 ? 's' : '');
+}
+
+// A job existed before the charge start date if it was already in the system
+// then — i.e. its created_at predates it. A job with no created_at yet (still
+// being created) is never a "previous booking", so it's chargeable.
+function courtesyCarChargeApplies() {
+  const j = allJobs.find(x => x.id === _editJobId) || declinedJobs.find(x => x.id === _editJobId);
+  if (!j || !j.created_at) return true;
+  return new Date(j.created_at) >= COURTESY_CAR_CHARGE_FROM;
+}
+
+// Tracks the amount this function itself last set, so that if Shaun hand-edits
+// the line's price afterwards, a later duration change won't silently overwrite
+// his custom figure.
+let _editCourtesyAutoAmount = null;
+
+function syncCourtesyCarLine() {
+  const idx0 = _editLines.findIndex(l => l.desc && l.desc.startsWith(COURTESY_CAR_LINE_PREFIX));
+
+  // Previous bookings stay free, full stop — regardless of the checkbox.
+  if (!courtesyCarChargeApplies()) {
+    if (idx0 !== -1) _editLines.splice(idx0, 1);
+    _editCourtesyAutoAmount = null;
+    editRenderLines();
+    editCalcTotal();
+    return;
+  }
+
+  const checked = document.getElementById('edit_courtesy_car')?.checked;
+  const idx = _editLines.findIndex(l => l.desc && l.desc.startsWith(COURTESY_CAR_LINE_PREFIX));
+
+  if (!checked) {
+    if (idx !== -1) _editLines.splice(idx, 1);
+    _editCourtesyAutoAmount = null;
+    editRenderLines();
+    editCalcTotal();
+    return;
+  }
+
+  const days = courtesyCarDays(document.getElementById('edit_duration')?.value || '');
+  const amount = days * COURTESY_CAR_DAILY_RATE;
+  const desc = courtesyCarLineDesc(days);
+
+  if (idx === -1) {
+    _editLines.push({ id: Date.now(), desc, amount, included: true });
+  } else {
+    const existing = _editLines[idx];
+    // Only refresh the amount if it still matches what we last auto-set —
+    // if Shaun has since typed in a different price by hand, leave it alone.
+    if (_editCourtesyAutoAmount === null || existing.amount === _editCourtesyAutoAmount) {
+      existing.amount = amount;
+    }
+    existing.desc = desc;
+  }
+  _editCourtesyAutoAmount = amount;
+  editRenderLines();
+  editCalcTotal();
+}
+
 let _editingLineId = null; // id of the line currently being edited inline, or null
 
 function editAddLine() {
@@ -8686,9 +8771,10 @@ function editCalcTotal() {
   const hidden = document.getElementById('edit_price');
   if (disp) disp.textContent = '£' + total.toFixed(2);
   if (hidden) hidden.value = '£' + total.toFixed(2);
-  // Auto-populate panels field from quote line descriptions (included lines only)
+  // Auto-populate panels field from quote line descriptions (included lines only,
+  // excluding the courtesy car add-on line — that's not a vehicle panel)
   const panelsEl = document.getElementById('edit_panels');
-  if (panelsEl) panelsEl.value = _editLines.filter(l => l.included).map(l => l.desc).join(', ');
+  if (panelsEl) panelsEl.value = _editLines.filter(l => l.included && !l.desc.startsWith(COURTESY_CAR_LINE_PREFIX)).map(l => l.desc).join(', ');
 }
 
 async function editSaveQuoteLines(jobId) {
