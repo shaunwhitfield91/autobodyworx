@@ -68,11 +68,11 @@ function buildReminderMessage(job) {
   const location = job.job_location === 'mobile'
     ? (job.customer_address || 'your address')
     : WORKSHOP_ADDRESS;
-  return `*Appointment Reminder* with Auto Bodyworx on ${date} at ${location}. Please contact ${BUSINESS_PHONE} if you have any issues.`;
+  return `*Appointment Reminder* with Auto Bodyworx on ${date} at ${location}. Please contact ${BUSINESS_PHONE} if you have any issues. Do not reply to this number - use ${BUSINESS_PHONE}`;
 }
 
 function buildReviewMessage(job) {
-  return `Hi ${(job.customer_name || '').split(' ')[0] || 'there'}, thank you for choosing Auto Bodyworx! We hope you're happy with your repair. We'd really appreciate a quick Google review — it only takes a minute and helps us a lot: ${REVIEW_LINK}`;
+  return `Hi ${(job.customer_name || '').split(' ')[0] || 'there'}, thank you for choosing Auto Bodyworx! We hope you're happy with your repair. We'd really appreciate a quick Google review — it only takes a minute and helps us a lot: ${REVIEW_LINK} Do not reply to this number - use ${BUSINESS_PHONE}`;
 }
 
 exports.handler = async (event) => {

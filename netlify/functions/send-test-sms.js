@@ -28,8 +28,8 @@ exports.handler = async (event) => {
   if (!phone.startsWith('+')) phone = '+44' + phone;
 
   const messages = {
-    reminder: `*Appointment Reminder* with Auto Bodyworx on Thursday 5 June at our Workshop, Shefford Woodlands. Please contact 07548841212 if you have any issues.`,
-    review: `Hi Shaun, thank you for choosing Auto Bodyworx! We hope you're happy with your repair. We'd really appreciate a quick Google review — it only takes a minute and helps us a lot: http://g.page/r/CScvy0YbLiBtEBE/review`
+    reminder: `*Appointment Reminder* with Auto Bodyworx on Thursday 5 June at our Workshop, Shefford Woodlands. Please contact 07548841212 if you have any issues. Do not reply to this number - use 07548841212`,
+    review: `Hi Shaun, thank you for choosing Auto Bodyworx! We hope you're happy with your repair. We'd really appreciate a quick Google review — it only takes a minute and helps us a lot: http://g.page/r/CScvy0YbLiBtEBE/review Do not reply to this number - use 07548841212`
   };
 
   const body = messages[type] || messages.reminder;
