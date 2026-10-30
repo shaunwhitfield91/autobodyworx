@@ -6790,6 +6790,82 @@ function initAdminTs() {
   else loadAdminTs();
 }
 
+// Builds { techName: [ {date, kind:'hol'|'bh', label} ] } for the range — approved
+// holiday requests, holidays added straight to the diary, and bank holidays.
+// Same de-duplication as the holiday allowance card: a date that is already a bank
+// holiday or an approved request isn't counted again from a diary row.
+async function tsLoadHolidays(from, to, workedTechs) {
+  const [reqs, diary] = await Promise.all([
+    sbRaw('GET','holiday_requests',null,`?status=eq.approved&from_date=lte.${to}&to_date=gte.${from}`),
+    sbRaw('GET','jobs',null,`?source=eq.Holiday&archived=eq.false&booking_date=gte.${from}&booking_date=lte.${to}&select=booking_date,assigned_tech,customer_name`)
+  ]);
+  const colFor = { Shaun:'S', Charles:'C', Tony:'T' };
+  const staffNames = (typeof STAFF_MEMBERS !== 'undefined' ? STAFF_MEMBERS : []).map(s => s.name);
+  const names = new Set([...workedTechs, ...staffNames, ...(reqs||[]).map(r => r.tech_name).filter(Boolean)]);
+  const out = {};
+  const add = (tech, date, kind, label) => {
+    if (!out[tech]) out[tech] = {};
+    if (out[tech][date] && out[tech][date].kind === 'bh') return;   // bank holiday wins
+    out[tech][date] = { date, kind, label };
+  };
+  // Bank holidays — every staff member / anyone with time entries, not before a new starter's start date
+  getBankHolidaysBetween(from, to).forEach(bh => {
+    const dow = localDate(bh.date).getDay();
+    if (dow === 0 || dow === 6) return;
+    names.forEach(n => {
+      if (_tsTechFilter !== 'all' && n !== _tsTechFilter) return;
+      if (!workedTechs.has(n) && !staffNames.includes(n)) return;
+      const st = (typeof STAFF_MEMBERS !== 'undefined' ? STAFF_MEMBERS : []).find(x => x.name === n);
+      if (st && st.firstYearStart && bh.date < st.firstYearStart) return;
+      add(n, bh.date, 'bh', bh.name);
+    });
+  });
+  // Approved holiday requests (weekdays only, bank holidays already covered above)
+  (reqs||[]).forEach(r => {
+    const n = r.tech_name;
+    if (!n || (_tsTechFilter !== 'all' && n !== _tsTechFilter)) return;
+    const d = localDate(r.from_date < from ? from : r.from_date);
+    const end = localDate(r.to_date > to ? to : r.to_date);
+    while (d <= end) {
+      const ds = dateToStr(d);
+      if (d.getDay() !== 0 && d.getDay() !== 6 && !isBankHoliday(ds)) add(n, ds, 'hol', r.reason || 'Annual leave');
+      d.setDate(d.getDate() + 1);
+    }
+  });
+  // Holidays added directly to the diary
+  (diary||[]).forEach(j => {
+    if (isBankHoliday(j.booking_date)) return;
+    const a = (j.assigned_tech||'').toLowerCase(), c = (j.customer_name||'').toLowerCase();
+    names.forEach(n => {
+      if (_tsTechFilter !== 'all' && n !== _tsTechFilter) return;
+      const nl = n.toLowerCase();
+      const col = colFor[n];
+      const mine = a.includes(nl) || c.includes(nl) || a.includes('both') || (col && col !== 'S' && jobBelongsTo(j.assigned_tech, col));
+      if (mine && (n !== 'Shaun' || a.includes('shaun') || c.includes('shaun'))) add(n, j.booking_date, 'hol', 'Holiday');
+    });
+  });
+  const result = {};
+  Object.entries(out).forEach(([n, byDate]) => { result[n] = Object.values(byDate).sort((x,y) => x.date.localeCompare(y.date)); });
+  return result;
+}
+
+// Merge a person's clock entries and holiday days into one date-ordered list
+function tsMergeDays(entries, hols) {
+  return [
+    ...entries.map(r => ({ date: r.date, type: 'work', r })),
+    ...(hols||[]).map(h => ({ date: h.date, type: h.kind, h }))
+  ].sort((a,b) => a.date.localeCompare(b.date) || (a.type === 'work' ? 1 : -1));
+}
+
+function tsHolSummary(hols) {
+  const h = (hols||[]).filter(x => x.kind === 'hol').length;
+  const b = (hols||[]).filter(x => x.kind === 'bh').length;
+  const parts = [];
+  if (h) parts.push(h + ' holiday day' + (h !== 1 ? 's' : ''));
+  if (b) parts.push(b + ' bank holiday' + (b !== 1 ? 's' : ''));
+  return parts.join(' · ');
+}
+
 async function loadAdminTs() {
   const from = document.getElementById('ts-from')?.value;
   const to = document.getElementById('ts-to')?.value;
@@ -6799,24 +6875,34 @@ async function loadAdminTs() {
   try {
     const techQ = _tsTechFilter !== 'all' ? `&tech_name=eq.${encodeURIComponent(_tsTechFilter)}` : '';
     const rows = await sbRaw('GET','time_entries',null,
-      `?date=gte.${from}&date=lte.${to}${techQ}&order=tech_name.asc,date.asc`);
-    if (!rows || !rows.length) {
-      content.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">No entries for this month</div>';
-      return;
-    }
-    // Group by tech
+      `?date=gte.${from}&date=lte.${to}${techQ}&order=tech_name.asc,date.asc`) || [];
+    // Group clock entries by tech
     const byTech = {};
     rows.forEach(r => {
       if (!byTech[r.tech_name]) byTech[r.tech_name] = [];
       byTech[r.tech_name].push(r);
     });
+    // Holidays — if this fails we say so loudly rather than hand the accountant a sheet that silently omits them
+    let holByTech = {}, holFailed = false;
+    try { holByTech = await tsLoadHolidays(from, to, new Set(Object.keys(byTech))); }
+    catch(e) { console.warn('Timesheet holidays failed to load', e); holFailed = true; }
+
+    const techs = [...new Set([...Object.keys(byTech), ...Object.keys(holByTech)])].sort();
+    if (!techs.length) {
+      content.innerHTML = '<div style="text-align:center;color:var(--muted);padding:40px">No entries for this period</div>';
+      return;
+    }
     const monthLabel = fmtDate(from) + ' – ' + fmtDate(to);
-    let html = '';
+    let html = holFailed ? '<div style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;font-size:12px;font-weight:600">⚠ Holidays could not be loaded — this timesheet may be missing them. Refresh and try again before exporting.</div>' : '';
     const techDots = {Shaun:'#1e40af', Charles:'#b45309'};
-    Object.entries(byTech).forEach(([tech, entries]) => {
+    const th = (al, pad) => `text-align:${al};padding:${pad};font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border)`;
+    techs.forEach(tech => {
+      const entries = byTech[tech] || [];
+      const hols = holByTech[tech] || [];
       const totalMins = entries.reduce((s,r) => s + (r.hours_worked ? r.hours_worked*60 : 0), 0);
       const missing = entries.filter(r => !r.clock_in || !r.clock_out).length;
       const dot = techDots[tech] || '#6b7280';
+      const holSum = tsHolSummary(hols);
       html += `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:14px;overflow:hidden">
         <div style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;background:var(--bg)">
           <div style="display:flex;align-items:center;gap:8px">
@@ -6825,40 +6911,50 @@ async function loadAdminTs() {
           </div>
           <div style="text-align:right">
             <div style="font-size:18px;font-weight:700;color:var(--txt)">${fmtHM(Math.round(totalMins))}</div>
-            <div style="font-size:11px;color:var(--muted)">${entries.length} days${missing?' · '+missing+' missing':''}</div>
+            <div style="font-size:11px;color:var(--muted)">${entries.length} days worked${missing?' · '+missing+' missing':''}${holSum?' · '+holSum:''}</div>
           </div>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead>
             <tr style="background:var(--bg)">
-              <th style="text-align:left;padding:8px 16px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border)">Date</th>
-              <th style="text-align:center;padding:8px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border)">Clock in</th>
-              <th style="text-align:center;padding:8px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border)">Clock out</th>
-              <th style="text-align:right;padding:8px 16px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:1px solid var(--border)">Hours</th>
+              <th style="${th('left','8px 16px')}">Date</th>
+              <th style="${th('center','8px')}">Clock in</th>
+              <th style="${th('center','8px')}">Clock out</th>
+              <th style="${th('right','8px 16px')}">Hours</th>
             </tr>
           </thead>
           <tbody>
-            ${entries.map(r => {
+            ${tsMergeDays(entries, hols).map(d => {
+              if (d.type !== 'work') {
+                const isBH = d.type === 'bh';
+                return `<tr style="background:${isBH?'#fef9c3':'#ecfdf5'}">
+                  <td style="padding:9px 16px;border-bottom:1px solid var(--border);color:var(--txt)">${fmtDate(d.date)}</td>
+                  <td colspan="2" style="padding:9px 8px;border-bottom:1px solid var(--border);text-align:center;color:${isBH?'#92400e':'#065f46'};font-weight:600">${isBH?'🏛 Bank holiday — '+esc(d.h.label):'🏖 Holiday'}</td>
+                  <td style="padding:9px 16px;border-bottom:1px solid var(--border);text-align:right;font-weight:700;color:${isBH?'#92400e':'#065f46'}">${isBH?'Bank hol':'Holiday'}</td>
+                </tr>`;
+              }
+              const r = d.r;
               const hrs = r.hours_worked ? fmtHM(Math.round(r.hours_worked*60)) : '—';
-              const missing = !r.clock_in || !r.clock_out;
-              return `<tr style="${missing?'background:#fef9c3':''}">
+              const miss = !r.clock_in || !r.clock_out;
+              return `<tr style="${miss?'background:#fef9c3':''}">
                 <td style="padding:9px 16px;border-bottom:1px solid var(--border);color:var(--txt)">${fmtDate(r.date)}</td>
                 <td style="padding:9px 8px;border-bottom:1px solid var(--border);text-align:center;color:${r.clock_in?'var(--txt)':'var(--red)'}">${r.clock_in||'Missing'}</td>
                 <td style="padding:9px 8px;border-bottom:1px solid var(--border);text-align:center;color:${r.clock_out?'var(--txt)':'var(--red)'}">${r.clock_out||'Missing'}</td>
-                <td style="padding:9px 16px;border-bottom:1px solid var(--border);text-align:right;font-weight:600;color:${missing?'var(--red)':'var(--txt)'}">${hrs}</td>
+                <td style="padding:9px 16px;border-bottom:1px solid var(--border);text-align:right;font-weight:600;color:${miss?'var(--red)':'var(--txt)'}">${hrs}</td>
               </tr>`;
             }).join('')}
             <tr style="background:var(--bg)">
               <td colspan="3" style="padding:10px 16px;font-weight:700;color:var(--txt)">Total — ${esc(tech)}</td>
               <td style="padding:10px 16px;font-weight:700;color:var(--txt);text-align:right">${fmtHM(Math.round(totalMins))}</td>
             </tr>
+            ${holSum ? `<tr style="background:var(--bg)"><td colspan="4" style="padding:8px 16px;font-size:12px;color:var(--muted)">Leave in this period: <b style="color:var(--txt)">${holSum}</b> (not included in hours total)</td></tr>` : ''}
           </tbody>
         </table>
       </div>`;
     });
     content.innerHTML = html;
     // Store for PDF
-    window._tsAdminData = { month: monthLabel, byTech, rows, from, to };
+    window._tsAdminData = { month: monthLabel, byTech, holByTech, techs, rows, from, to };
   } catch(e) { content.innerHTML = `<div style="color:var(--red);padding:20px">${e.message}</div>`; }
 }
 
@@ -6881,6 +6977,9 @@ function exportTsPdf() {
       th{background:#f9fafb;padding:8px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;border-bottom:1px solid #e5e7eb}
       td{padding:9px 12px;border-bottom:1px solid #f3f4f6;font-size:13px}
       .total-row td{background:#f9fafb;font-weight:700;border-top:1px solid #e5e7eb}
+      .leave-row td{background:#f9fafb;font-size:12px;color:#374151}
+      .hol td{background:#ecfdf5;color:#065f46;font-weight:600;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .bh td{background:#fef9c3;color:#92400e;font-weight:600;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       .missing{color:#dc2626}
       .footer{margin-top:30px;color:#9ca3af;font-size:11px;border-top:1px solid #e5e7eb;padding-top:12px}
       @media print{body{padding:15px}}
@@ -6888,19 +6987,24 @@ function exportTsPdf() {
     <h1>Timesheet — ${data.month}</h1>
     <div class="sub">Auto Bodyworx Minor Body Repairs Ltd · Generated ${new Date().toLocaleDateString('en-GB')}</div>`;
 
-  Object.entries(data.byTech).forEach(([tech, entries]) => {
+  (data.techs || Object.keys(data.byTech)).forEach(tech => {
+    const entries = data.byTech[tech] || [];
+    const hols = (data.holByTech || {})[tech] || [];
     const totalMins = entries.reduce((s,r) => s + (r.hours_worked ? r.hours_worked*60 : 0), 0);
     const dot = techDots[tech] || '#6b7280';
-    const missing = entries.filter(r => !r.clock_in || !r.clock_out).length;
+    const holSum = tsHolSummary(hols);
     body += `<div class="tech-block">
       <div class="tech-hd">
-        <div class="tech-name"><span class="dot" style="background:${dot}"></span>${tech}</div>
+        <div class="tech-name"><span class="dot" style="background:${dot}"></span>${esc(tech)}</div>
         <div class="tech-total">${fmtHM(Math.round(totalMins))}</div>
       </div>
       <table>
         <thead><tr><th>Date</th><th>Clock in</th><th>Clock out</th><th>Total hours</th></tr></thead>
         <tbody>
-          ${entries.map(r => {
+          ${tsMergeDays(entries, hols).map(d => {
+            if (d.type === 'bh') return `<tr class="bh"><td>${fmtDate(d.date)}</td><td colspan="2">Bank holiday — ${esc(d.h.label)}</td><td>Bank holiday</td></tr>`;
+            if (d.type === 'hol') return `<tr class="hol"><td>${fmtDate(d.date)}</td><td colspan="2">Holiday</td><td>Holiday</td></tr>`;
+            const r = d.r;
             const hrs = r.hours_worked ? fmtHM(Math.round(r.hours_worked*60)) : '—';
             const m = !r.clock_in || !r.clock_out;
             return `<tr>
@@ -6910,7 +7014,8 @@ function exportTsPdf() {
               <td class="${m?'missing':''}">${hrs}</td>
             </tr>`;
           }).join('')}
-          <tr class="total-row"><td colspan="3">${tech} — ${data.month} total</td><td>${fmtHM(Math.round(totalMins))}</td></tr>
+          <tr class="total-row"><td colspan="3">${esc(tech)} — ${data.month} total hours worked</td><td>${fmtHM(Math.round(totalMins))}</td></tr>
+          ${holSum ? `<tr class="leave-row"><td colspan="4">Leave in this period: <b>${holSum}</b> (not included in hours total)</td></tr>` : ''}
         </tbody>
       </table>
     </div>`;
