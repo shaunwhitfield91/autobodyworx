@@ -544,6 +544,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 /* Chrome password manager decoy fields */
 .chrome-autofill-decoy { position:absolute; width:0; height:0; overflow:hidden; opacity:0; pointer-events:none; left:-9999px; top:-9999px; }
+.stg-edit-row{border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-bottom:8px;background:var(--surface)}
+.stg-edit-row.off{opacity:.55}
+.stg-edit-top{display:flex;align-items:center;gap:8px}
+.stg-edit-top label{flex:1;font-size:14px;font-weight:700;display:flex;align-items:center;gap:7px;cursor:pointer}
+.stg-edit-top select{width:auto;min-width:116px;font-size:13px;padding:6px 8px}
+.stg-edit-in{margin-top:7px;width:100%;box-sizing:border-box;font-size:13px}
+.srow{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--border)}
+.srow .ic{font-size:18px;width:26px;text-align:center;padding-top:1px}
+.srow .mid{flex:1;min-width:0}
+.srow .nm{font-size:14px;font-weight:800;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.srow .tx{font-size:13px;color:var(--txt2);margin-top:2px;line-height:1.4}
+.srow .tx.empty{color:var(--hint);font-style:italic}
+.srow .mt{font-size:11px;color:var(--muted);margin-top:3px}
+.srow .sb{font-size:12px;color:#991b1b;margin-top:3px}
+.srow.next{background:var(--blue-bg);margin:0 -8px;padding:10px 8px;border-radius:8px;border-top-color:transparent}
+.sbtn{font-family:inherit;font-size:12px;font-weight:700;padding:7px 11px;border-radius:8px;cursor:pointer;border:1px solid var(--border2);background:var(--surface);color:var(--txt);white-space:nowrap}
+.sbtn.go{background:var(--teal);border-color:var(--teal);color:#fff}
+.sbtn.done{background:#d1fae5;border-color:#6ee7b7;color:#065f46}
+.sbtn.prog{background:#fef3c7;border-color:#fcd34d;color:#92400e}
+.sbtn:disabled{opacity:.5;cursor:default}
+.stg-ask{margin-top:8px;padding:8px;border:1px solid var(--border2);border-radius:8px;background:var(--surface2)}
 </style>
 </head>
 <body>
@@ -1719,6 +1740,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <span class="qlbl">Customer's driving licence number <span style="font-weight:400;color:var(--muted)">(optional)</span></span>
       <input autocomplete="off" class="minp" id="edit_courtesy_license" placeholder="e.g. MORGA657054SM9IJ">
     </div>
+    <div id="edit_stages_box" style="display:none;margin-bottom:10px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius)">
+      <div style="font-size:13px;font-weight:600;color:var(--txt);margin-bottom:6px">🛠 Workshop stages this job needs</div>
+      <div id="edit_stages_rows"></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px" id="edit_stages_hint"></div>
+    </div>
     <div class="modal-grid2">
       <div><span class="qlbl">Booking date</span><input autocomplete="off" class="minp" type="date" id="edit_date"></div>
       <div><span class="qlbl">Time</span><input autocomplete="off" class="minp" type="time" id="edit_time"></div>
@@ -2298,13 +2324,24 @@ let _jobsLoadToken = 0; // guards against overlapping loadJobs() calls resolving
 async function loadJobs() {
   const myToken = ++_jobsLoadToken;
   try {
-    const data = await sbRaw('GET', 'jobs', null,
-      `?select=*,job_photos(*)&archived=eq.false&status=neq.declined&source=not.in.(Holiday,Appointment,Van%20day,Diary%20entry)&order=created_at.desc`);
+    const baseQ = `&archived=eq.false&status=neq.declined&source=not.in.(Holiday,Appointment,Van%20day,Diary%20entry)&order=created_at.desc`;
+    let data, embedded = false;
+    if (_stagesEmbed) {
+      // Workshop stages come back inside the same request, so they add no loading time.
+      // If the job_stages table hasn't been created yet, fall back to the plain query.
+      try { data = await sbRaw('GET', 'jobs', null, `?select=*,job_photos(*),job_stages(*)${baseQ}`); embedded = true; }
+      catch (e) {
+        if (/job_stages|relationship|schema cache/i.test(e.message || '')) { _stagesEmbed = false; _stagesAvailable = false; }
+        else throw e;
+      }
+    }
+    if (!embedded) data = await sbRaw('GET', 'jobs', null, `?select=*,job_photos(*)${baseQ}`);
     // A newer call has since started — its result will supersede this one, so
     // discard this now-stale response rather than let it overwrite fresher data.
     if (myToken !== _jobsLoadToken) return;
     const freshJobs = data || [];
     if (_notifsReady) checkForNewNotifs(freshJobs);
+    if (embedded) stagesIngest(freshJobs);
     allJobs = freshJobs;
   } catch(e) { /* keep showing the last successfully loaded jobs — a failed refresh shouldn't blank the list */ }
   if (myToken !== _jobsLoadToken) return; // stale even on the error path — a newer call is already handling this
@@ -2913,6 +2950,7 @@ function buildJobCard(j) {
             : j.duration?`<span class="badge bdg-dur">${esc(j.duration)}</span>`:''
           }
           ${techBadge(j.assigned_tech)}
+          ${stageBadge(j)}
           ${j.cd_required?'<span class="badge bdg-cd">C&amp;D</span>':''}
           ${j.source?`<span class="badge bdg-src">${esc(j.source)}</span>`:''}
         </div>
@@ -2926,6 +2964,7 @@ function buildJobCard(j) {
     <div class="jcard-body">
       <!-- Progress bar -->
       ${buildProgBar(prog)}
+      ${stagesHtml(j)}
       <!-- Details grid -->
       <div class="jbody-grid" style="margin-top:14px">
         <div><div class="jbf">Customer</div><div class="jbv">${esc(j.customer_name||'—')}</div></div>
@@ -4963,6 +5002,7 @@ function buildTechCard(j) {
           ${j.parts_required?'<span class="badge" style="background:#fef9c3;color:#713f12;border:1px solid #fde047">🔧 Parts</span>':''}
           ${j.courtesy_car?'<span class="badge" style="background:#f0fdf4;color:#065f46;border:1px solid #bbf7d0">🚘 Courtesy</span>':''}
           ${j.is_rework?'<span class="badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5">🔄 Rework</span>':''}
+          ${stageBadge(j)}
         </div>
       </div>
       <div class="tech-job-badges">
@@ -4990,6 +5030,7 @@ function buildTechCard(j) {
       </div>
       ${bmq.length?`<div class="tech-photos-row">${bmq.map((p,pi)=>`<img src="${SUPABASE_URL}/storage/v1/object/public/job-photos/${p.storage_path}" class="tech-photo-thumb" alt="damage" onclick="event.stopPropagation();openPhotoByJobId(${j.id},${pi})" data-job-id="${j.id}" data-photo-idx="${pi}">`).join('')}</div>`:''}
       ${damagePhotosHtml}
+      ${stagesHtml(j)}
       ${editBox}
       ${completeBox}
     </div>
@@ -5636,6 +5677,7 @@ async function saveBooking() {
   };
   try {
     await sbRaw('PATCH', 'jobs', updates, '?id=eq.' + _bookJobId);
+    await stagesAutoCreateOnBooking(_bookJobId, updates.job_location);
     showToast('✓ Job booked — ' + fmtDate(date));
     closeBookModal();
     await loadJobs();
@@ -5694,6 +5736,7 @@ async function openEditModal(jobId) {
   if (ccLicEl) ccLicEl.value = j.courtesy_car_license || '';
   toggleCourtesyCarDetails('edit');
   document.getElementById('edit_loc').value = j.job_location || 'workshop';
+  loadEditStagesBox(j);
   document.getElementById('edit_source').value = j.source || 'other';
   const cdEl = document.getElementById('edit_cd');
   if (cdEl) cdEl.checked = !!j.cd_required;
@@ -5815,6 +5858,8 @@ async function saveEditJob() {
     _uploadInProgress = false;
     // Save quote lines (always — this also clears the DB when the last line was removed)
     await editSaveQuoteLines(_editJobId);
+    try { await saveEditStages(_editJobId); }
+    catch (e) { console.warn('Stages not saved', e); alert('Job saved, but the workshop stages could not be saved: ' + e.message); }
     showToast('✓ Job updated');
     closeEditModal();
     const prevOpen = _editJobId;
@@ -7029,6 +7074,335 @@ function exportTsPdf() {
   w.document.close();
   w.focus();
   setTimeout(() => w.print(), 500);
+}
+
+// ═══════════════════════════════════════════════════════════
+// WORKSHOP JOB STAGES — Strip > Panel > Paint > Fit > Polish > QC
+// Each job opts in to the stages it needs. Each stage can carry instructions ("what needs
+// doing") and a named person. Order is "soft": the next stage is highlighted but anyone can
+// jump ahead after a warning. Only Shaun can pass QC. Admin can mark a stage done on behalf
+// of a tech (e.g. when Tony signs the paper sheet); the app records both names.
+// Passing QC texts the customer that the car is ready (send-ready-sms function).
+// ═══════════════════════════════════════════════════════════
+const JOB_STAGES = [
+  { key:'strip',  label:'Strip',  icon:'🔧', who:['Shaun','Charles'] },
+  { key:'panel',  label:'Panel',  icon:'🔨', who:['Shaun','Tony'] },
+  { key:'paint',  label:'Paint',  icon:'🎨', who:['Shaun','Charles','Tony'] },
+  { key:'fit',    label:'Fit',    icon:'🔩', who:['Shaun','Charles'] },
+  { key:'polish', label:'Polish', icon:'✨', who:['Shaun','Charles','Tony'] },
+  { key:'qc',     label:'QC',     icon:'✅', who:['Shaun'] }
+];
+// Workshop jobs created from this date get all stages by default (untick any not needed).
+// Older jobs and mobile jobs stay as they were unless you tick stages in Edit job.
+const STAGES_NEW_JOBS_FROM = new Date(2026, 10, 1); // 1 Nov 2026
+// Only these people (plus anyone with the admin role) can pass or send back QC.
+const STAGE_QC_NAMES = ['Shaun'];
+
+let _stagesByJob = {};        // jobId -> [stage rows ordered by position]
+let _stagesAvailable = false; // true once the job_stages table has loaded successfully
+let _stagesEmbed = true;      // ask for stages inside the jobs query (falls back if table missing)
+let _stageAsk = {};           // jobId -> stage key waiting for "who did it?" (admin only)
+let _stageSendBackOpen = {};
+let _stageBusy = {};
+
+function stageRows(jobId) { return _stagesByJob[jobId] || []; }
+function stageMeta(key) { return JOB_STAGES.find(s => s.key === key) || { key, label: key, icon: '', who: [] }; }
+function canPassQc() {
+  return currentProfile?.role === 'admin' || STAGE_QC_NAMES.includes(currentProfile?.full_name || '');
+}
+function stageWhen(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+}
+function stagePill(name) {
+  const c = { Shaun:['var(--blue-bg)','var(--blue-txt)','var(--blue-bdr)'], Charles:['var(--amber-bg)','var(--amber-txt)','var(--amber-bdr)'],
+              Tony:['var(--tony-bg)','var(--tony-txt)','var(--tony-bdr)'] }[name] || ['var(--surface2)','var(--muted)','var(--border2)'];
+  return `<span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:20px;background:${c[0]};color:${c[1]};border:1px solid ${c[2]}">${esc(name || 'Anyone')}</span>`;
+}
+
+// Called by loadJobs with the embedded rows from each job
+function stagesIngest(jobs) {
+  const by = {};
+  (jobs || []).forEach(j => {
+    const rows = j.job_stages;
+    if (rows && rows.length) by[j.id] = rows.slice().sort((a, b) => a.position - b.position);
+    delete j.job_stages;
+  });
+  _stagesByJob = by;
+  _stagesAvailable = true;
+}
+
+// Small badge on a job card showing where it is: current stage, or Ready
+function stageBadge(j) {
+  const rows = stageRows(j.id);
+  if (!rows.length) return '';
+  const cur = rows.find(r => r.status !== 'done');
+  let txt, bg, fg;
+  if (!cur) { txt = '✅ Ready'; bg = '#d1fae5'; fg = '#065f46'; }
+  else {
+    const m = stageMeta(cur.stage);
+    txt = m.icon + ' ' + m.label;
+    if (cur.status === 'in_progress') { bg = '#fef3c7'; fg = '#92400e'; } else { bg = 'var(--bg)'; fg = 'var(--txt2)'; }
+  }
+  return `<span class="badge" data-stgbadge="${j.id}" style="background:${bg};color:${fg};border:1px solid var(--border)">${txt}</span>`;
+}
+
+function stagesHtml(j) {
+  if (!stageRows(j.id).length) return '';
+  return `<div class="stg-wrap" data-job="${j.id}" onclick="event.stopPropagation()" style="margin-top:14px">${stagesInner(j.id)}</div>`;
+}
+
+function stageButton(jobId, r) {
+  const k = r.stage;
+  const b = (cls, label, onclick) => `<button class="sbtn ${cls}" onclick="${onclick}">${label}</button>`;
+  if (k === 'qc') {
+    if (!canPassQc()) return `<button class="sbtn" disabled>${STAGE_QC_NAMES.join('/')} only</button>`;
+    return r.status === 'done' ? b('done', 'QC passed ✓', `stageUndo(${jobId},'qc')`) : b('go', 'Pass QC', `stageSet(${jobId},'qc','done')`);
+  }
+  if (r.status === 'done') return b('done', 'Done ✓', `stageUndo(${jobId},'${k}')`);
+  if (r.status === 'in_progress') return b('prog', 'Mark done', `stageAskDone(${jobId},'${k}')`);
+  return b('go', 'Start', `stageSet(${jobId},'${k}','in_progress')`);
+}
+
+function stagesInner(jobId) {
+  const rows = stageRows(jobId);
+  if (!rows.length) return '';
+  const j = allJobs.find(x => x.id === jobId) || {};
+  const next = rows.find(r => r.status !== 'done');
+  const body = rows.map(r => {
+    const m = stageMeta(r.stage);
+    let meta = '';
+    if (r.status === 'done') meta = `Done${r.done_by ? ' by ' + esc(r.done_by) : ''}${r.done_at ? ' · ' + stageWhen(r.done_at) : ''}${r.entered_by ? ' <i>(signed off in the app by ' + esc(r.entered_by) + ')</i>' : ''}`;
+    else if (r.status === 'in_progress') meta = `In progress${r.started_by ? ' — ' + esc(r.started_by) : ''}${r.started_at ? ' · ' + stageWhen(r.started_at) : ''}`;
+    const isNext = next && next.stage === r.stage;
+    const sendBackLink = (r.stage === 'qc' && canPassQc()) ? `<div><a href="#" onclick="event.preventDefault();stageToggleSendBack(${jobId})" style="font-size:12px;color:var(--red)">↩ Send back…</a></div>` : '';
+    return `<div class="srow${isNext ? ' next' : ''}">
+      <div class="ic">${m.icon}</div>
+      <div class="mid">
+        <div class="nm">${m.label} ${stagePill(r.assigned_to)}</div>
+        <div class="tx ${r.instructions ? '' : 'empty'}">${r.instructions ? esc(r.instructions) : (r.stage === 'qc' ? '' : 'No instructions')}</div>
+        ${meta ? `<div class="mt">${meta}</div>` : ''}
+        ${r.note && r.status !== 'done' ? `<div class="sb">↩ ${esc(r.note)}</div>` : ''}
+        ${sendBackLink}
+      </div>
+      <div>${stageButton(jobId, r)}</div>
+    </div>`;
+  }).join('');
+
+  // Admin: who did this stage? (e.g. Tony signed the sheet, Shaun enters it for him)
+  let ask = '';
+  const askRow = _stageAsk[jobId] && rows.find(r => r.stage === _stageAsk[jobId]);
+  if (askRow) {
+    const m = stageMeta(askRow.stage);
+    const me = currentProfile?.full_name || '';
+    const names = m.who.slice();
+    if (me && !names.includes(me)) names.unshift(me);
+    const def = askRow.assigned_to || (names.includes(me) ? me : names[0]);
+    ask = `<div class="stg-ask"><div style="font-size:12px;font-weight:700;margin-bottom:6px">${m.icon} ${m.label} — who did this stage?</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <select id="stgask_${jobId}" class="msel" style="width:auto">${names.map(n => `<option ${n === def ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>
+        <button class="sbtn go" onclick="stageConfirmDone(${jobId})">Mark done</button>
+        <button class="sbtn" onclick="stageCancelAsk(${jobId})">Cancel</button>
+      </div></div>`;
+  }
+
+  let sendBack = '';
+  if (_stageSendBackOpen[jobId] && canPassQc()) {
+    const opts = rows.filter(r => r.stage !== 'qc').map(r => `<option value="${r.stage}">${stageMeta(r.stage).label}</option>`).join('');
+    sendBack = `<div style="margin-top:8px;padding:8px;border:1px solid #fca5a5;border-radius:8px;background:#fff7f7">
+      <div style="font-size:11px;font-weight:700;color:#991b1b;margin-bottom:6px">Send back to which stage? (that stage and everything after it goes back to waiting)</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <select id="stgsb_t_${jobId}" class="msel" style="width:auto">${opts}</select>
+        <input id="stgsb_n_${jobId}" class="minp" placeholder="What needs fixing?" style="flex:1;min-width:160px" autocomplete="off">
+        <button class="sbtn" style="background:#dc2626;border-color:#dc2626;color:#fff" onclick="stageSendBack(${jobId})">Send back</button>
+        <button class="sbtn" onclick="stageToggleSendBack(${jobId})">Cancel</button>
+      </div></div>`;
+  }
+
+  const ready = !next ? `<div style="margin-top:8px;background:#d1fae5;border:1px solid #6ee7b7;color:#065f46;border-radius:8px;padding:7px 10px;font-size:12px;font-weight:600">✅ Ready for collection${j.ready_sms_sent_at ? ' — customer texted ' + stageWhen(j.ready_sms_sent_at) : ' — customer not texted yet <button class="sbtn go" style="margin-left:6px;padding:3px 9px" onclick="stageSendReady(' + jobId + ')">Send ready text</button>'}</div>` : '';
+
+  return `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:2px">Workshop stages</div>${body}${ask}${sendBack}${ready}`;
+}
+
+function paintStageContainers() {
+  document.querySelectorAll('.stg-wrap[data-job]').forEach(el => { el.innerHTML = stagesInner(+el.dataset.job); });
+  document.querySelectorAll('[data-stgbadge]').forEach(el => {
+    const j = allJobs.find(x => x.id === +el.dataset.stgbadge);
+    if (j) el.outerHTML = stageBadge(j);
+  });
+}
+
+function stageToggleSendBack(jobId) { _stageSendBackOpen[jobId] = !_stageSendBackOpen[jobId]; paintStageContainers(); }
+function stageCancelAsk(jobId) { _stageAsk[jobId] = null; paintStageContainers(); }
+
+// "Mark done": admins are asked whose work it was; techs just sign off as themselves
+function stageAskDone(jobId, key) {
+  if (currentProfile?.role === 'admin') { _stageAsk[jobId] = key; paintStageContainers(); }
+  else stageSet(jobId, key, 'done');
+}
+function stageConfirmDone(jobId) {
+  const key = _stageAsk[jobId];
+  const who = document.getElementById('stgask_' + jobId)?.value;
+  if (!key) return;
+  _stageAsk[jobId] = null;
+  stageSet(jobId, key, 'done', who);
+}
+function stageUndo(jobId, key) {
+  if (!confirm('Set ' + stageMeta(key).label + ' back to waiting?')) return;
+  stageSet(jobId, key, 'pending');
+}
+
+async function stageSet(jobId, key, status, byName) {
+  const rows = stageRows(jobId);
+  const r = rows.find(x => x.stage === key);
+  if (!r || _stageBusy[jobId]) return;
+  if (key === 'qc' && !canPassQc()) { showToast('Only ' + STAGE_QC_NAMES.join(' or ') + ' can pass QC'); return; }
+  // Soft ordering: warn, but let them carry on
+  if (status !== 'pending') {
+    const behind = rows.filter(x => x.position < r.position && x.status !== 'done');
+    if (behind.length && !confirm(behind.map(x => stageMeta(x.stage).label).join(', ') + (behind.length > 1 ? " aren't" : " isn't") + ' marked done yet. Carry on anyway?')) return;
+  }
+  const me = currentProfile?.full_name || 'Staff';
+  const who = byName || (status === 'in_progress' ? (r.assigned_to || me) : me);
+  const now = new Date().toISOString();
+  const patch = { status };
+  if (status === 'in_progress') Object.assign(patch, { started_at: r.started_at || now, started_by: r.started_by || who, done_at: null, done_by: null, entered_by: null });
+  if (status === 'done')        Object.assign(patch, { started_at: r.started_at || now, started_by: r.started_by || who, done_at: now, done_by: who, entered_by: who !== me ? me : null, note: null });
+  if (status === 'pending')     Object.assign(patch, { started_at: null, started_by: null, done_at: null, done_by: null, entered_by: null });
+  _stageBusy[jobId] = true;
+  try {
+    await sbRaw('PATCH', 'job_stages', patch, `?job_id=eq.${jobId}&stage=eq.${key}`);
+    Object.assign(r, patch);
+  } catch (e) { _stageBusy[jobId] = false; alert('Could not update stage: ' + e.message); return; }
+  _stageBusy[jobId] = false;
+  paintStageContainers();
+  if (key === 'qc' && status === 'done') await stageSendReady(jobId);
+}
+
+async function stageSendBack(jobId) {
+  const target = document.getElementById('stgsb_t_' + jobId)?.value;
+  const note = (document.getElementById('stgsb_n_' + jobId)?.value || '').trim();
+  if (!target) return;
+  if (!note) { showToast('Add a short note so they know what to fix'); return; }
+  const rows = stageRows(jobId);
+  const tr = rows.find(r => r.stage === target);
+  if (!tr || _stageBusy[jobId]) return;
+  const me = currentProfile?.full_name || 'Staff';
+  const noteTxt = `Sent back by ${me} (${new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short' })}): ${note}`;
+  _stageBusy[jobId] = true;
+  try {
+    for (const r of rows.filter(x => x.position >= tr.position)) {
+      const patch = { status: 'pending', started_at: null, started_by: null, done_at: null, done_by: null, entered_by: null, note: r.stage === target ? noteTxt : null };
+      await sbRaw('PATCH', 'job_stages', patch, `?job_id=eq.${jobId}&stage=eq.${r.stage}`);
+      Object.assign(r, patch);
+    }
+  } catch (e) { _stageBusy[jobId] = false; alert('Could not send back: ' + e.message); paintStageContainers(); return; }
+  _stageBusy[jobId] = false;
+  _stageSendBackOpen[jobId] = false;
+  showToast('↩ Sent back to ' + stageMeta(target).label);
+  paintStageContainers();
+}
+
+// Texts the customer (server checks login, reads the number itself, and never sends twice)
+async function stageSendReady(jobId) {
+  const j = allJobs.find(x => x.id === jobId);
+  if (!j || j.ready_sms_sent_at) return;
+  if (!j.customer_phone) { showToast('QC passed — no phone number on this job, so no text was sent'); return; }
+  try {
+    const res = await fetch('/.netlify/functions/send-ready-sms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (currentUser?.access_token || '') },
+      body: JSON.stringify({ jobId })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || ('Error ' + res.status));
+    j.ready_sms_sent_at = new Date().toISOString();
+    showToast(data.alreadySent ? 'Customer had already been texted' : '✓ QC passed — customer texted');
+  } catch (e) {
+    showToast('QC passed, but the text failed: ' + e.message);
+  }
+  paintStageContainers();
+}
+
+// ── Edit Job modal: tick the stages, pick who, type what needs doing ──
+function loadEditStagesBox(j) {
+  const box = document.getElementById('edit_stages_box');
+  if (!box) return;
+  if (!_stagesAvailable) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  const rows = stageRows(j.id);
+  const isNewWorkshop = !rows.length && (j.job_location || 'workshop') === 'workshop' && j.status !== 'completed' &&
+    j.created_at && new Date(j.created_at) >= STAGES_NEW_JOBS_FROM;
+  document.getElementById('edit_stages_rows').innerHTML = JOB_STAGES.map(s => {
+    const row = rows.find(r => r.stage === s.key);
+    const on = rows.length ? !!row : isNewWorkshop;
+    const locked = !!(row && row.status === 'done');
+    const names = s.who.slice();
+    if (row && row.assigned_to && !names.includes(row.assigned_to)) names.push(row.assigned_to);
+    return `<div class="stg-edit-row${on ? '' : ' off'}" id="edit_stgrow_${s.key}">
+      <div class="stg-edit-top">
+        <label><input autocomplete="off" type="checkbox" id="edit_stg_${s.key}" ${on ? 'checked' : ''} ${locked ? 'disabled title="Already done — can’t be removed"' : ''} onchange="editStageTick('${s.key}')"> ${s.icon} ${s.label}</label>
+        <select class="msel" id="edit_stgwho_${s.key}" ${on ? '' : 'disabled'}>
+          <option value="">Anyone</option>
+          ${names.map(n => `<option ${row && row.assigned_to === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}
+        </select>
+      </div>
+      <input autocomplete="off" class="minp stg-edit-in" id="edit_stgtx_${s.key}" style="${on ? '' : 'display:none'}" placeholder="${s.key === 'qc' ? 'Anything to check? (optional)' : 'What needs doing? (optional)'}" value="${esc(row?.instructions || '')}">
+    </div>`;
+  }).join('');
+  const hint = document.getElementById('edit_stages_hint');
+  if (hint) hint.textContent = rows.length ? 'Untick a stage this job doesn’t need. Stages already done stay.'
+    : isNewWorkshop ? 'New workshop job — all stages ticked by default. Untick any this job doesn’t need.'
+    : 'Tick the stages to start tracking this job. Leave all unticked to not track it.';
+}
+
+function editStageTick(key) {
+  const on = document.getElementById('edit_stg_' + key).checked;
+  document.getElementById('edit_stgrow_' + key)?.classList.toggle('off', !on);
+  const sel = document.getElementById('edit_stgwho_' + key); if (sel) sel.disabled = !on;
+  const tx = document.getElementById('edit_stgtx_' + key); if (tx) tx.style.display = on ? '' : 'none';
+}
+
+async function saveEditStages(jobId) {
+  if (!_stagesAvailable) return;
+  const rows = stageRows(jobId);
+  const toAdd = [], toDel = [], toPatch = [];
+  JOB_STAGES.forEach((s, i) => {
+    const cb = document.getElementById('edit_stg_' + s.key);
+    if (!cb) return;
+    const row = rows.find(r => r.stage === s.key);
+    const assigned = document.getElementById('edit_stgwho_' + s.key)?.value || null;
+    const instr = (document.getElementById('edit_stgtx_' + s.key)?.value || '').trim() || null;
+    if (cb.checked && !row) toAdd.push({ job_id: jobId, stage: s.key, position: i + 1, assigned_to: assigned, instructions: instr });
+    else if (cb.checked && row && ((row.assigned_to || null) !== assigned || (row.instructions || null) !== instr)) toPatch.push({ s, assigned, instr });
+    else if (!cb.checked && row && row.status !== 'done') toDel.push(row);
+  });
+  if (toAdd.length) await sbRaw('POST', 'job_stages', toAdd);
+  for (const p of toPatch) await sbRaw('PATCH', 'job_stages', { assigned_to: p.assigned, instructions: p.instr }, `?job_id=eq.${jobId}&stage=eq.${p.s.key}`);
+  for (const r of toDel) await sbRaw('DELETE', 'job_stages', null, `?job_id=eq.${jobId}&stage=eq.${r.stage}`);
+}
+
+// New workshop jobs get the full set of stages when they're booked in
+async function stagesAutoCreateOnBooking(jobId, location) {
+  if (!_stagesAvailable || location !== 'workshop' || stageRows(jobId).length) return;
+  const j = allJobs.find(x => x.id === jobId);
+  if (!j || !j.created_at || new Date(j.created_at) < STAGES_NEW_JOBS_FROM) return;
+  try { await sbRaw('POST', 'job_stages', JOB_STAGES.map((s, i) => ({ job_id: jobId, stage: s.key, position: i + 1 }))); }
+  catch (e) { console.warn('Could not create stages for job', jobId, e.message); }
+}
+
+// Stages table for the printed Job card (replaces the fixed 8-step list for jobs that use stages)
+function stagesPrintBlock(jobId) {
+  const e = s => (s || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const rows = stageRows(jobId);
+  return `<table class="stg-print">
+    <thead><tr><th style="width:15%">Stage</th><th>What needs doing</th><th style="width:14%">Who</th><th style="width:13%">Initials</th><th style="width:13%">Time</th><th style="width:6%">✓</th></tr></thead>
+    <tbody>${rows.map(r => {
+      const m = stageMeta(r.stage);
+      const done = r.status === 'done';
+      return `<tr><td><b>${m.label}</b></td><td>${e(r.instructions) || '&nbsp;'}</td><td>${e(r.assigned_to || '')}</td>
+        <td>${done ? e(r.done_by || '') : ''}</td><td>${done && r.done_at ? e(stageWhen(r.done_at)) : ''}</td><td style="text-align:center">${done ? '✓' : ''}</td></tr>`;
+    }).join('')}</tbody></table>`;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -8527,6 +8901,9 @@ function printJobCard(jobId) {
     .sig-lbl{font-size:9px;font-weight:700;text-transform:uppercase;color:#777;margin-bottom:4px}
     .sig-line{border-bottom:1px solid #000;height:24px}
     .footer{margin-top:12px;font-size:9px;color:#999;text-align:center;border-top:1px solid #eee;padding-top:6px}
+    .stg-print{width:100%;border-collapse:collapse;margin-bottom:12px}
+    .stg-print th{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#777;text-align:left;border-bottom:2px solid #999;padding:4px 6px}
+    .stg-print td{border-bottom:1px solid #ccc;padding:9px 6px;font-size:12px;vertical-align:top;height:34px}
     @media print{.no-print{display:none}}
   </style></head><body>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
@@ -8540,12 +8917,12 @@ function printJobCard(jobId) {
     <div class="field"><label>Colour</label><div class="val">${esc2(j.colour||'')}</div></div>
     <div class="field" style="grid-column:1/-1"><label>Repair description</label><div class="val" style="min-height:30px">${esc2(j.panels||'')} ${j.notes?'— '+esc2(j.notes):''}</div></div>
   </div>
-  <div class="stages">
+  ${stageRows(j.id).length ? stagesPrintBlock(j.id) : `  <div class="stages">
     <div class="stage"><div></div><div class="stage-lbl">Initials</div><div class="stage-lbl">Time</div><div class="stage-lbl">✓</div></div>
     ${[['1','Strip & assess'],['2','Filler & block'],['3','Prime'],['4','Guide coat & block'],['5','Prep & mask'],['6','Base coat'],['7','Clear coat'],['8','Polish & refit']].map(([n,s])=>
       `<div class="stage"><div class="stage-name">${n}. ${s}</div><div class="stage-box"></div><div class="stage-box"></div><div class="stage-tick"></div></div>`
     ).join('')}
-  </div>
+  </div>`}
   <div class="qc"><div class="qc-title">QC Checklist</div>
     ${[['Masking tape not touching panel edge — clear gap to prevent bridging on demask'],
        ['All adjacent trims masked before DA sanding'],
