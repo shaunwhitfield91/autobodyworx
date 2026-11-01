@@ -252,7 +252,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .cal-day.other-month{background:var(--surface2)}
 .cal-day.is-today .cal-dn{background:var(--blue);color:#fff;border-radius:50%}
 .cal-day.is-today{background:#dbeafe!important;border:2px solid #93c5fd!important;}
-.cal-day.is-sel{background:#eff6ff}
+.cal-day.is-sel{background:#fef3c7;outline:3px solid #f59e0b;outline-offset:-3px}
+.cal-day.is-today.is-sel{background:#dbeafe!important;border:2px solid #93c5fd!important;outline:3px solid #f59e0b;outline-offset:-3px}
+.cal-day.is-sel .cal-dn{font-weight:900}
 .cal-dn{font-size:11px;font-weight:700;color:var(--txt);width:21px;height:21px;display:flex;align-items:center;justify-content:center;margin-bottom:3px}
 .other-month .cal-dn{color:var(--hint)}
 .cal-evt{border-radius:3px;padding:1px 5px;font-size:10px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:3px;font-weight:600;line-height:1.6;position:relative;cursor:pointer}
@@ -565,6 +567,47 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .sbtn.prog{background:#fef3c7;border-color:#fcd34d;color:#92400e}
 .sbtn:disabled{opacity:.5;cursor:default}
 .stg-ask{margin-top:8px;padding:8px;border:1px solid var(--border2);border-radius:8px;background:var(--surface2)}
+.stc-row{display:flex;gap:3px;flex-wrap:wrap;margin-top:4px}
+.stc{font-size:10px;font-weight:700;padding:1px 5px;border-radius:6px;border:1px solid var(--border2);background:#fff;color:var(--txt2);white-space:nowrap}
+.stc.done{background:#d1fae5;border-color:#6ee7b7;color:#065f46}
+.stc.in_progress{background:#fef3c7;border-color:#fcd34d;color:#92400e}
+.ws-top{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.ws-top .ws-ttl{font-size:16px;font-weight:800;flex:1;min-width:140px}
+.ws-seg{display:flex;border:1px solid var(--border2);border-radius:8px;overflow:hidden}
+.ws-seg button{font-family:inherit;font-size:12px;font-weight:700;padding:6px 12px;border:none;background:var(--surface);cursor:pointer;color:var(--txt2)}
+.ws-seg button.on{background:var(--blue);color:#fff}
+.ws-wk{overflow-x:auto;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.ws-wk table{border-collapse:collapse;min-width:820px;width:100%}
+.ws-wk th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);padding:7px;border-bottom:1px solid var(--border);background:var(--surface2);text-align:left;cursor:pointer}
+.ws-wk th.today{color:var(--blue);background:var(--blue-bg)}
+.ws-wk td{vertical-align:top;border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:5px;min-width:108px;height:62px}
+.ws-wk td.today{background:#f5f9ff}
+.ws-wk td.who{min-width:74px;width:74px;background:var(--surface2)}
+.ws-sc{border-radius:7px;padding:4px 6px;margin-bottom:4px;font-size:11px;line-height:1.3;border:1px solid var(--border2);cursor:pointer;background:#fff;color:var(--txt2)}
+.ws-sc b{font-size:12px;color:var(--txt)}
+.ws-sc.pending{border-style:dashed}
+.ws-sc.in_progress{background:#fef3c7;border-color:#fcd34d;color:#92400e}
+.ws-sc.done{background:#ecfdf5;border-color:#a7f3d0;color:#065f46;opacity:.75}
+.ws-sc.sel,.ws-card.sel{outline:3px solid #f59e0b;outline-offset:1px}
+.ws-dg{display:grid;gap:8px}
+.ws-dgh{font-size:12px;font-weight:800;text-align:center;padding:6px;border-radius:8px;background:var(--surface2)}
+.ws-card{border:1px solid var(--border);border-radius:10px;padding:9px 10px;margin-bottom:8px;background:var(--surface)}
+.ws-card.in_progress{border-color:#fcd34d;background:#fffbeb}
+.ws-card.done{opacity:.7;background:#f0fdf4}
+.ws-card .t{font-size:13px;font-weight:800}.ws-card .v{font-size:12px;color:var(--muted)}.ws-card .i{font-size:13px;margin:4px 0;color:var(--txt2)}
+.ws-days{display:flex;gap:6px;margin-bottom:10px;overflow-x:auto}
+.ws-days button{font-family:inherit;font-size:12px;font-weight:700;padding:7px 12px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);cursor:pointer;white-space:nowrap}
+.ws-days button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.ws-days button.today:not(.on){border-color:var(--blue);color:var(--blue)}
+.ws-tray{margin-top:10px;padding:8px 10px;border:1px dashed var(--border2);border-radius:10px;background:var(--surface2)}
+.ws-tray .h{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:6px}
+.ws-tray .ws-sc{display:inline-block;margin-right:5px}
+.ws-detail{margin-top:12px;padding:12px;border:2px solid #f59e0b;border-radius:12px;background:var(--surface)}
+.ws-detail .row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:8px}
+.ws-detail label{font-size:10px;font-weight:700;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:2px}
+.stg-sub{display:flex;gap:6px;margin-top:7px}
+.stg-sub .stg-edit-in{margin-top:0;flex:1}
+.stg-sub input[type=date]{width:136px;font-size:13px}
 </style>
 </head>
 <body>
@@ -598,6 +641,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="ttab on" id="t-home" onclick="switchTab('home')">Home<span id="declinedBadge" style="display:none;background:var(--red);color:#fff;border-radius:50%;font-size:9px;padding:1px 5px;margin-left:4px;vertical-align:middle;font-weight:700"></span></div>
       <div class="ttab" id="t-jobs" onclick="switchTab('jobs')">Jobs <span class="ttab-badge tb-warn" id="tb-jobs" style="display:none">0</span></div>
       <div class="ttab" id="t-diary" onclick="switchTab('diary')">Diary</div>
+      <div class="ttab role-admin_staff" id="t-workshop" onclick="switchTab('workshop')">Workshop</div>
       <div class="ttab" id="t-courtesy" onclick="switchTab('courtesy')">🚘 Courtesy car</div>
       <div class="ttab" id="t-quote" onclick="switchTab('quote')">New quote</div>
       <div class="ttab" id="t-tech" onclick="switchTab('tech')">My repairs</div>
@@ -914,6 +958,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 
   <!-- QUOTE PAGE -->
+  <div class="page role-admin_staff" id="pg-workshop">
+    <div class="page-wrap" id="workshopRoot"></div>
+  </div>
+
   <div class="page" id="pg-quote">
     <div class="page-wrap">
       <div style="font-size:18px;font-weight:800;color:var(--txt);margin-bottom:16px">New quote</div>
@@ -2291,6 +2339,7 @@ function switchTab(t) {
 
   if (t === 'jobs') { renderJobs(); renderDeclined(); }
   if (t === 'home') { updateHomeStats(); renderHome(); }
+  if (t === 'workshop') { renderWorkshop(); }
   if (t === 'diary') {
     // If diaryAllJobs is already loaded (from previous visit), render immediately
     if (diaryAllJobs.length) { renderDiary(); renderRevBar(); }
@@ -3814,7 +3863,7 @@ function renderMonthView() {
       const ds = diaryYear + '-' + pad2(diaryMonth+1) + '-' + pad2(cell.d);
       const evts = cell.cur ? getJobsForDate(ds) : [];
       const isToday = cell.cur && ds === todStr;
-      let cls = 'cal-day' + (cell.cur ? '' : ' other-month') + (isToday ? ' is-today' : '');
+      let cls = 'cal-day' + (cell.cur ? '' : ' other-month') + (isToday ? ' is-today' : '') + (cell.cur && ds === diarySelDs ? ' is-sel' : '');
 
       // Check for W+M conflict (Shaun has both ws and mob) — use all evts regardless of filter
       const shaunJobs = evts.filter(j => techClass(j.assigned_tech) !== 'C');
@@ -3822,7 +3871,7 @@ function renderMonthView() {
       const hasCd = evts.some(j => j.cd_required);
 
       const onclick = cell.cur ? `onclick="selectDiaryDay('${ds}','${cell.d} ${months[diaryMonth]}')"` : '';
-      html += `<div class="${cls}" ${onclick}>`;
+      html += `<div class="${cls}" data-ds="${ds}" ${onclick}>`;
       const bhName = cell.cur ? UK_BANK_HOLIDAYS[ds] : null;
       html += `<div class="cal-dn">${cell.d}${bhName ? '<span style="font-size:7px;background:#fde68a;color:#92400e;padding:0 3px;border-radius:2px;margin-left:2px;font-weight:700">BH</span>' : ''}</div>`;
       if (bhName) html += `<div style="font-size:9px;color:#92400e;font-weight:600;padding:0 2px 2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${bhName}</div>`;
@@ -3992,7 +4041,11 @@ function renderWeekView() {
   document.getElementById('diaryView').innerHTML = html;
 }
 
+let diarySelDs = null; // the day last clicked in the diary (today keeps its own highlight)
 function selectDiaryDay(ds, label) {
+  diarySelDs = ds;
+  document.querySelectorAll('.cal-day.is-sel').forEach(el => el.classList.remove('is-sel'));
+  document.querySelector('.cal-day[data-ds="' + ds + '"]')?.classList.add('is-sel');
   const evts = getJobsForDate(ds);
   const panel = document.getElementById('detPanel');
   const warn = document.getElementById('detWarn');
@@ -4052,6 +4105,7 @@ function detJobCard(j, side) {
   return `<div class="djob djob-${side}" onclick="selectDiaryJob(${j.id})" style="cursor:pointer;${styleExtra}">
     <div class="djob-name">${isDone?'✓ ':isOverdueD?'⚠ ':''}${esc(j.customer_name||'')}</div>
     <div class="djob-veh">${esc(j.vehicle||'')} · ${esc(j.panels||'')}</div>
+    ${stageChips(j)}
     <div class="djob-tags">${buildDetTags(j)}</div>
   </div>`;
 }
@@ -4798,6 +4852,8 @@ function renderTechPortal() {
         </div>`).join('')}
     </div>`;
   }
+
+  diaryHtml = `<div class="stg-mine">${myStagesInner()}</div>` + diaryHtml;
 
   const myJobs = allJobs.filter(j => {
     if (!j.assigned_tech) return false;
@@ -7230,6 +7286,8 @@ function paintStageContainers() {
     const j = allJobs.find(x => x.id === +el.dataset.stgbadge);
     if (j) el.outerHTML = stageBadge(j);
   });
+  document.querySelectorAll('.stg-mine').forEach(el => { el.innerHTML = myStagesInner(); });
+  if (document.getElementById('pg-workshop')?.classList.contains('on')) renderWorkshop();
 }
 
 function stageToggleSendBack(jobId) { _stageSendBackOpen[jobId] = !_stageSendBackOpen[jobId]; paintStageContainers(); }
@@ -7347,7 +7405,10 @@ function loadEditStagesBox(j) {
           ${names.map(n => `<option ${row && row.assigned_to === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}
         </select>
       </div>
-      <input autocomplete="off" class="minp stg-edit-in" id="edit_stgtx_${s.key}" style="${on ? '' : 'display:none'}" placeholder="${s.key === 'qc' ? 'Anything to check? (optional)' : 'What needs doing? (optional)'}" value="${esc(row?.instructions || '')}">
+      <div class="stg-sub" id="edit_stgsub_${s.key}" style="${on ? '' : 'display:none'}">
+        <input autocomplete="off" class="minp stg-edit-in" id="edit_stgtx_${s.key}" placeholder="${s.key === 'qc' ? 'Anything to check? (optional)' : 'What needs doing? (optional)'}" value="${esc(row?.instructions || '')}">
+        <input autocomplete="off" class="minp" type="date" id="edit_stgday_${s.key}" title="Planned day (optional)" value="${esc(row?.planned_date || '')}">
+      </div>
     </div>`;
   }).join('');
   const hint = document.getElementById('edit_stages_hint');
@@ -7360,7 +7421,7 @@ function editStageTick(key) {
   const on = document.getElementById('edit_stg_' + key).checked;
   document.getElementById('edit_stgrow_' + key)?.classList.toggle('off', !on);
   const sel = document.getElementById('edit_stgwho_' + key); if (sel) sel.disabled = !on;
-  const tx = document.getElementById('edit_stgtx_' + key); if (tx) tx.style.display = on ? '' : 'none';
+  const sub = document.getElementById('edit_stgsub_' + key); if (sub) sub.style.display = on ? '' : 'none';
 }
 
 async function saveEditStages(jobId) {
@@ -7373,12 +7434,13 @@ async function saveEditStages(jobId) {
     const row = rows.find(r => r.stage === s.key);
     const assigned = document.getElementById('edit_stgwho_' + s.key)?.value || null;
     const instr = (document.getElementById('edit_stgtx_' + s.key)?.value || '').trim() || null;
-    if (cb.checked && !row) toAdd.push({ job_id: jobId, stage: s.key, position: i + 1, assigned_to: assigned, instructions: instr });
-    else if (cb.checked && row && ((row.assigned_to || null) !== assigned || (row.instructions || null) !== instr)) toPatch.push({ s, assigned, instr });
+    const day = document.getElementById('edit_stgday_' + s.key)?.value || null;
+    if (cb.checked && !row) toAdd.push({ job_id: jobId, stage: s.key, position: i + 1, assigned_to: assigned, instructions: instr, planned_date: day });
+    else if (cb.checked && row && ((row.assigned_to || null) !== assigned || (row.instructions || null) !== instr || (row.planned_date || null) !== day)) toPatch.push({ s, assigned, instr, day });
     else if (!cb.checked && row && row.status !== 'done') toDel.push(row);
   });
   if (toAdd.length) await sbRaw('POST', 'job_stages', toAdd);
-  for (const p of toPatch) await sbRaw('PATCH', 'job_stages', { assigned_to: p.assigned, instructions: p.instr }, `?job_id=eq.${jobId}&stage=eq.${p.s.key}`);
+  for (const p of toPatch) await sbRaw('PATCH', 'job_stages', { assigned_to: p.assigned, instructions: p.instr, planned_date: p.day }, `?job_id=eq.${jobId}&stage=eq.${p.s.key}`);
   for (const r of toDel) await sbRaw('DELETE', 'job_stages', null, `?job_id=eq.${jobId}&stage=eq.${r.stage}`);
 }
 
@@ -7403,6 +7465,194 @@ function stagesPrintBlock(jobId) {
       return `<tr><td><b>${m.label}</b></td><td>${e(r.instructions) || '&nbsp;'}</td><td>${e(r.assigned_to || '')}</td>
         <td>${done ? e(r.done_by || '') : ''}</td><td>${done && r.done_at ? e(stageWhen(r.done_at)) : ''}</td><td style="text-align:center">${done ? '✓' : ''}</td></tr>`;
     }).join('')}</tbody></table>`;
+}
+
+// ── Planned day, diary chips, Workshop view and "my stages" ──
+const WS_PEOPLE = ['Shaun', 'Charles', 'Tony'];
+let _ws = { mode: 'week', weekStart: null, day: null, sel: null };
+
+function stageIsNextOpen(jobId, r) {
+  const n = stageRows(jobId).find(x => x.status !== 'done');
+  return !!n && n.stage === r.stage;
+}
+function stageJobLive(j) { return !!j && j.status !== 'completed' && j.status !== 'cancelled'; }
+function wsSurname(j) { const p = (j.customer_name || '').trim().split(/\s+/); return p[p.length - 1] || ''; }
+
+// Small stage line for diary job blocks: 🔧 C ✓  🔨 S  🎨 T ...
+function stageChips(j) {
+  const rows = stageRows(j.id);
+  if (!rows.length) return '';
+  return '<div class="stc-row">' + rows.map(r => {
+    const m = stageMeta(r.stage);
+    const ini = r.assigned_to ? r.assigned_to[0] : '';
+    return `<span class="stc ${r.status}" title="${esc(m.label + (r.assigned_to ? ' — ' + r.assigned_to : ''))}">${m.icon}${ini ? ' ' + esc(ini) : ''}${r.status === 'done' ? ' ✓' : ''}</span>`;
+  }).join('') + '</div>';
+}
+
+function wsMonday(ds) { const d = localDate(ds); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return dateToStr(d); }
+function wsAdd(ds, n) { const d = localDate(ds); d.setDate(d.getDate() + n); return dateToStr(d); }
+function wsInit() { if (!_ws.weekStart) { const t = dateToStr(new Date()); _ws.weekStart = wsMonday(t); _ws.day = t; } }
+function wsItems() {
+  const out = [];
+  allJobs.forEach(j => stageRows(j.id).forEach(r => out.push({ j, r })));
+  return out;
+}
+function wsDayLabel(ds, long) {
+  return localDate(ds).toLocaleDateString('en-GB', long ? { weekday: 'long', day: 'numeric', month: 'long' } : { weekday: 'short', day: 'numeric' });
+}
+function wsPeople(items) {
+  const extra = [...new Set(items.map(x => x.r.assigned_to).filter(n => n && !WS_PEOPLE.includes(n)))];
+  const people = WS_PEOPLE.concat(extra);
+  if (items.some(x => !x.r.assigned_to)) people.push('');
+  return people;
+}
+function wsPill(n) { return stagePill(n || 'Anyone'); }
+
+function wsSmallCard(it) {
+  const { j, r } = it; const m = stageMeta(r.stage);
+  const sel = _ws.sel && _ws.sel.id === j.id && _ws.sel.key === r.stage;
+  return `<div class="ws-sc ${r.status}${sel ? ' sel' : ''}" onclick="wsSelect(${j.id},'${r.stage}')"><b>${m.icon} ${m.label}</b> · ${esc(wsSurname(j))}<br>${esc(j.vehicle || '')}${r.status === 'done' ? ' ✓' : ''}</div>`;
+}
+function wsBigCard(it) {
+  const { j, r } = it; const m = stageMeta(r.stage);
+  const sel = _ws.sel && _ws.sel.id === j.id && _ws.sel.key === r.stage;
+  const lbl = r.status === 'done' ? 'Done ✓' : r.status === 'in_progress' ? 'In progress' : 'Up next';
+  return `<div class="ws-card ${r.status}${sel ? ' sel' : ''}" style="cursor:pointer" onclick="wsSelect(${j.id},'${r.stage}')">
+    <div class="t">${m.icon} ${m.label} — ${esc(j.customer_name || '')}</div>
+    <div class="v">${esc(j.vehicle || '')}</div>
+    <div class="i">${r.instructions ? esc(r.instructions) : '<i style="color:var(--hint)">No instructions</i>'}</div>
+    <span class="sbtn ${r.status === 'done' ? 'done' : r.status === 'in_progress' ? 'prog' : ''}" style="padding:3px 9px">${lbl}</span></div>`;
+}
+function wsTrayHtml(items) {
+  const t = items.filter(x => !x.r.planned_date && x.r.status !== 'done' && stageJobLive(x.j) && stageIsNextOpen(x.j.id, x.r));
+  if (!t.length) return '';
+  return `<div class="ws-tray"><div class="h">Next stage not planned yet (${t.length})</div>${t.map(it => {
+    const m = stageMeta(it.r.stage);
+    return `<span class="ws-sc pending" onclick="wsSelect(${it.j.id},'${it.r.stage}')"><b>${m.icon} ${m.label}</b> · ${esc(wsSurname(it.j))} ${it.r.assigned_to ? wsPill(it.r.assigned_to) : ''}</span>`;
+  }).join('')}</div>`;
+}
+
+function wsWeekHtml(items) {
+  const days = Array.from({ length: 7 }, (_, i) => wsAdd(_ws.weekStart, i));
+  const today = dateToStr(new Date());
+  const inWeek = items.filter(x => x.r.planned_date && x.r.planned_date >= days[0] && x.r.planned_date <= days[6]);
+  const people = wsPeople(inWeek.concat(items.filter(x => !x.r.planned_date && stageJobLive(x.j) && x.r.status !== 'done' && stageIsNextOpen(x.j.id, x.r))));
+  let h = `<div class="ws-wk"><table><tr><th></th>${days.map(d => `<th class="${d === today ? 'today' : ''}" onclick="wsPickDay('${d}')">${wsDayLabel(d)}</th>`).join('')}</tr>`;
+  people.forEach(p => {
+    h += `<tr><td class="who">${wsPill(p)}</td>` + days.map(d => `<td class="${d === today ? 'today' : ''}">${inWeek.filter(x => x.r.planned_date === d && (x.r.assigned_to || '') === p).map(wsSmallCard).join('')}</td>`).join('') + '</tr>';
+  });
+  return h + '</table></div>';
+}
+function wsDayHtml(items) {
+  const days = Array.from({ length: 7 }, (_, i) => wsAdd(_ws.weekStart, i));
+  const today = dateToStr(new Date());
+  const here = items.filter(x => x.r.planned_date === _ws.day);
+  const people = wsPeople(here.concat(WS_PEOPLE.map(n => ({ r: { assigned_to: n } }))).filter(x => x.r));
+  const tabs = `<div class="ws-days">${days.map(d => `<button class="${d === _ws.day ? 'on' : ''} ${d === today ? 'today' : ''}" onclick="wsPickDay('${d}')">${wsDayLabel(d)}${d === today ? ' · today' : ''}</button>`).join('')}</div>`;
+  const cols = people.map(p => `<div><div class="ws-dgh">${wsPill(p)}</div>${(() => { const c = here.filter(x => (x.r.assigned_to || '') === p); return c.length ? c.map(wsBigCard).join('') : '<div style="text-align:center;font-size:12px;color:var(--muted);padding:10px">Nothing planned</div>'; })()}</div>`).join('');
+  return tabs + `<div class="ws-dg" style="grid-template-columns:repeat(${Math.min(people.length, 4)},minmax(0,1fr))">${cols}</div>`;
+}
+
+function wsDetailHtml() {
+  const sel = _ws.sel; if (!sel) return '';
+  const j = allJobs.find(x => x.id === sel.id); const r = stageRows(sel.id).find(x => x.stage === sel.key);
+  if (!j || !r) return '';
+  const m = stageMeta(r.stage);
+  const names = m.who.slice(); if (r.assigned_to && !names.includes(r.assigned_to)) names.push(r.assigned_to);
+  const me = currentProfile?.full_name || '';
+  const byNames = m.who.slice(); if (me && !byNames.includes(me)) byNames.unshift(me);
+  const byDef = r.assigned_to || (byNames.includes(me) ? me : byNames[0]);
+  let meta = '';
+  if (r.status === 'done') meta = `Done${r.done_by ? ' by ' + esc(r.done_by) : ''}${r.done_at ? ' · ' + stageWhen(r.done_at) : ''}${r.entered_by ? ' (signed off in the app by ' + esc(r.entered_by) + ')' : ''}`;
+  else if (r.status === 'in_progress') meta = `In progress${r.started_by ? ' — ' + esc(r.started_by) : ''}`;
+  let act = '';
+  if (r.stage === 'qc' && !canPassQc()) act = `<span style="font-size:12px;color:var(--muted)">${STAGE_QC_NAMES.join('/')} only can pass QC</span>`;
+  else if (r.status === 'pending') act = `<button class="sbtn go" onclick="wsStatus('in_progress')">Start</button>` + (r.stage === 'qc' ? `<button class="sbtn go" onclick="wsStatus('done')">Pass QC</button>` : '');
+  else if (r.status === 'in_progress') act = (r.stage === 'qc' ? '' : `<div><label>Done by</label><select id="ws_by" class="msel" style="width:auto">${byNames.map(n => `<option ${n === byDef ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></div>`) + `<button class="sbtn prog" onclick="wsStatus('done')">${r.stage === 'qc' ? 'Pass QC' : 'Mark done'}</button>`;
+  else act = `<button class="sbtn" onclick="wsStatus('pending')">Back to waiting</button>`;
+  return `<div class="ws-detail" id="wsDetail">
+    <div style="display:flex;justify-content:space-between;gap:8px"><div style="font-size:15px;font-weight:800">${m.icon} ${m.label} — ${esc(j.customer_name || '')} <span style="font-weight:500;color:var(--muted);font-size:13px">${esc(j.vehicle || '')}</span></div><a href="#" onclick="event.preventDefault();wsSelect(null)" style="font-size:12px">Close</a></div>
+    <div style="font-size:13px;color:var(--txt2);margin-top:4px">${r.instructions ? esc(r.instructions) : '<i style="color:var(--hint)">No instructions — add them in Edit job</i>'}</div>
+    ${meta ? `<div style="font-size:11px;color:var(--muted);margin-top:3px">${meta}</div>` : ''}
+    ${r.note && r.status !== 'done' ? `<div style="font-size:12px;color:#991b1b;margin-top:3px">↩ ${esc(r.note)}</div>` : ''}
+    <div class="row">
+      <div><label>Person</label><select id="ws_who" class="msel" style="width:auto"><option value="">Anyone</option>${names.map(n => `<option ${r.assigned_to === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></div>
+      <div><label>Planned day</label><input id="ws_day" type="date" class="minp" style="width:150px" value="${esc(r.planned_date || '')}"></div>
+      <button class="sbtn go" onclick="wsSavePlan()">Save plan</button>
+    </div>
+    <div class="row" style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">${act}</div>
+  </div>`;
+}
+
+function renderWorkshop() {
+  const root = document.getElementById('workshopRoot'); if (!root) return;
+  wsInit();
+  if (!_stagesAvailable) { root.innerHTML = '<div class="tech-empty"><div>Workshop stages aren’t set up yet — run job-stages.sql in Supabase first.</div></div>'; return; }
+  const items = wsItems();
+  const wkEnd = wsAdd(_ws.weekStart, 6);
+  const lbl = _ws.mode === 'week' ? `Week of ${wsDayLabel(_ws.weekStart)} – ${wsDayLabel(wkEnd)}` : wsDayLabel(_ws.day, true);
+  root.innerHTML = `<div class="ws-top">
+      <div class="ws-ttl">🛠 Workshop — ${esc(lbl)}</div>
+      <div class="ws-seg"><button class="${_ws.mode === 'week' ? 'on' : ''}" onclick="wsMode('week')">Week</button><button class="${_ws.mode === 'day' ? 'on' : ''}" onclick="wsMode('day')">Day</button></div>
+      <div class="ws-seg"><button onclick="wsShift(-1)">‹</button><button onclick="wsToday()">Today</button><button onclick="wsShift(1)">›</button></div>
+    </div>
+    ${_ws.mode === 'week' ? wsWeekHtml(items) : wsDayHtml(items)}
+    ${wsTrayHtml(items)}
+    ${wsDetailHtml()}`;
+}
+function wsMode(m) { _ws.mode = m; if (m === 'day' && !(_ws.day >= _ws.weekStart && _ws.day <= wsAdd(_ws.weekStart, 6))) _ws.day = _ws.weekStart; renderWorkshop(); }
+function wsShift(n) {
+  if (_ws.mode === 'week') _ws.weekStart = wsAdd(_ws.weekStart, 7 * n);
+  else { _ws.day = wsAdd(_ws.day, n); _ws.weekStart = wsMonday(_ws.day); }
+  renderWorkshop();
+}
+function wsToday() { const t = dateToStr(new Date()); _ws.day = t; _ws.weekStart = wsMonday(t); renderWorkshop(); }
+function wsPickDay(ds) { _ws.day = ds; _ws.mode = 'day'; renderWorkshop(); }
+function wsSelect(id, key) {
+  _ws.sel = id ? { id, key } : null;
+  renderWorkshop();
+  if (id) document.getElementById('wsDetail')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+async function wsSavePlan() {
+  const sel = _ws.sel; if (!sel) return;
+  const r = stageRows(sel.id).find(x => x.stage === sel.key); if (!r) return;
+  const patch = { assigned_to: document.getElementById('ws_who').value || null, planned_date: document.getElementById('ws_day').value || null };
+  try {
+    await sbRaw('PATCH', 'job_stages', patch, `?job_id=eq.${sel.id}&stage=eq.${sel.key}`);
+    Object.assign(r, patch);
+  } catch (e) { alert('Could not save: ' + e.message); return; }
+  showToast('✓ Plan saved');
+  paintStageContainers();
+}
+async function wsStatus(status) {
+  const sel = _ws.sel; if (!sel) return;
+  const by = document.getElementById('ws_by')?.value;
+  if (status === 'pending' && !confirm('Set ' + stageMeta(sel.key).label + ' back to waiting?')) return;
+  await stageSet(sel.id, sel.key, status, status === 'done' && sel.key !== 'qc' ? by : undefined);
+}
+
+// ── "My workshop stages" at the top of a tech's My repairs page ──
+function myStagesInner() {
+  if (!_stagesAvailable) return '';
+  const me = currentProfile?.full_name || '';
+  const today = dateToStr(new Date());
+  const mine = wsItems().filter(({ j, r }) => r.assigned_to === me && r.status !== 'done' && stageJobLive(j) && (r.planned_date || stageIsNextOpen(j.id, r)));
+  if (!mine.length) return '';
+  const card = ({ j, r }) => {
+    const m = stageMeta(r.stage);
+    const btn = (r.stage === 'qc' && !canPassQc()) ? '' : r.status === 'in_progress'
+      ? `<button class="sbtn prog" onclick="stageSet(${j.id},'${r.stage}','done')">${r.stage === 'qc' ? 'Pass QC' : 'Mark done'}</button>`
+      : `<button class="sbtn go" onclick="stageSet(${j.id},'${r.stage}','in_progress')">Start</button>`;
+    return `<div class="ws-card ${r.status}"><div class="t">${m.icon} ${m.label} — ${esc(j.customer_name || '')}</div>
+      <div class="v">${esc(j.vehicle || '')}${r.planned_date ? ' · ' + esc(fmtDate(r.planned_date)) : ''}</div>
+      <div class="i">${r.instructions ? esc(r.instructions) : '<i style="color:var(--hint)">No instructions</i>'}</div>
+      ${r.note ? `<div style="font-size:12px;color:#991b1b;margin-bottom:4px">↩ ${esc(r.note)}</div>` : ''}${btn}</div>`;
+  };
+  const sec = (t, a) => a.length ? `<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:10px 0 6px">${t}</div>${a.map(card).join('')}` : '';
+  return `<div style="margin-bottom:14px"><div style="font-size:13px;font-weight:800;margin-bottom:2px">🛠 My workshop stages</div>` +
+    sec('Today & overdue', mine.filter(x => x.r.planned_date && x.r.planned_date <= today)) +
+    sec('Coming up', mine.filter(x => x.r.planned_date && x.r.planned_date > today)) +
+    sec('Not planned yet — next in line', mine.filter(x => !x.r.planned_date)) + '</div>';
 }
 
 // ═══════════════════════════════════════════════════════════
