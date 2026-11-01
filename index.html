@@ -2410,8 +2410,18 @@ function switchTab(t) {
 // LOAD JOBS
 // ═══════════════════════════════════════════════════════════
 let _jobsLoadToken = 0; // guards against overlapping loadJobs() calls resolving out of order
+// Apply a just-saved change to both in-memory job lists straight away, so the diary,
+// job list and badges show it instantly instead of waiting for the reload from the server.
+function applyJobPatchLocal(jobId, updates) {
+  [allJobs, diaryAllJobs].forEach(list => { const j = list.find(x => x.id === jobId); if (j) Object.assign(j, updates); });
+  if (document.getElementById('pg-diary')?.classList.contains('on')) { renderDiary(); renderRevBar(); }
+  renderJobs(); updateHomeStats(); renderHome();
+}
+
 async function loadJobs() {
   const myToken = ++_jobsLoadToken;
+  // Fetch the diary data at the same time as the jobs (it used to wait until the jobs had finished)
+  const diaryP = diaryAllJobs.length ? loadDiaryJobs() : null;
   try {
     const baseQ = `&archived=eq.false&status=neq.declined&source=not.in.(Holiday,Appointment,Van%20day,Diary%20entry)&order=created_at.desc`;
     let data, embedded = false;
@@ -2438,8 +2448,8 @@ async function loadJobs() {
   // that allJobs excludes) — keep it in sync here too, so any edit made elsewhere
   // (reassigning a tech, changing a date, etc.) shows on the diary immediately
   // rather than waiting for the next background poll to catch up.
-  if (diaryAllJobs.length) {
-    loadDiaryJobs().then(() => {
+  if (diaryP) {
+    diaryP.then(() => {
       if (document.getElementById('pg-diary')?.classList.contains('on')) { renderDiary(); renderRevBar(); }
     }).catch(()=>{});
   }
@@ -5375,6 +5385,7 @@ async function completeTechJob(jobId) {
   if (notes) updates.notes = notes;
   try {
     await sbRaw('PATCH', 'jobs', updates, `?id=eq.${jobId}`);
+    applyJobPatchLocal(jobId, updates);
     const payLabel = {card:'Card',cash:'Cash',bacs:'BACS',none:'Invoice later'}[payMethodSelected] || payMethodSelected;
     showToast('✓ Job complete — ' + payLabel + ' — Chloe will invoice');
     payMethodSelected = null;
@@ -6333,6 +6344,7 @@ async function confirmComplete() {
   if (notes) updates.notes = notes;
   try {
     await sbRaw('PATCH', 'jobs', updates, `?id=eq.${_completeJobId}`);
+    applyJobPatchLocal(_completeJobId, updates);
     const payLabel = {card:'Card',bacs:'BACS',cash:'Cash',none:'Invoice later'}[_completeMethod] || _completeMethod;
     showToast('✓ Job complete — ' + payLabel + ' — awaiting invoice');
     closeCompleteModal();
