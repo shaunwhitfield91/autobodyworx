@@ -1437,7 +1437,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="modal-grid2" style="margin-top:4px">
       <div>
         <span class="qlbl">Duration</span>
-        <select class="msel" id="m_dur">
+        <select class="msel" id="m_dur" onchange="syncCourtesyCarLineAdd()">
           <option value="1 hour">1 hour</option>
           <option value="2 hours">2 hours</option>
           <option value="3 hours">3 hours</option>
@@ -1482,6 +1482,30 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         </select>
       </div>
     </div>
+    <span class="qlbl">Internal notes</span>
+    <textarea autocomplete="off" class="minp" id="m_notes" rows="2" placeholder="Notes visible to all staff..." style="resize:vertical"></textarea>
+    <div style="display:flex;gap:8px;margin-top:10px;margin-bottom:6px;align-items:center;background:var(--blue-bg);border:1px solid #bfdbfe;border-radius:var(--radius);padding:8px 12px">
+      <input autocomplete="off" type="checkbox" id="m_cd" style="width:16px;height:16px;accent-color:var(--blue);cursor:pointer;flex-shrink:0">
+      <label for="m_cd" style="font-size:13px;font-weight:600;color:var(--blue-txt);cursor:pointer">🚗 Collection &amp; Delivery required</label>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px;margin-bottom:6px;align-items:center;background:#fef9c3;border:1px solid #fde047;border-radius:var(--radius);padding:8px 12px">
+      <input autocomplete="off" type="checkbox" id="m_parts_required" style="width:16px;height:16px;accent-color:#92400e;cursor:pointer;flex-shrink:0">
+      <label for="m_parts_required" style="font-size:13px;font-weight:600;color:#713f12;cursor:pointer">🔧 Parts required — document in notes</label>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--radius);padding:8px 12px">
+      <input autocomplete="off" type="checkbox" id="m_courtesy_car" onchange="toggleCourtesyCarDetails('m');syncCourtesyCarLineAdd()" style="width:16px;height:16px;accent-color:#065f46;cursor:pointer;flex-shrink:0">
+      <label for="m_courtesy_car" style="font-size:13px;font-weight:600;color:#065f46;cursor:pointer">🚘 Courtesy car required</label>
+    </div>
+    <div id="m_courtesy_details" style="display:none;margin-top:-4px;margin-bottom:10px;padding:8px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--radius)">
+      <span class="qlbl" style="margin-top:0">Which car</span>
+      <select class="msel" id="m_courtesy_reg">
+        <option value="">Not yet assigned</option>
+        <option value="CA18HFL">Car 1 — MG, Manual, CA18HFL</option>
+        <option value="S25WHT">Car 2 — Audi A6, Automatic, S25WHT</option>
+      </select>
+      <span class="qlbl">Customer's driving licence number <span style="font-weight:400;color:var(--muted)">(optional)</span></span>
+      <input autocomplete="off" class="minp" id="m_courtesy_license" placeholder="e.g. MORGA657054SM9IJ">
+    </div>
     <div class="modal-grid2">
       <div><span class="qlbl">Booking date</span><input autocomplete="off" class="minp" type="date" id="m_date"></div>
       <div><span class="qlbl">Time</span><input autocomplete="off" class="minp" type="time" id="m_time" value="09:00"></div>
@@ -1498,6 +1522,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <option value="other">Other</option>
         </select>
       </div>
+    </div>
+    <div class="modal-grid2">
+      <div>
+        <span class="qlbl">Payment method</span>
+        <select class="msel" id="m_payment_method">
+          <option value="">— Not set —</option>
+          <option value="card">Card</option>
+          <option value="bacs">BACS</option>
+          <option value="cash">Cash</option>
+          <option value="none">Invoice later</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px;margin-bottom:6px;align-items:center;background:#fee2e2;border:1px solid #fca5a5;border-radius:var(--radius);padding:8px 12px">
+      <input autocomplete="off" type="checkbox" id="m_rework" style="width:16px;height:16px;accent-color:#991b1b;cursor:pointer;flex-shrink:0">
+      <label for="m_rework" style="font-size:13px;font-weight:600;color:#991b1b;cursor:pointer">⚠ Rework — redo of a previous job</label>
     </div>
     <span class="qlbl">Photos (optional)</span>
     <label class="upzone" for="m_photo_input" style="display:block;cursor:pointer;padding:12px;margin-bottom:8px">
@@ -3425,6 +3465,7 @@ async function unmarkQuoteSent(jobId) {
 // ═══════════════════════════════════════════════════════════
 function openAddModal() { document.getElementById('addModal').classList.add('show'); setTimeout(initPriceInputs, 50); }
 function closeAddModal() {
+  resetAddExtras();
   resetQuoteLines();
   document.getElementById('addModal').classList.remove('show');
   resetPanelPicker('m');
@@ -3456,6 +3497,14 @@ async function saveNewJob() {
     job_location: document.getElementById('m_loc').value,
     source: document.getElementById('m_source').value,
     status: status,
+    notes: document.getElementById('m_notes')?.value.trim() || null,
+    cd_required: document.getElementById('m_cd')?.checked || false,
+    parts_required: document.getElementById('m_parts_required')?.checked || false,
+    courtesy_car: document.getElementById('m_courtesy_car')?.checked || false,
+    courtesy_car_reg: document.getElementById('m_courtesy_car')?.checked ? (document.getElementById('m_courtesy_reg')?.value || null) : null,
+    courtesy_car_license: document.getElementById('m_courtesy_car')?.checked ? (document.getElementById('m_courtesy_license')?.value.trim() || null) : null,
+    is_rework: document.getElementById('m_rework')?.checked || false,
+    payment_method: document.getElementById('m_payment_method')?.value || null,
     archived: false
   };
   try {
@@ -3492,6 +3541,10 @@ async function saveNewJob() {
     closeAddModal();
     showToast('✓ Job saved successfully');
     await loadJobs();
+    if (newJob?.id && status !== 'completed') {
+      await stagesAutoCreateOnBooking(newJob.id, body.job_location);
+      if (_stagesAvailable && body.job_location === 'workshop') await loadJobs();
+    }
     switchTab('jobs');
   } catch(e) {
     alert('⚠ SAVE FAILED — this job was NOT saved to the system.\n\nError: ' + e.message + '\n\nPlease try again. If the error continues, note the customer details and contact Shaun.');
@@ -5525,8 +5578,8 @@ function openBookModal(jobId) {
 
 function toggleCourtesyCarDetails(prefix) {
   // The checkbox id differs between the two forms this is used on
-  const checkboxId = prefix === 'bk' ? 'bk_courtesy' : 'edit_courtesy_car';
-  const detailsId = prefix === 'bk' ? 'bk_courtesy_details' : 'edit_courtesy_details';
+  const checkboxId = prefix === 'bk' ? 'bk_courtesy' : prefix === 'm' ? 'm_courtesy_car' : 'edit_courtesy_car';
+  const detailsId = prefix === 'bk' ? 'bk_courtesy_details' : prefix === 'm' ? 'm_courtesy_details' : 'edit_courtesy_details';
   const checkboxEl = document.getElementById(checkboxId);
   const detailsEl = document.getElementById(detailsId);
   const checked = checkboxEl?.checked;
@@ -9721,7 +9774,39 @@ function calcQuoteTotal() {
   if (hidden) hidden.value = '£' + total.toFixed(2);
   // Auto-populate panels field from quote line descriptions
   const panelsEl = document.getElementById('m_panels');
-  if (panelsEl) panelsEl.value = _quoteLines.map(l => l.desc).join(', ');
+  if (panelsEl) panelsEl.value = _quoteLines.filter(l => !(l.desc && l.desc.startsWith(COURTESY_CAR_LINE_PREFIX))).map(l => l.desc).join(', ');
+}
+
+// Courtesy car auto line for the Add job form (new jobs are always charged)
+let _addCourtesyAutoAmount = null;
+function syncCourtesyCarLineAdd() {
+  const checked = document.getElementById('m_courtesy_car')?.checked;
+  const idx = _quoteLines.findIndex(l => l.desc && l.desc.startsWith(COURTESY_CAR_LINE_PREFIX));
+  if (!checked) {
+    if (idx !== -1) _quoteLines.splice(idx, 1);
+    _addCourtesyAutoAmount = null;
+    renderQuoteLines(); calcQuoteTotal();
+    return;
+  }
+  const days = courtesyCarDays(document.getElementById('m_dur')?.value || '');
+  const amount = days * COURTESY_CAR_DAILY_RATE;
+  const desc = courtesyCarLineDesc(days);
+  if (idx === -1) _quoteLines.push({ id: Date.now(), desc, amount, included: true });
+  else {
+    const ex = _quoteLines[idx];
+    if (_addCourtesyAutoAmount === null || ex.amount === _addCourtesyAutoAmount) ex.amount = amount;
+    ex.desc = desc;
+  }
+  _addCourtesyAutoAmount = amount;
+  renderQuoteLines(); calcQuoteTotal();
+}
+function resetAddExtras() {
+  ['m_cd','m_parts_required','m_courtesy_car','m_rework'].forEach(id => { const el = document.getElementById(id); if (el) el.checked = false; });
+  ['m_notes','m_courtesy_license'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const r = document.getElementById('m_courtesy_reg'); if (r) r.value = '';
+  const pm = document.getElementById('m_payment_method'); if (pm) pm.value = '';
+  const d = document.getElementById('m_courtesy_details'); if (d) d.style.display = 'none';
+  _addCourtesyAutoAmount = null;
 }
 
 function resetQuoteLines() {
