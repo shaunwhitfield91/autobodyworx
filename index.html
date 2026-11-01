@@ -2091,7 +2091,46 @@ let openTechJobId = null;
 // ═══════════════════════════════════════════════════════════
 // SUPABASE HELPER
 // ═══════════════════════════════════════════════════════════
+// Re-draw everything that shows job data (batched, so several quick saves redraw once)
+let _optRefreshTimer = null;
+function optimisticRefresh() {
+  if (_optRefreshTimer) return;
+  _optRefreshTimer = setTimeout(() => {
+    _optRefreshTimer = null;
+    try {
+      if (document.getElementById('pg-diary')?.classList.contains('on')) { renderDiary(); renderRevBar(); }
+      renderJobs(); updateHomeStats(); renderHome(); updatePendingBadge();
+      if (currentProfile?.role === 'tech' && document.getElementById('pg-tech')?.classList.contains('on')) renderTechPortal();
+    } catch (e) { console.warn('optimistic refresh', e); }
+  }, 0);
+}
+
+// Every save to a single job (…jobs?id=eq.N) shows on screen immediately; if the save then fails
+// the change is undone and the error is passed on so the normal "save failed" message appears.
 async function sbRaw(method, table, body, query = '') {
+  const m = (method === 'PATCH' && table === 'jobs' && body && typeof body === 'object') ? /^\?id=eq\.(\d+)$/.exec(query) : null;
+  if (!m) return sbRawInner(method, table, body, query);
+  const id = +m[1];
+  const undo = [];
+  const leaves = body.archived === true || body.status === 'declined'; // job drops out of the live lists
+  [allJobs, diaryAllJobs].forEach((list, li) => {
+    const idx = list.findIndex(x => x.id === id);
+    if (idx === -1) return;
+    const j = list[idx];
+    const old = {}; Object.keys(body).forEach(k => { old[k] = j[k]; });
+    undo.push([j, old, li, idx, leaves]); Object.assign(j, body);
+    if (leaves) list.splice(idx, 1);
+  });
+  if (undo.length) optimisticRefresh();
+  try { return await sbRawInner(method, table, body, query); }
+  catch (e) {
+    undo.forEach(([j, old, li, idx, left]) => { Object.assign(j, old); if (left) (li === 0 ? allJobs : diaryAllJobs).splice(idx, 0, j); });
+    if (undo.length) optimisticRefresh();
+    throw e;
+  }
+}
+
+async function sbRawInner(method, table, body, query = '') {
   const url = `${SUPABASE_URL}/rest/v1/${table}${query}`;
   const makeOpts = () => ({
     method,
