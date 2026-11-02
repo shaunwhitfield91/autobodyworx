@@ -156,7 +156,11 @@ async function listEnquiryEmails(env, token, sinceIso) {
   const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token, Prefer: 'outlook.body-content-type="html"' } });
   const j = await res.json();
   if (!res.ok) throw new Error('Could not read the mailbox: ' + (j.error?.message || res.status));
-  return (j.value || []).filter(m => /new submission/i.test(m.subject || '') && /enquiry form/i.test(m.subject || ''));
+  // HubSpot words the subject differently for a first-time contact ("new submission") and for someone it already
+  // knows ("Contact reconversion by submitting …"), so accept any notification about the Enquiry form.
+  // …but only if it's about the Enquiry form (in the subject or the email text), so other HubSpot forms are ignored.
+  return (j.value || []).filter(m => /(new submission|reconversion)/i.test(m.subject || '') &&
+    (/enquiry form/i.test(m.subject || '') || /enquiry form/i.test((m.body && m.body.content) || '')));
 }
 
 // ── Supabase ───────────────────────────────────────────────────────────────
