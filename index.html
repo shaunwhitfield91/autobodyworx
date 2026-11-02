@@ -3091,7 +3091,7 @@ function buildJobCard(j) {
           ${j.needs_check ? '<span class="badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5">⚠ Check enquiry</span>' : ''}
           ${stageBadge(j)}
           ${j.cd_required?'<span class="badge bdg-cd">C&amp;D</span>':''}
-          ${j.source?`<span class="badge bdg-src">${esc(j.source)}</span>`:''}
+          ${j.source?`<span class="badge bdg-src"${String(j.source).toLowerCase()==='hubspot'?' style="background:#ffedd5;color:#9a3412;border:1px solid #fdba74;font-weight:700"':''}>${esc(sourceLabel(j.source))}</span>`:''}
         </div>
       </div>
       <div class="jcard-right">
@@ -3110,7 +3110,7 @@ function buildJobCard(j) {
         <div><div class="jbf">Customer</div><div class="jbv">${esc(j.customer_name||'—')}</div></div>
         <div><div class="jbf">Phone</div><div class="jbv"><a href="tel:${esc(j.customer_phone||'')}" style="color:var(--blue)">${esc(j.customer_phone||'—')}</a></div></div>
         <div><div class="jbf">Email</div><div class="jbv">${j.customer_email?`<a href="mailto:${esc(j.customer_email)}" style="color:var(--blue)">${esc(j.customer_email)}</a>`:'—'}</div></div>
-        <div><div class="jbf">Source</div><div class="jbv">${esc(j.source||'—')}</div></div>
+        <div><div class="jbf">Source</div><div class="jbv">${esc(sourceLabel(j.source)||'—')}</div></div>
         <div><div class="jbf">Location</div><div class="jbv">${j.job_location==='mobile'?'Mobile — customer site':'Workshop'}${j.cd_required?' + C&D required':''}</div></div>
         <div><div class="jbf">Assigned to</div><div class="jbv">${esc(j.assigned_tech||'—')}</div></div>
         ${j.customer_address?`<div style="grid-column:1/-1"><div class="jbf">Customer address</div><div class="jbv" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${esc(j.customer_address)}<a href="https://maps.google.com/?q=${encodeURIComponent(j.customer_address)}" target="_blank" style="font-size:10px;background:var(--blue-bg);color:var(--blue-txt);padding:2px 7px;border-radius:4px;text-decoration:none;font-weight:600;flex-shrink:0">Map</a></div></div>`:''}
@@ -7236,6 +7236,12 @@ function exportTsPdf() {
   w.document.close();
   w.focus();
   setTimeout(() => w.print(), 500);
+}
+
+// Friendly names for where an enquiry came from (stored lowercase, shown properly)
+function sourceLabel(src) {
+  const map = { hubspot: 'HubSpot', whatsapp: 'WhatsApp', phone: 'Phone', email: 'Email', walkin: 'Walk-in', other: 'Other' };
+  return map[String(src || '').toLowerCase()] || src || '';
 }
 
 // Red flag on enquiries imported from the HubSpot email that came through incomplete
