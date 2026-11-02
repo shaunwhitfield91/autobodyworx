@@ -7,7 +7,7 @@
 
 const SUPABASE_URL = 'https://isxycoxqlummscxmdckj.supabase.co';
 const HUBSPOT_SENDER = 'noreply@notifications.hubspot.com';
-const MAX_PER_RUN = 4;          // keep each run short; the rest are picked up 5 minutes later
+const MAX_PER_RUN = 3;          // keep each run short; the rest are picked up 5 minutes later
 const TIME_BUDGET_MS = 20000;   // stop starting new enquiries after this long
 
 // ── Parsing ────────────────────────────────────────────────────────────────
@@ -43,6 +43,18 @@ function normalisePhone(p) {
   else if (p.startsWith('0044')) p = '0' + p.slice(4);
   else if (/^44\d{10}$/.test(p)) p = '0' + p.slice(2);
   return p;
+}
+
+// Shrink phone photos to the same size PanelPro uses itself (1200px, quality 75) so the job list stays quick.
+// If the image library isn't available, the original is stored instead.
+let _sharp; let _sharpTried = false;
+async function shrink(buf, type) {
+  if (!_sharpTried) { _sharpTried = true; try { _sharp = require('sharp'); } catch (e) { _sharp = null; } }
+  if (!_sharp) return { buf, type };
+  try {
+    const out = await _sharp(buf).rotate().resize({ width: 1200, height: 1200, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 75 }).toBuffer();
+    return { buf: out, type: 'image/jpeg' };
+  } catch (e) { return { buf, type }; }   // e.g. a format it can't read — keep the original
 }
 
 function parseEnquiry(html) {
@@ -201,15 +213,19 @@ async function runImport(rawEnv, opts) {
     const e = parseEnquiry(m.body?.content || '');
     const problems = missingFields(e);
     const photos = []; const photoLog = [];
-    for (let i = 0; i < e.images.length; i++) {
-      const img = e.images[i];
+    const results = await Promise.all(e.images.map(async (img, i) => {
       try {
         const d = await downloadHubspotImage(img.href, env.HUBSPOT_TOKEN);
-        photoLog.push({ name: img.text, href: dry ? img.href : undefined, how: d.how, tried: d.tried, bytes: d.buf ? d.buf.length : 0 });
-        if (d.buf && d.buf.length) photos.push({ name: img.text, buf: d.buf, type: d.type });
-        else problems.push(`photo ${i + 1} (${img.text}) could not be downloaded`);
-      } catch (err) { problems.push(`photo ${i + 1} failed: ${err.message}`); photoLog.push({ name: img.text, error: err.message }); }
-    }
+        if (d.buf && d.buf.length) { const sm = await shrink(d.buf, d.type); return { i, img, d, ok: true, sm }; }
+        return { i, img, d, ok: false };
+      } catch (err) { return { i, img, err }; }
+    }));
+    results.forEach(r => {
+      if (r.err) { problems.push(`photo ${r.i + 1} failed: ${r.err.message}`); photoLog.push({ name: r.img.text, error: r.err.message }); return; }
+      photoLog.push({ name: r.img.text, href: dry ? r.img.href : undefined, how: r.d.how, tried: r.d.tried, bytes: r.d.buf ? r.d.buf.length : 0, savedBytes: r.ok ? r.sm.buf.length : 0 });
+      if (r.ok) photos.push({ name: r.img.text, buf: r.sm.buf, type: r.sm.type });
+      else problems.push(`photo ${r.i + 1} (${r.img.text}) could not be downloaded`);
+    });
     const item = { subject: m.subject, received: m.receivedDateTime, parsed: { name: e.name, email: e.email, phone: e.phone, address: e.address, vehicle: e.vehicle, damage: e.damage, photoLinks: e.images.length }, photoLog, problems };
     if (dry) { report.created.push(item); continue; }
 
@@ -220,13 +236,16 @@ async function runImport(rawEnv, opts) {
         customer_name: e.name || 'Unknown enquiry', customer_phone: e.phone || null, customer_email: e.email || null,
         customer_address: e.address || null, vehicle: e.vehicle || null, panels: e.damage || null,
         notes: notesParts.join('\n'), job_location: 'mobile', status: 'pending', source: 'hubspot', archived: false,
-        enquiry_ref: ref, needs_check: problems.length > 0, check_reason: problems.length ? 'Missing or failed: ' + problems.join('; ') : null
+        enquiry_ref: ref, needs_check: true, check_reason: 'Import still running — if this stays, some photos may be missing'
       };
       const created = await sb('POST', 'jobs', key, body, 'return=representation');
       const jobId = created[0].id;
-      let failed = 0;
-      for (const p of photos) { try { await uploadPhoto(key, jobId, p.buf, p.type); } catch (err) { failed++; item.problems.push(err.message); } }
-      if (failed) await sb('PATCH', `jobs?id=eq.${jobId}`, key, { needs_check: true, check_reason: 'Missing or failed: ' + problems.concat(failed + ' photo(s) failed to save').join('; ') });
+      const ups = await Promise.all(photos.map(p => uploadPhoto(key, jobId, p.buf, p.type).then(() => null, err => err.message)));
+      const failed = ups.filter(Boolean).length;
+      const allProblems = problems.slice(); if (failed) allProblems.push(failed + ' photo(s) failed to save');
+      await sb('PATCH', `jobs?id=eq.${jobId}`, key, allProblems.length
+        ? { needs_check: true, check_reason: 'Missing or failed: ' + allProblems.join('; ') }
+        : { needs_check: false, check_reason: null });
       item.jobId = jobId; item.photosSaved = photos.length - failed;
       report.created.push(item);
     } catch (err) {
