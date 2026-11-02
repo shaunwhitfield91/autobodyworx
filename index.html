@@ -3088,6 +3088,7 @@ function buildJobCard(j) {
             : j.duration?`<span class="badge bdg-dur">${esc(j.duration)}</span>`:''
           }
           ${techBadge(j.assigned_tech)}
+          ${j.needs_check ? '<span class="badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5">⚠ Check enquiry</span>' : ''}
           ${stageBadge(j)}
           ${j.cd_required?'<span class="badge bdg-cd">C&amp;D</span>':''}
           ${j.source?`<span class="badge bdg-src">${esc(j.source)}</span>`:''}
@@ -3101,6 +3102,7 @@ function buildJobCard(j) {
     </div>
     <div class="jcard-body">
       <!-- Progress bar -->
+      ${needsCheckBanner(j)}
       ${buildProgBar(prog)}
       ${stagesHtml(j)}
       <!-- Details grid -->
@@ -7234,6 +7236,18 @@ function exportTsPdf() {
   w.document.close();
   w.focus();
   setTimeout(() => w.print(), 500);
+}
+
+// Red flag on enquiries imported from the HubSpot email that came through incomplete
+function needsCheckBanner(j) {
+  if (!j.needs_check) return '';
+  return `<div onclick="event.stopPropagation()" style="margin:0 0 10px;padding:9px 12px;background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;color:#991b1b;font-size:13px">
+    <b>⚠ Check this enquiry</b><div style="margin-top:2px">${esc(j.check_reason || 'Some details may be missing.')}</div>
+    <button class="sbtn" style="margin-top:6px" onclick="event.stopPropagation();clearNeedsCheck(${j.id})">I've checked it</button></div>`;
+}
+async function clearNeedsCheck(id) {
+  try { await sbRaw('PATCH', 'jobs', { needs_check: false }, `?id=eq.${id}`); showToast('✓ Marked as checked'); }
+  catch (e) { alert('Could not update: ' + e.message); }
 }
 
 // ═══════════════════════════════════════════════════════════
