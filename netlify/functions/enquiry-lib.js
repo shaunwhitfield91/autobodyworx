@@ -167,8 +167,10 @@ async function uploadPhoto(key, jobId, buf, type) {
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────
-async function runImport(env, opts) {
+async function runImport(rawEnv, opts) {
   opts = opts || {};
+  // pasted values often carry a stray space or line break — remove them
+  const env = {}; Object.keys(rawEnv || {}).forEach(k => { env[k] = typeof rawEnv[k] === 'string' ? rawEnv[k].trim() : rawEnv[k]; });
   const dry = !!opts.dry;
   const need = ['MS_TENANT_ID', 'MS_CLIENT_ID', 'MS_CLIENT_SECRET', 'MS_MAILBOX', 'HUBSPOT_TOKEN', 'SUPABASE_SERVICE_KEY', 'ENQUIRY_IMPORT_FROM'];
   const missing = need.filter(k => !env[k]);
