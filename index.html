@@ -7632,10 +7632,32 @@ function wsPeople(items) {
 }
 function wsPill(n) { return stagePill(n || 'Anyone'); }
 
+// The day a stage shows on: its planned day, or — for a job's current stage with no plan — the job's booking day
+function wsDay(it) {
+  if (it.r.planned_date) return it.r.planned_date;
+  if (it.r.status !== 'done' && stageIsNextOpen(it.j.id, it.r) && it.j.booking_date) return it.j.booking_date;
+  return null;
+}
+function wsAssumed(it) { return !it.r.planned_date && !!wsDay(it); }
+function wsSetupCandidates() {
+  return allJobs.filter(j => j.job_location === 'workshop' && j.status === 'booked' && !stageRows(j.id).length);
+}
+async function wsSetupStages() {
+  const c = wsSetupCandidates();
+  if (!c.length) return;
+  if (!confirm('Add all six stages (Strip, Panel, Paint, Fit, Polish, QC) to ' + c.length + ' booked workshop job' + (c.length > 1 ? 's' : '') + '?\n\nYou can untick any stage a job doesn’t need in Edit job.')) return;
+  try {
+    await sbRaw('POST', 'job_stages', c.flatMap(j => JOB_STAGES.map((st, i) => ({ job_id: j.id, stage: st.key, position: i + 1 }))));
+    showToast('✓ Stages added to ' + c.length + ' job' + (c.length > 1 ? 's' : ''));
+    await loadJobs();
+    renderWorkshop();
+  } catch (e) { alert('Could not add stages: ' + e.message); }
+}
+
 function wsSmallCard(it) {
   const { j, r } = it; const m = stageMeta(r.stage);
   const sel = _ws.sel && _ws.sel.id === j.id && _ws.sel.key === r.stage;
-  return `<div class="ws-sc ${r.status}${sel ? ' sel' : ''}" onclick="wsSelect(${j.id},'${r.stage}')"><b>${m.icon} ${m.label}</b> · ${esc(wsSurname(j))}<br>${esc(j.vehicle || '')}${r.status === 'done' ? ' ✓' : ''}</div>`;
+  return `<div class="ws-sc ${r.status}${sel ? ' sel' : ''}" onclick="wsSelect(${j.id},'${r.stage}')"><b>${m.icon} ${m.label}</b> · ${esc(wsSurname(j))}<br>${esc(j.vehicle || '')}${r.status === 'done' ? ' ✓' : ''}${wsAssumed(it) ? '<br><span style="opacity:.7">📅 booking day</span>' : ''}</div>`;
 }
 function wsBigCard(it) {
   const { j, r } = it; const m = stageMeta(r.stage);
@@ -7648,7 +7670,7 @@ function wsBigCard(it) {
     <span class="sbtn ${r.status === 'done' ? 'done' : r.status === 'in_progress' ? 'prog' : ''}" style="padding:3px 9px">${lbl}</span></div>`;
 }
 function wsTrayHtml(items) {
-  const t = items.filter(x => !x.r.planned_date && x.r.status !== 'done' && stageJobLive(x.j) && stageIsNextOpen(x.j.id, x.r));
+  const t = items.filter(x => !wsDay(x) && x.r.status !== 'done' && stageJobLive(x.j) && stageIsNextOpen(x.j.id, x.r));
   if (!t.length) return '';
   return `<div class="ws-tray"><div class="h">Next stage not planned yet (${t.length})</div>${t.map(it => {
     const m = stageMeta(it.r.stage);
@@ -7659,18 +7681,18 @@ function wsTrayHtml(items) {
 function wsWeekHtml(items) {
   const days = Array.from({ length: 7 }, (_, i) => wsAdd(_ws.weekStart, i));
   const today = dateToStr(new Date());
-  const inWeek = items.filter(x => x.r.planned_date && x.r.planned_date >= days[0] && x.r.planned_date <= days[6]);
-  const people = wsPeople(inWeek.concat(items.filter(x => !x.r.planned_date && stageJobLive(x.j) && x.r.status !== 'done' && stageIsNextOpen(x.j.id, x.r))));
+  const inWeek = items.filter(x => { const d = wsDay(x); return d && d >= days[0] && d <= days[6]; });
+  const people = wsPeople(inWeek.concat(items.filter(x => !wsDay(x) && stageJobLive(x.j) && x.r.status !== 'done' && stageIsNextOpen(x.j.id, x.r))));
   let h = `<div class="ws-wk"><table><tr><th></th>${days.map(d => `<th class="${d === today ? 'today' : ''}" onclick="wsPickDay('${d}')">${wsDayLabel(d)}</th>`).join('')}</tr>`;
   people.forEach(p => {
-    h += `<tr><td class="who">${wsPill(p)}</td>` + days.map(d => `<td class="${d === today ? 'today' : ''}">${inWeek.filter(x => x.r.planned_date === d && (x.r.assigned_to || '') === p).map(wsSmallCard).join('')}</td>`).join('') + '</tr>';
+    h += `<tr><td class="who">${wsPill(p)}</td>` + days.map(d => `<td class="${d === today ? 'today' : ''}">${inWeek.filter(x => wsDay(x) === d && (x.r.assigned_to || '') === p).map(wsSmallCard).join('')}</td>`).join('') + '</tr>';
   });
   return h + '</table></div>';
 }
 function wsDayHtml(items) {
   const days = Array.from({ length: 7 }, (_, i) => wsAdd(_ws.weekStart, i));
   const today = dateToStr(new Date());
-  const here = items.filter(x => x.r.planned_date === _ws.day);
+  const here = items.filter(x => wsDay(x) === _ws.day);
   const people = wsPeople(here.concat(WS_PEOPLE.map(n => ({ r: { assigned_to: n } }))).filter(x => x.r));
   const tabs = `<div class="ws-days">${days.map(d => `<button class="${d === _ws.day ? 'on' : ''} ${d === today ? 'today' : ''}" onclick="wsPickDay('${d}')">${wsDayLabel(d)}${d === today ? ' · today' : ''}</button>`).join('')}</div>`;
   const cols = people.map(p => `<div><div class="ws-dgh">${wsPill(p)}</div>${(() => { const c = here.filter(x => (x.r.assigned_to || '') === p); return c.length ? c.map(wsBigCard).join('') : '<div style="text-align:center;font-size:12px;color:var(--muted);padding:10px">Nothing planned</div>'; })()}</div>`).join('');
@@ -7713,6 +7735,13 @@ function renderWorkshop() {
   wsInit();
   if (!_stagesAvailable) { root.innerHTML = '<div class="tech-empty"><div>Workshop stages aren’t set up yet — run job-stages.sql in Supabase first.</div></div>'; return; }
   const items = wsItems();
+  const cand = wsSetupCandidates();
+  const setup = (cand.length && currentProfile?.role !== 'tech')
+    ? `<div style="margin-bottom:10px;padding:10px 12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;font-size:13px">
+         <b>${cand.length} booked workshop job${cand.length > 1 ? 's have' : ' has'} no stages yet</b>, so ${cand.length > 1 ? 'they' : 'it'} can’t show here.
+         <button class="sbtn go" style="margin-left:6px" onclick="wsSetupStages()">Add stages to ${cand.length > 1 ? 'them' : 'it'}</button></div>` : '';
+  const empty = (!items.length && !cand.length)
+    ? `<div class="tech-empty" style="margin-bottom:10px"><div>No jobs have workshop stages yet. New workshop jobs get them automatically; for an existing job, open it, choose Edit job and tick the stages.</div></div>` : '';
   const wkEnd = wsAdd(_ws.weekStart, 6);
   const lbl = _ws.mode === 'week' ? `Week of ${wsDayLabel(_ws.weekStart)} – ${wsDayLabel(wkEnd)}` : wsDayLabel(_ws.day, true);
   root.innerHTML = `<div class="ws-top">
@@ -7720,6 +7749,7 @@ function renderWorkshop() {
       <div class="ws-seg"><button class="${_ws.mode === 'week' ? 'on' : ''}" onclick="wsMode('week')">Week</button><button class="${_ws.mode === 'day' ? 'on' : ''}" onclick="wsMode('day')">Day</button></div>
       <div class="ws-seg"><button onclick="wsShift(-1)">‹</button><button onclick="wsToday()">Today</button><button onclick="wsShift(1)">›</button></div>
     </div>
+    ${setup}${empty}
     ${_ws.mode === 'week' ? wsWeekHtml(items) : wsDayHtml(items)}
     ${wsTrayHtml(items)}
     ${wsDetailHtml()}`;
