@@ -5,8 +5,11 @@ const { runImport } = require('./enquiry-lib');
 
 exports.handler = async (event) => {
   const key = (event.queryStringParameters || {}).key;
-  if (!process.env.ENQUIRY_IMPORT_KEY || key !== process.env.ENQUIRY_IMPORT_KEY) {
-    return { statusCode: 401, body: 'Not allowed' };
+  if (!process.env.ENQUIRY_IMPORT_KEY) {
+    return { statusCode: 401, body: 'Not allowed: ENQUIRY_IMPORT_KEY is not set on the server yet. Add it in Netlify (Site settings > Environment variables), then Deploys > Trigger deploy > Deploy site.' };
+  }
+  if (!key || key.trim() !== process.env.ENQUIRY_IMPORT_KEY.trim()) {
+    return { statusCode: 401, body: 'Not allowed: the key in the link does not match ENQUIRY_IMPORT_KEY (check capitals, spaces and the exact spelling).' };
   }
   try {
     const report = await runImport(process.env, { dry: true });
