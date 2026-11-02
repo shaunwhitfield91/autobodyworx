@@ -198,6 +198,8 @@ async function runImport(rawEnv, opts) {
   const started = Date.now();
   const key = env.SUPABASE_SERVICE_KEY;
   const report = { ok: true, dry, checked: 0, created: [], skipped: 0, problems: [] };
+  // is the photo-shrinking tool installed? (if false, photos are saved at full size)
+  try { require('sharp'); report.imageShrink = true; } catch (e) { report.imageShrink = false; report.imageShrinkError = String(e.message).split('\n')[0].slice(0, 200); }
   const gt = await graphToken(env);
   const mails = await listEnquiryEmails(env, gt, since.toISOString());
   report.checked = mails.length;
