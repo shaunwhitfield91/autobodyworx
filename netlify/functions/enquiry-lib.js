@@ -175,7 +175,8 @@ async function runImport(rawEnv, opts) {
   const need = ['MS_TENANT_ID', 'MS_CLIENT_ID', 'MS_CLIENT_SECRET', 'MS_MAILBOX', 'HUBSPOT_TOKEN', 'SUPABASE_SERVICE_KEY', 'ENQUIRY_IMPORT_FROM'];
   const missing = need.filter(k => !env[k]);
   if (missing.length) return { ok: false, error: 'Not set up yet — missing settings: ' + missing.join(', ') };
-  const since = new Date(env.ENQUIRY_IMPORT_FROM);
+  // a manual dry run may look further back; a real import never does
+  const since = new Date((dry && opts.since) ? opts.since : env.ENQUIRY_IMPORT_FROM);
   if (isNaN(since)) return { ok: false, error: 'ENQUIRY_IMPORT_FROM is not a valid date/time' };
 
   const started = Date.now();

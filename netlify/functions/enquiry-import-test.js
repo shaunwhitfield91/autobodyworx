@@ -12,7 +12,7 @@ exports.handler = async (event) => {
     return { statusCode: 401, body: 'Not allowed: the key in the link does not match ENQUIRY_IMPORT_KEY (check capitals, spaces and the exact spelling).' };
   }
   try {
-    const report = await runImport(process.env, { dry: true });
+    const report = await runImport(process.env, { dry: true, since: (event.queryStringParameters || {}).since });
     return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(report, null, 2) };
   } catch (e) {
     return { statusCode: 500, body: 'Error: ' + e.message };
